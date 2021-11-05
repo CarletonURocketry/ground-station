@@ -2,7 +2,7 @@
 # RN2483 LoRa radio module.
 # Authors: 
 
-import serial
+import serial as ser 
 
 def init_ground_station():
 
@@ -73,9 +73,9 @@ def load_map():
 def wait_for_ok():
     is_set=false 
     while is_set==false:
-        sio.flush() # it is buffering. required to get the data out *now*
+        ser.flush() # it is buffering. required to get the data out *now*
         
-        hello = sio.readline()
-        if hello == bytes('ok'): #wait untill it says ok
+        rv = ser.readline()
+        if rv == bytes('ok'): #wait untill it says ok
             is_set==true
     return true
