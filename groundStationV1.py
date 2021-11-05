@@ -17,22 +17,34 @@ def init_ground_station():
                     )  
    #set the frequency of the radio 
     ser.write(bytes(str("radio set freq 433050000") + "\r\n", "utf-8"))
+    wait_for_ok()
+    #set the power to -14 db
     ser.write(bytes(str("radio set pwr 14 ") + "\r\n", "utf-8"))
+    wait_for_ok()
+    #set the spreading factor
     ser.write(bytes(str("radio set sf sf9 ") + "\r\n", "utf-8"))
-    ser.write(bytes(str("radio set cr 4/7 ") + "\r\n", "utf-8"))
-    ser.write(bytes(str("radio set bw 500 ") + "\r\n", "utf-8"))
-    ser.write(bytes(str("radio set pr 6 ") + "\r\n", "utf-8"))
-    ser.write(bytes(str("radio set crc on  ") + "\r\n", "utf-8"))
-    ser.write(bytes(str("radio set  iqi off  ") + "\r\n", "utf-8"))
-    ser.write(bytes(str("radio set  sync 43  ") + "\r\n", "utf-8"))`
-
-
-
+    wait_for_ok()
     
-
-
-
-
+    #set the coding rate 
+    ser.write(bytes(str("radio set cr 4/7 ") + "\r\n", "utf-8"))
+    wait_for_ok()
+    #set bandwdith
+    ser.write(bytes(str("radio set bw 500 ") + "\r\n", "utf-8"))
+    wait_for_ok()
+    # set prlen preamble length
+    ser.write(bytes(str("radio set prlen 6 ") + "\r\n", "utf-8"))
+    wait_for_ok()
+    # set crc
+    ser.write(bytes(str("radio set crc on  ") + "\r\n", "utf-8"))
+    wait_for_ok()
+    #set iri
+    ser.write(bytes(str("radio set  iqi off  ") + "\r\n", "utf-8"))
+    wait_for_ok()
+    #set sync word to be 0x43
+    ser.write(bytes(str("radio set  sync 43  ") + "\r\n", "utf-8"))
+    wait_for_ok()
+    print("sucessfully configured lora radio")
+   
 
 def write_to_ground_station(register:int):
     """writes data to the ground station via UART
@@ -52,8 +64,18 @@ def read_from_ground_station(register:int):
     """
     
 
-    
-    
+       
 def load_map():
     """load in a map that can be used offline
         author: """
+
+
+def wait_for_ok():
+    is_set=false 
+    while is_set==false:
+        sio.flush() # it is buffering. required to get the data out *now*
+        
+        hello = sio.readline()
+        if hello == bytes('ok'): #wait untill it says ok
+            is_set==true
+    return true
