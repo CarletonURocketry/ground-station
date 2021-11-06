@@ -5,6 +5,9 @@
 import serial as ser 
 
 def init_ground_station():
+    
+    #notes from arsalan: why is there a space after every command (ex. "radio set pwr_"
+    #
 
     # initlize a serial port  
     ser = serial.Serial(
@@ -71,6 +74,7 @@ def load_map():
 
 
 def wait_for_ok():
+    #comment from arsalan: if we never get an ok then this will turn into an infinite loop. Should set a timer of some sort.
     is_set=false 
     while is_set==false:
         ser.flush() # it is buffering. required to get the data out *now*
