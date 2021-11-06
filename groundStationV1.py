@@ -8,6 +8,7 @@ def init_ground_station():
     
     #notes from arsalan: why is there a space after every command (ex. "radio set pwr_"
     #does \r\n also work for ios systems?
+    #does the radio always respond when we give it any command? Because then we can put the check_for_ok() function in the write() function
 
     # initlize a serial port  
     ser = serial.Serial(
