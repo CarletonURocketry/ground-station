@@ -7,7 +7,7 @@ import serial as ser
 def init_ground_station():
     
     #notes from arsalan: why is there a space after every command (ex. "radio set pwr_"
-    #
+    #does \r\n also work for ios systems?
 
     # initlize a serial port  
     ser = serial.Serial(
