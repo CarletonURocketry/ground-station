@@ -8,14 +8,14 @@ import serial as ser
 
 
 def init_ground_station():
-    
-    #notes from arsalan: why is there a space after every command (ex. "radio set pwr_"
-    #does \r\n also work for ios systems?
-    #does the radio always respond when we give it any command? Because then we can put the check_for_ok() function in the write() function
+
+    # notes from arsalan: why is there a space after every command (ex. "radio set pwr_"
+    # does \r\n also work for ios systems?
+    # does the radio always respond when we give it any command? Because then we can put the check_for_ok() function in the write() function
 
     # initlize a serial port
     ser = serial.Serial(
-        timeout=1,  
+        timeout=1,
         baudrate=57600,
         # number of bits per bytes ((configure packet size?)
         bytesize=serial.EIGHTBITS,
@@ -25,7 +25,7 @@ def init_ground_station():
     )
    # set the frequency of the radio
     radio_set_freq(433050000)
-    # set the power to -14 db    
+    # set the power to -14 db
     radio_set_pwr(14)
     # set the spreading factor
     radio_set_sf("sf9")
@@ -66,9 +66,6 @@ def load_map():
         author: """
 
 # wait for serial response we have set a timeout value so it will wait for a response and checks if it's not ok
-# will log for
-
-
 def wait_for_ok():
    # flush the serial port
     ser.flush()
@@ -80,96 +77,96 @@ def wait_for_ok():
     else:
         return false
 
-# set frequencies based on what possible frequencies can be set
-
-
+# set frequencies based on what possible frequencies can be set to values can be 
+# 50000, 125000, 62500.0, 31300.0, 15600.0, 7800.0, 3900.0,
+#  200000, 100000, 50000, 25000, 12500.0, 6300.0, 3100.0, 166700.0, 83300.0, 41700.0, 20800.0, 10400.0, 5200.0, 2600.0
 def radio_set_freq(freq):
     frequencies = [250000, 125000, 62500.0, 31300.0, 15600.0, 7800.0, 3900.0,
                    200000, 100000, 50000, 25000, 12500.0, 6300.0, 3100.0, 166700.0, 83300.0, 41700.0, 20800.0, 10400.0, 5200.0, 2600.0]
     if freq in frequencies:
         write_to_ground_station(str("radio set pwr "+freq + "\r\n", "utf-8"))
-        if wait_for_ok()==true:
+        if wait_for_ok() == true:
             print("value sucessfully set")
         else:
             print("invalid param error sent to radio")
     print("invalid param")
-# set power between -3 and 14 db
 
-
+# set power possible values between -3 and 14 db
 def radio_set_pwr(pwr):
     if pwr in range(-3, 14):
         write_to_ground_station(str("radio set pwr "+pwr + "\r\n", "utf-8"))
-        if wait_for_ok()==true:
+        if wait_for_ok() == true:
             print("value sucessfully set")
         else:
             print("invalid param error")
 
-# set spreading factor check if valid values are prvided
-
-
+# set spreading factor can only be set to  sf7", "sf8", "sf9", "sf10", "sf11", "sf12"]
 def radio_set_sf(sf):
     if sf in range["sf7", "sf8", "sf9", "sf10", "sf11", "sf12"]:
         write_to_ground_station(str("radio set sf "+sf + "\r\n", "utf-8"))
-        if wait_for_ok()==true:
+        if wait_for_ok() == true:
             print("value sucessfully set")
-        else: 
+        else:
             print("invalid param error")
 
-# set coding rate
-
-
+# set coding rate which can only be "4/5", "4/6", "4/7", "4/8"
 def radio_set_cr(cr):
     if cr in ["4/5", "4/6", "4/7", "4/8"]:
         write_to_ground_station(str("radio set cr "+cr + "\r\n", "utf-8"))
-        if wait_for_ok()==true:
+        if wait_for_ok() == true:
             print("value sucessfully set")
         else:
             print("invalid param error")
 
-# set bw
 
-
+# set the bandwidth which can only  be 125 250 or 500 hz
 def radio_set_bw(bw):
     if bw in [125, 250, 500]:
         write_to_ground_station(str("radio set bw "+bw + "\r\n", "utf-8"))
-        if wait_for_ok()==true:
+        if wait_for_ok() == true:
             print("value sucessfully set")
         else:
             print("invalid param error")
 
-# set IQI
 
-
+# set IQI to be on or off
 def radio_set_iqi(iqi):
     if iqi in ["on", "off"]:
         write_to_ground_station(str("radio set iqi "+iqi + "\r\n", "utf-8"))
-        if wait_for_ok()==true:
+        if wait_for_ok() == true:
             print("value sucessfully set")
         else:
             print("invalid param error")
-# set sync word it's a byte no 
+
+# set sync word it's a 2 bytes 
 def radio_set_sync(sync):
     write_to_ground_station(str("radio set sync"+sync + "\r\n", "utf-8"))
-    if wait_for_ok()==true:
+    if wait_for_ok() == true:
         print("value sucessfully set")
     else:
         print("invalid param error")
 
-
+# set the preamble length between 0 and  65535
 def radio_set_prlen(pr):
     if pr in range(0, 65535):
         write_to_ground_station(str("radio set pr"+pr + "\r\n", "utf-8"))
-        if wait_for_ok()==true:
+        if wait_for_ok() == true:
             print("value sucessfully set")
         else:
             print("invalid param error")
-        
 
+
+# crc can only be set to true or false to enable error checking
 
 def radio_set_crc(crc):
     if crc in ["on", "off"]:
         write_to_ground_station(str("radio set crc"+crc + "\r\n", "utf-8"))
-        if wait_for_ok()==true:
+        if wait_for_ok() == true:
             print("value sucessfully set")
         else:
             print("invalid param error")
+
+
+def radio_set_rxmode():
+    # set the timeout to 65535 the maximum amount
+    write_to_ground_station(str("radio rx 65535", "utf-8"))
