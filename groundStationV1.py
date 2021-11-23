@@ -93,7 +93,7 @@ def wait_for_ok():
     print(rv)
     if rv == bytes('ok'):  # check for ok and report if param invalid
 
-        return ture
+        return true
     else:
         return false
     if rv != 'ok':
@@ -209,7 +209,7 @@ def radio_set_crc(crc):
 
 def radio_set_rxmode():
     # set the timeout to 65535 the maximum amount
-    write_to_ground_station(str("radio rx 65535", "utf-8"))
+    write_to_ground_station(str("radio rx 0", "utf-8"))
 def test_radio():
     #send a valid command which get's frequency
 
@@ -217,4 +217,5 @@ def test_radio():
         write_to_ground_station(str("radio get freq "+ "\r\n", "utf-8"))
         rv = ser.readline()
         print(rv)
-    
+def radio_set_txmode(data):
+    write_to_ground_station(str("radio tx "+data+"\r\n", utf8))   
