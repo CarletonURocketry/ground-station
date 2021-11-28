@@ -2,29 +2,29 @@
 # RN2483 LoRa radio module.
 # Authors:
 
-import serial as ser
 
-# set constants
+import serial
+
+ser = serial.Serial( port = "COM4",
+                         timeout=1,
+                         baudrate=57600,
+                         # number of bits per message
+                         bytesize=serial.EIGHTBITS,
+                         # set parity check: no parity
+                         parity=serial.PARITY_NONE,
+                         # number of stop bits
+                         stopbits = 1, 
+                         # disable hardware (RTS/CTS) flow control 
+                         rtscts=False)   
+
+def init_serial(port):
+    
+        
+    return 0
+    
 
 
-def init_ground_station():
-
-    # notes from arsalan: why is there a space after every command (ex. "radio set pwr_"
-    # does \r\n also work for ios systems?
-    # does the radio always respond when we give it any command? Because then we can put the check_for_ok() function in the write() function
-
-    # initlize a serial port
-    ser = serial.Serial(
-        timeout=1,
-        baudrate=57600,
-        # number of bits per bytes ((configure packet size?)
-        bytesize=serial.EIGHTBITS,
-        parity=serial.PARITY_NONE,  # set parity check: no parity
-        stopbits=0,  # number of stop bits
-        rtscts=False,  # disable hardware (RTS/CTS) flow control
-    )
-
-    # initlize all the pins to be inputs
+def init_GPIO():
     write_to_ground_station("sys set pinmode GPIO0 digin")
     write_to_ground_station("sys set pinmode GPIO1 digin")
     write_to_ground_station("sys set pinmode GPIO2 digin")
@@ -38,35 +38,74 @@ def init_ground_station():
     write_to_ground_station("sys set pinmode GPIO10 digin")
     write_to_ground_station("sys set pinmode GPIO11 digin")
     write_to_ground_station("sys set pinmode GPIO12 digin")
-    write_to_ground_station("sys set pinmode GPIO13 digin")
+    write_to_ground_station("sys set pinmode GPIO13 digin")    
+
+def init_ground_station():
+    
+    # initlize a serial port
+    init_serial("COM4")
+
+    # initlize all the pins to be inputs
+    init_GPIO()
 
    # set the frequency of the radio
     radio_set_freq(433050000)
+    
     # set the power to -14 db
     radio_set_pwr(14)
+    
     # set the spreading factor
     radio_set_sf("sf9")
+    
     # set the coding rate
     radio_set_cr("4/7")
+    
     # set bandwdith
     radio_set_rxbw(500)
+    
     # set prlen preamble length
     radio_set_prlen(6)
+    
     # set crc
     radio_set_crc("on")
+    
     # set iqi
     radio_set_iqi("on")
+    
     # set sync word to be 0x43
     radio_set_sync("43")
+    
     print("sucessfully configured lora radio")
 
 
-def write_to_ground_station(register: int):
+    
+def write_to_ground_station(command_string): 
     """writes data to the ground station via UART
-       author: tarik, Fahim
-       step 1: rudimentary write
-       step 2: commands? 
-       @param register:address of the register you want to write to"""
+       author: Tarik
+       @param command_string: full command to be send to the ground station
+       @param COM_PORT: the COM port to be used for the UART transmission
+       
+       Ex. 
+       >>write_to_ground_station("radio set pwr 7", COM1)
+       >>"ok"
+       
+       //above example sets the radio tramission power to 7 using COM1
+       
+       """
+
+    data = str(command_string) 
+    
+    #must include carriage return for valid commands (see DS40001784B pg XX)
+    data = data + "\r\n"
+    
+    # encode command_string as bytes and then transmit over serial port
+    ser.write(data.encode('utf-8'))  
+    
+    #if ground station produces error in response to command then it will 
+    #halt the program 
+    return wait_for_ok()
+    
+   
 
 
 def read_from_ground_station(register: int):
@@ -84,45 +123,42 @@ def load_map():
 
 # wait for serial response we have set a timeout value so it will wait for a response and checks if it's not ok
 
-
 def wait_for_ok():
    # flush the serial port
     ser.flush()
-
-    rv = ser.readline()
-    print(rv)
-    if rv == bytes('ok'):  # check for ok and report if param invalid
-
-        return ture
-    else:
-        return false
-    if rv != 'ok':
-        print("the value is not ok the value is : " + rv)
-# set frequencies based on what possible frequencies can be set to values can be
-# 50000, 125000, 62500.0, 31300.0, 15600.0, 7800.0, 3900.0,
-#  200000, 100000, 50000, 25000, 12500.0, 6300.0,
-# 3100.0, 166700.0, 83300.0, 41700.0, 20800.0, 10400.0, 5200.0, 2600.0 HZ
+    
+    #read 'ok' from the terminal, if it's there. 
+    rv = str(ser.readline())
+    
+    if ('ok' in rv):  # check for ok and report if param invalid
+        return True
+    
+    elif rv != 'ok':
+        print("ERROR: wait for ok(): " + rv)
+        return False
 
 
 def radio_set_freq(freq):
-    frequencies = [250000, 125000, 62500.0, 31300.0, 15600.0, 7800.0, 3900.0,
-                   200000, 100000, 50000, 25000, 12500.0, 6300.0, 3100.0, 166700.0,
-                   83300.0, 41700.0, 20800.0, 10400.0, 5200.0, 2600.0]
-    if freq in frequencies:
-        write_to_ground_station(str("radio set pwr "+freq + "\r\n", "utf-8"))
-        if wait_for_ok() == true:
-            print("value frequency sucessfully set")
-        else:
-            print(" frequency error:radio unable to set")
-    print("invalid frequency param")
+    
+    #frequencies = [250000, 125000, 62500.0, 31300.0, 15600.0, 7800.0, 3900.0,
+     #              200000, 100000, 50000, 25000, 12500.0, 6300.0, 3100.0, 
+      #             166700.0, 83300.0, 41700.0, 20800.0, 10400.0, 5200.0, 2600.0]
+    #if freq in frequencies:
+    
+    success = write_to_ground_station("radio set freq " + str(freq))
+    if(success):
+        print("frequency sucessfully set")
+        return True
+    else:
+        print("error: frequency not set")
+        return False
+            
 
 # set power possible values between -3 and 14 db
-
-
 def radio_set_pwr(pwr):
     if pwr in range(-3, 14):
-        write_to_ground_station(str("radio set pwr "+pwr + "\r\n", "utf-8"))
-        if wait_for_ok() == true:
+        write_to_ground_station("radio set pwr " + str(pwr))
+        if wait_for_ok() == True:
             print("value power sucessfully set")
         else:
             print("power error:radio unable to set")
@@ -131,9 +167,9 @@ def radio_set_pwr(pwr):
 
 
 def radio_set_sf(sf):
-    if sf in range["sf7", "sf8", "sf9", "sf10", "sf11", "sf12"]:
-        write_to_ground_station(str("radio set sf "+sf + "\r\n", "utf-8"))
-        if wait_for_ok() == true:
+    if sf in ["sf7", "sf8", "sf9", "sf10", "sf11", "sf12"]:
+        write_to_ground_station("radio set sf " + sf)
+        if wait_for_ok() == True:
             print("value spreading factor sucessfully set")
         else:
             print("spreading factor  error:radio unable to set")
@@ -143,8 +179,8 @@ def radio_set_sf(sf):
 
 def radio_set_cr(cr):
     if cr in ["4/5", "4/6", "4/7", "4/8"]:
-        write_to_ground_station(str("radio set cr "+cr + "\r\n", "utf-8"))
-        if wait_for_ok() == true:
+        write_to_ground_station("radio set cr " + str(cr))
+        if wait_for_ok() == True:
             print("value cr sucessfully set")
         else:
             print("cr error:radio unable to set")
@@ -155,8 +191,8 @@ def radio_set_cr(cr):
 
 def radio_set_rxbw(bw):
     if bw in [125, 250, 500]:
-        write_to_ground_station(str("radio set bw "+bw + "\r\n", "utf-8"))
-        if wait_for_ok() == true:
+        write_to_ground_station("radio set bw " + str(bw))
+        if wait_for_ok() == True:
             print("value rxbw sucessfully set")
         else:
             print("rxbw error:radio unable to set")
@@ -167,8 +203,8 @@ def radio_set_rxbw(bw):
 
 def radio_set_iqi(iqi):
     if iqi in ["on", "off"]:
-        write_to_ground_station(str("radio set iqi "+iqi + "\r\n", "utf-8"))
-        if wait_for_ok() == true:
+        write_to_ground_station("radio set iqi " + str(iqi))
+        if wait_for_ok() == True:
             print("value sucessfully set")
         else:
             print("iqi error:radio unable to set")
@@ -177,8 +213,8 @@ def radio_set_iqi(iqi):
 
 
 def radio_set_sync(sync):
-    write_to_ground_station(str("radio set sync"+sync + "\r\n", "utf-8"))
-    if wait_for_ok() == true:
+    write_to_ground_station("radio set sync" + str(sync))
+    if wait_for_ok() == True:
         print("value sync word sucessfully set")
     else:
         print("sync param error:radio unable to set ")
@@ -187,20 +223,20 @@ def radio_set_sync(sync):
 # set the preamble length between 0 and  65535
 def radio_set_prlen(pr):
     if pr in range(0, 65535):
-        write_to_ground_station(str("radio set pr"+pr + "\r\n", "utf-8"))
-        if wait_for_ok() == true:
+        write_to_ground_station("radio set pr" + str(pr))
+        if wait_for_ok() == True:
             print("value prlen sucessfully set")
         else:
             print("prlen error:radio unable to set ")
     print("invalid preamble length")
 
-# crc can only be set to true or false to enable error checking
+# crc can only be set to True or false to enable error checking
 
 
 def radio_set_crc(crc):
     if crc in ["on", "off"]:
-        write_to_ground_station(str("radio set crc"+crc + "\r\n", "utf-8"))
-        if wait_for_ok() == true:
+        write_to_ground_station("radio set crc" + str(crc))
+        if wait_for_ok() == True:
             print("value crc sucessfully set")
         else:
             print("crc error:radio unable to set")
@@ -209,7 +245,8 @@ def radio_set_crc(crc):
 
 def radio_set_rxmode():
     # set the timeout to 65535 the maximum amount
-    write_to_ground_station(str("radio rx 65535", "utf-8"))
+    write_to_ground_station("radio rx 0")
+    
 def test_radio():
     #send a valid command which get's frequency
 
