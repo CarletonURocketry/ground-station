@@ -265,6 +265,7 @@ def test_radio():
 def radio_set_txmode(data):
     write_to_ground_station(str("radio tx "+data+"\r\n", utf8))   
  
+ #comment out beyond this point to debug the serial commnications 
 class signal_report:
     signal_noise_ratio=0
     recieved_signal_strength=0
