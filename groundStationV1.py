@@ -158,8 +158,8 @@ def radio_set_freq(freq):
 # set power possible values between -3 and 14 db
 def radio_set_pwr(pwr):
     if pwr in range(-3, 14):
-        write_to_ground_station("radio set pwr " + str(pwr))
-        if wait_for_ok() == True:
+        sucess=  write_to_ground_station("radio set pwr " + str(pwr))
+        if sucess:
             print("value power sucessfully set")
         else:
             print("power error:radio unable to set")
@@ -169,8 +169,8 @@ def radio_set_pwr(pwr):
 
 def radio_set_sf(sf):
     if sf in ["sf7", "sf8", "sf9", "sf10", "sf11", "sf12"]:
-        write_to_ground_station("radio set sf " + sf)
-        if wait_for_ok() == True:
+        sucess= write_to_ground_station("radio set sf " + sf)
+        if sucess:
             print("value spreading factor sucessfully set")
         else:
             print("spreading factor  error:radio unable to set")
@@ -180,8 +180,8 @@ def radio_set_sf(sf):
 
 def radio_set_cr(cr):
     if cr in ["4/5", "4/6", "4/7", "4/8"]:
-        write_to_ground_station("radio set cr " + str(cr))
-        if wait_for_ok() == True:
+        sucess=xwrite_to_ground_station("radio set cr " + str(cr))
+        if sucess:
             print("value cr sucessfully set")
         else:
             print("cr error:radio unable to set")
@@ -192,8 +192,8 @@ def radio_set_cr(cr):
 
 def radio_set_rxbw(bw):
     if bw in [125, 250, 500]:
-        write_to_ground_station("radio set bw " + str(bw))
-        if wait_for_ok() == True:
+        sucess= write_to_ground_station("radio set bw " + str(bw))
+        if sucess:
             print("value rxbw sucessfully set")
         else:
             print("rxbw error:radio unable to set")
@@ -204,8 +204,8 @@ def radio_set_rxbw(bw):
 
 def radio_set_iqi(iqi):
     if iqi in ["on", "off"]:
-        write_to_ground_station("radio set iqi " + str(iqi))
-        if wait_for_ok() == True:
+        sucess= write_to_ground_station("radio set iqi " + str(iqi))
+        if sucess:
             print("value sucessfully set")
         else:
             print("iqi error:radio unable to set")
@@ -214,8 +214,8 @@ def radio_set_iqi(iqi):
 
 
 def radio_set_sync(sync):
-    write_to_ground_station("radio set sync" + str(sync))
-    if wait_for_ok() == True:
+    sucess= write_to_ground_station("radio set sync" + str(sync))
+    if sucess:
         print("value sync word sucessfully set")
     else:
         print("sync param error:radio unable to set ")
@@ -224,8 +224,8 @@ def radio_set_sync(sync):
 # set the preamble length between 0 and  65535
 def radio_set_prlen(pr):
     if pr in range(0, 65535):
-        write_to_ground_station("radio set pr" + str(pr))
-        if wait_for_ok() == True:
+        sucess=write_to_ground_station("radio set pr" + str(pr))
+        if sucess:
             print("value prlen sucessfully set")
         else:
             print("prlen error:radio unable to set ")
@@ -236,8 +236,8 @@ def radio_set_prlen(pr):
 
 def radio_set_crc(crc):
     if crc in ["on", "off"]:
-        write_to_ground_station("radio set crc" + str(crc))
-        if wait_for_ok() == True:
+        sucess= write_to_ground_station("radio set crc" + str(crc))
+        if sucess:
             print("value crc sucessfully set")
         else:
             print("crc error:radio unable to set")
@@ -246,9 +246,15 @@ def radio_set_crc(crc):
 
 def radio_set_rxmode():
     # set the timeout to 65535 the maximum amount
+    # we will set this value to be the transmission 
+    #The mac pause command must be called before any radio transmission
+    #or reception, even if no MAC operations have been initiated before.
 
-    write_to_ground_station("radio rx 0")
-    
+    write_to_ground_station(str("mac pause", "utf-8"))
+
+    # set rx amount to the amount of bytes we need 
+    #suggestion is to keep it to 0 since we know the packet lenght and anoumt of blocks is varible 
+    write_to_ground_station(str("radio rx 0", "utf-8"))
 def test_radio():
     #send a valid command which get's frequency
 
@@ -258,3 +264,67 @@ def test_radio():
         print(rv)
 def radio_set_txmode(data):
     write_to_ground_station(str("radio tx "+data+"\r\n", utf8))   
+ 
+class signal_report:
+    signal_noise_ratio=0
+    recieved_signal_strength=0
+    TX_power=0
+    def set_signal_ratio(bits):
+        snr_bits=bits[0:7]
+        value=bytearray(snr_bits)
+        signal_noise_ratio=value.int 
+    def set_rssi(bits):
+        rssi_bits=bits[8:15]
+        value=bytearray(rssi_bits)
+        recieved_signal_strength=value.int
+        
+    def set_tx_power(data):
+        rssi_bits=bits[8:15]
+        value=bytearray(rssi_bits)
+        value=value.int
+#order is wrong correct when pushing TODO 
+class altitude:
+      time =0
+      pressure=0
+      temp=0
+      altitude=0
+      def set_time(bits):
+          time_bits=bits[0:31]
+          time_bits=BitArray(bits)
+          time=a.int
+      def set_pressure(bits):
+          pressure_bits = bits[32:63]
+          presure_bits = BitArray(bits)
+          pressure=pressure_bits.int
+      def set_temp(bits):
+          temp_bits = bits[64:94]
+          temp_bits = BitArray(bits)
+          temp=temp.int
+      def set_altitude(bits): 
+           altitude_bits = bits[32:62]
+           altitude_bits = BitArray(bits)
+           altitude=altitude_bits.int
+
+class acceleration: 
+    time=0
+    fsr=0 
+    x_axis=0
+    y_axis=0
+    z_axis=0
+    def set_time(bits):
+        time_bits = bits[32:62]
+        time_bits = BitArray(time_bits)
+        time=time.uint # parse as unsigned? 
+    def set_fsr(bits):
+        fsr_bits=bits[32:39]
+        fsr_bits=BitArray(fsr_bits)
+        fsr=fsr_bits.int# unsigned? 
+    def set_x_axis(bits):
+        xa_bits = bits[]
+
+    
+
+
+
+        
+
