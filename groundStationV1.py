@@ -52,7 +52,7 @@ def init_ground_station():
     radio_set_freq(433050000)
     
     # set the power to -14 db
-    radio_set_pwr(14)
+    radio_set_pwr(-3)
     
     # set the spreading factor
     radio_set_sf("sf9")
@@ -134,7 +134,7 @@ def wait_for_ok():
         return True
     
     elif rv != 'ok':
-        print("ERROR: wait for ok(): " + rv)
+        print("ERROR: wait_for_ok(): " + rv)
         return False
 
 
@@ -160,11 +160,11 @@ def radio_set_pwr(pwr):
     if pwr in range(-3, 14):
         sucess=  write_to_ground_station("radio set pwr " + str(pwr))
         if sucess:
-            print("value power sucessfully set")
+            print("radio_set_pwr(): value power sucessfully set")
         else:
-            print("power error:radio unable to set")
-    print("invalid power  param ")
-# set spreading factor can only be set to  sf7", "sf8", "sf9", "sf10", "sf11", "sf12"]
+            print("radio_set_pwr(): power error:radio unable to set")
+            print("radio_set_pwr(): invalid power param ")
+
 
 
 def radio_set_sf(sf):
@@ -174,18 +174,18 @@ def radio_set_sf(sf):
             print("value spreading factor sucessfully set")
         else:
             print("spreading factor  error:radio unable to set")
-    print("invalid spreading factor error")
+            print("invalid spreading factor error")
 # set coding rate which can only be "4/5", "4/6", "4/7", "4/8"
 
 
 def radio_set_cr(cr):
     if cr in ["4/5", "4/6", "4/7", "4/8"]:
-        sucess=xwrite_to_ground_station("radio set cr " + str(cr))
+        sucess= write_to_ground_station("radio set cr " + str(cr))
         if sucess:
             print("value cr sucessfully set")
         else:
             print("cr error:radio unable to set")
-    print("invalid cycling rate ")
+            print("invalid cycling rate ")
 
 # set the bandwidth which can only  be 125 250 or 500 hz
 
@@ -197,7 +197,7 @@ def radio_set_rxbw(bw):
             print("value rxbw sucessfully set")
         else:
             print("rxbw error:radio unable to set")
-    print("invalid recieving bandwidth  ")
+            print("invalid recieving bandwidth  ")
 
 # set IQI to be on or off
 
@@ -209,12 +209,12 @@ def radio_set_iqi(iqi):
             print("value sucessfully set")
         else:
             print("iqi error:radio unable to set")
-    print("invalid iqi setting ")
+            print("invalid iqi setting ")
 # set sync word it's a 2 bytes no error checking is done because it's confusing to change between types
 
 
 def radio_set_sync(sync):
-    sucess= write_to_ground_station("radio set sync" + str(sync))
+    sucess= write_to_ground_station("radio set sync " + str(sync))
     if sucess:
         print("value sync word sucessfully set")
     else:
@@ -224,24 +224,24 @@ def radio_set_sync(sync):
 # set the preamble length between 0 and  65535
 def radio_set_prlen(pr):
     if pr in range(0, 65535):
-        sucess=write_to_ground_station("radio set pr" + str(pr))
+        sucess=write_to_ground_station("radio set prlen " + str(pr))
         if sucess:
             print("value prlen sucessfully set")
         else:
             print("prlen error:radio unable to set ")
-    print("invalid preamble length")
+            print("invalid preamble length")
 
 # crc can only be set to True or false to enable error checking
 
 
 def radio_set_crc(crc):
     if crc in ["on", "off"]:
-        sucess= write_to_ground_station("radio set crc" + str(crc))
+        sucess= write_to_ground_station("radio set crc " + str(crc))
         if sucess:
             print("value crc sucessfully set")
         else:
             print("crc error:radio unable to set")
-    print("invalid crc param ")
+            print("invalid crc param ")
 
 
 def radio_set_rxmode():
@@ -265,11 +265,14 @@ def test_radio():
 def radio_set_txmode(data):
     write_to_ground_station(str("radio tx "+data+"\r\n", utf8))   
  
+ 
+
  #comment out beyond this point to debug the serial commnications 
 class signal_report:
     signal_noise_ratio=0
     recieved_signal_strength=0
     TX_power=0
+    
     def set_signal_ratio(bits):
         snr_bits=bits[0:7]
         value=bytearray(snr_bits)
@@ -283,35 +286,42 @@ class signal_report:
         rssi_bits=bits[8:15]
         value=bytearray(rssi_bits)
         value=value.int
+        
+        
 #order is wrong correct when pushing TODO 
 class altitude:
-      time =0
-      pressure=0
-      temp=0
-      altitude=0
+      time = 0
+      pressure = 0
+      temp = 0
+      altitude = 0
+      
       def set_time(bits):
           time_bits=bits[0:31]
           time_bits=BitArray(bits)
           time=a.int
+          
       def set_pressure(bits):
           pressure_bits = bits[32:63]
           presure_bits = BitArray(bits)
           pressure=pressure_bits.int
+          
       def set_temp(bits):
           temp_bits = bits[64:94]
           temp_bits = BitArray(bits)
           temp=temp.int
+          
       def set_altitude(bits): 
            altitude_bits = bits[32:62]
            altitude_bits = BitArray(bits)
            altitude=altitude_bits.int
 
 class acceleration: 
-    time=0
-    fsr=0 
-    x_axis=0
-    y_axis=0
-    z_axis=0
+    time = 0
+    fsr = 0 
+    x_axis = 0
+    y_axis = 0
+    z_axis = 0
+    
     def set_time(bits):
         time_bits = bits[32:62]
         time_bits = BitArray(time_bits)
@@ -324,8 +334,6 @@ class acceleration:
         xa_bits = bits[]
 
     
-
-
 
         
 
