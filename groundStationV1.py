@@ -565,6 +565,13 @@ class accel:
 class IMU_data:
     def __init__(self,bits):
         set_time(self,bits)
+        set_agsrdiv(self,bits)
+        set_ms(self,bits)
+        set_afsr(self,bits)
+        set_gfsr(self,bits)
+        set_abw(self,bits)
+        set_gbw(self,bits)
+        set_abw(self,bits)
     
     def set_time(bits):
         time_bits=bits[0:31]
@@ -636,10 +643,51 @@ class IMU_data:
         if gbw_bits==6:
             self.gbw=250
 class imu_entry:
-    def set_time(bits):
+    def __init__(self,bits):
+        set_time(self,bits)
+        set_acell_data(self, bits)
+        set_res(self,bits)
+        set_overflow(self,bits)
+    def set_time(self, bits):
         time_bits=bits[0:31]
         time_bits=BitArray(time_bits)
         self.time=time_bits.int
+    def set_acell_data(self, bits):
+        offset=32
+        acell_data = []
+        mag_data = []
+        gyro_data = []
+        for i in range (0,3):
+            acell_bits=bits[offset:offset+16]
+            acell_bits=BitArray(acell_bits)
+            acell=acell_bits.int
+            acell_data.append(acell)
+            range+16
+        self.acell_arr=acell_data  
+        for i in range (0,3):
+            gyro_bits=bits[offset:offset+16]
+            gyro_bits=BitArray(gyro_bits)
+            gyro_data.append(gyro)
+            range+16
+
+        self.gyro_arr=gyro_data
+        for i in range (0,3):
+            mag_bits=bits[offset:offset+16]
+            mag_bits=BitArray(mag_bits)
+            mag_data.append(mag)
+            range+16
+
+        self.mag_arr=mag_data   
+    def set_res(self,bits):
+        if bits[163]==0:
+            self.res=16
+        else: 
+            self.res=14    
+    def set_overflow(self,bits):
+        if bits[164]==1:
+            self.overflow="yes"    
+        else:
+            self.overflow="no"
     
    
 
