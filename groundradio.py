@@ -6,7 +6,7 @@
 import serial
 
 
-class serial:
+class groundradiol:
     ser = serial.Serial( port = "COM4",
                             timeout=1,
                             baudrate=57600,
