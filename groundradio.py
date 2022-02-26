@@ -65,7 +65,7 @@ class groundradiol:
         radio_set_cr("4/7")
         
         # set bandwdith
-        radio_set_rxbw(500)
+        radio_set_bw(500)
         
         # set prlen preamble length
         radio_set_prlen(6)
@@ -103,7 +103,7 @@ class groundradiol:
         data = data + "\r\n"
         
         # encode command_string as bytes and then transmit over serial port
-        ser.write(data.encode('utf-8'))  
+        ser.write(data.encode('utf-8').hex)  # ser.write
         
         #if ground station produces error in response to command then it will
         #halt the program
@@ -194,13 +194,13 @@ class groundradiol:
     # set the bandwidth which can only  be 125 250 or 500 hz
 
 
-    def radio_set_rxbw(bw):
+    def radio_set_bw(bw):
         if bw in [125, 250, 500]:
             sucess= write_to_ground_station("radio set bw " + str(bw))
             if sucess:
-                print("value rxbw sucessfully set")
+                print("value bw sucessfully set")
             else:
-                print("rxbw error:radio unable to set")
+                print("bw error:radio unable to set")
         print("invalid recieving bandwidth  ")
 
     # set IQI to be on or off
@@ -258,13 +258,13 @@ class groundradiol:
 
         # set rx amount to the amount of bytes we need
         #suggestion is to keep it to 0 since we know the packet lenght and anoumt of blocks is varible
-        write_to_ground_station(str("radio rx 0", "utf-8"))
+        write_to_ground_station("radio rx 0")
     def test_radio():
-        #send a valid command which get's frequency
+        #send a valid command which get's the frequency
 
         while(1):
-            write_to_ground_station(str("radio get freq "+ "\r\n", "utf-8"))
+            write_to_ground_station("radio get freq ")
             rv = ser.readline()
             print(rv)
     def radio_set_txmode(data):
-        write_to_ground_station(str("radio tx "+data+"\r\n", utf8)) 
+        write_to_ground_station("radio tx "+data) 
