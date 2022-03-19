@@ -13,7 +13,9 @@ import io
 import folium
 import packet 
 import datetime
-#import groundradio
+import GroundStation
+
+
 # 2. Create an instance of QApplication
 def init_UI():
     #make the UI window
@@ -46,12 +48,14 @@ def init_UI():
     cfgRadioButton.setText("configure radio")
     cfgRadioButton.clicked.connect(cfgRadioButton_clicked)
     cfgRadioButton.move(1200,100)
+    
     # configure the specific parameters which have a set amount of values 
     button2 = QPushButton(window)
     button2.setText("configure specific parameters ")
     sub_window = SubWindow()
     button2.clicked.connect(sub_window.show)
     button2.move(1200,200)
+    
     #configure preamble 
     configbtn = QPushButton(window)
     configbtn.setText("configure preamble")
@@ -87,8 +91,6 @@ def init_UI():
     webView.resize(1000,1000)
     webView.show()
     
-
-
     #set the update rate of our telemetry system 
     timer = QTimer()
     timer.timeout.connect(update_label)
