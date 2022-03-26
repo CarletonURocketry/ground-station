@@ -6,7 +6,7 @@
 import serial
 
 
-ser = serial.Serial( port = "/dev/ttyUSB0",
+ser = serial.Serial( port = "COM4",
                         timeout=1,
                         baudrate=57600,
                         # number of bits per message
@@ -107,22 +107,10 @@ def write_to_ground_station(command_string):
     #halt the program
     flag =wait_for_ok()
     
-
-    data = str(command_string)
-    
-    #must include carriage return for valid commands (see DS40001784B pg XX)
-    data = data + "\r\n"
-    
-    # encode command_string as bytes and then transmit over serial port
-    ser.write(bytes(data,"utf-8"))  # ser.write
-    
     #if ground station produces error in response to command then it will
     #halt the program
     return flag
     
-
-
-
 def read_from_ground_station(register: int):
     """reads data from the ground station via UART and puts it into the
     correct data format to be passed onto the UI (check the logging format)
@@ -147,6 +135,7 @@ def wait_for_ok():
     #printtoUI(rv)
     
     if ('ok' in rv):  # check for ok and report if param invalid
+        print('success', rv)
         return True
     
     elif rv != 'ok':
@@ -281,7 +270,16 @@ def test_radio():
         write_to_ground_station("radio set wdt 5")
 
         #write_to_ground_station("radio tx 48656c6C6F")
+        
 def radio_set_txmode(data):
-    write_to_ground_station("radio tx 48656c6C6F"+data) 
-
-radio_set_rxmode()
+    
+    #must pause mac, even if not used
+    write_to_ground_station('mac pause')
+    
+    #must stop radio from reciving 
+    write_to_ground_station('radio rxstop')
+    
+    #send the data
+    write_to_ground_station("radio tx 48656c6C6F"+data)
+    
+    return ser.readline()
