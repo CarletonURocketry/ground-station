@@ -1,0 +1,4 @@
+words are too small for names
+the button should be smd 
+pin 5 (vio) needs to be tied to a high voltage, and given its own capacitor
+remove resistor
