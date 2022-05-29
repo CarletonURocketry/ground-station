@@ -1,46 +1,90 @@
 from random import randrange
-class altitude:
-     
-      def __init__(self, bits):
-          set_time(self,bits)
-          set_pressure(self,bits)
-          set_temp(self,bits)
-          set_altitude(self,bits)
-      def set_time(self,bits):
-          time_bits=bits[0:32]
-          time_bits=BitArray(bits)
-          self.time=time.int
-      def set_pressure(self,bits):
-          pressure_bits = bits[32:64]
-          presure_bits = BitArray(bits)
-          self.pressure=pressure_bits.int
-      def set_temp(self,bits):
-          temp_bits = bits[65:97]
-          temp_bits = BitArray(bits)
-          self.temp=temp.int
-      def set_altitude(self, bits):
-           altitude_bits = bits[98:130]
-           altitude_bits = BitArray(bits)
-           altitude=altitude_bits.int
 
-class acceleration:
+
+def hex_str_to_int(hex_string):
+
+    if '0x' not in hex_string:
+        hex_string = '0x' + hex_string
+
+    an_int = int(hex_string, 16)
+    return an_int
+
+
+class AltitudeData:
+
+    def __init__(self, raw):
+
+        self.time = None
+        self.pressure = None
+        self.temperature = None
+        self.altitude = None
+
+        self.set_time(raw)
+        self.set_pressure(raw)
+        self.set_temp(raw)
+        self.set_altitude(raw)
+
+    def set_time(self, raw):
+        """
+        :param raw: the raw message, a string, that is recieved from the rocket's stack
+        :return:
+        """
+
+        # time in milliseconds
+        self.time = hex_str_to_int(raw[0:8])
+
+    def set_pressure(self, raw):
+
+        # pressure in kilo pascals
+        pressure = hex_str_to_int(raw[8:16]) /1000
+
+        self.pressure = pressure
+
+    def set_temp(self, raw):
+
+        # temperature in recieved in millidegree celcius
+        temperature = hex_str_to_int(raw[16:24]) / 1000
+
+        self.temperature = temperature
+
+    def set_altitude(self, raw):
+
+        # altitude in mm
+        altitude_mm = hex_str_to_int(raw[24:32])
+
+        altitude_m = altitude_mm / 1000
+        self.altitude = altitude_m
+
+
+class AccelerationData:
  
-    def __init__(self, bits):
-        
-        set_time(self,bits)
-        set_fsr(self,bits)
-        set_x_axis(self,bits)
-        set_y_axis(self,bits)
-        set_z_axis(self,bits)
+    def __init__(self, raw, resolution):
 
-    def set_time(self, bits):
-        time_bits = bits[0:31]
-        time_bits = BitArray(time_bits)
-        self.time=time.uint # parse as unsigned?
-    def set_fsr(self,bits):
-        fsr_bits=bits[32:40]
-        fsr_bits=BitArray(fsr_bits)
-        self.fsr=fsr_bits.int# unsigned?
+        self.time_stamp = None
+        self.fsr = None
+        self.x_axis = None
+        self.y_axis = None
+        self.z_axis = None
+
+        self.set_time(raw)
+        self.set_x_axis(raw)
+        self.set_y_axis(raw)
+        self.set_z_axis(raw)
+
+    def set_time(self, raw):
+        """
+        :param raw: the raw message, a string, that is recieved from the rocket's stack
+        :return:
+        """
+
+        # time in milliseconds
+        self.time_stamp = hex_str_to_int(raw[0:8])
+
+
+    def set_fsr(self, raw, resolution ):
+
+
+
     def set_x_axis(self, bits):
         xa_bits = bits[47:64]
         xa_bits= BitArray(xa_bits)
@@ -404,8 +448,12 @@ def test_sending_data():
 
    
 
-
-
+data = '12341234123412341234123412341234'
+a = AltitudeData(data)
+print('temperature is', a.temperature)
+print("altitude ", a.altitude)
+print('time ', a.time)
+print('pressure ', a.pressure)
 
     
 

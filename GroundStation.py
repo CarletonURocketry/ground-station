@@ -5,33 +5,28 @@
 
 
 import serial
+import queue
 
 class GroundStation:
     
     def __init__(self, com_port='COM4'):
         
-        #USB serial connection 
-        self.ser = serial.Serial(port = com_port,
-                                  timeout=1,
-                                  baudrate=57600,
-                                  # number of bits per message
-                                  bytesize=serial.EIGHTBITS,
-                                  # set parity check: no parity
-                                  parity=serial.PARITY_NONE,
-                                  # number of stop bits
-                                  stopbits = 1,
-                                  # disable hardware (RTS/CTS) flow control
-                                  rtscts=False)           
-    
+        # initiate the USB serial connection
+        self.ser = serial.Serial(port=com_port,
+                                 timeout=1,
+                                 baudrate=57600,
+                                 # number of bits per message
+                                 bytesize=serial.EIGHTBITS,
+                                 # set parity check: no parity
+                                 parity=serial.PARITY_NONE,
+                                 # number of stop bits
+                                 stopbits=1,
+                                 # disable hardware (RTS/CTS) flow control
+                                 rtscts=False)
 
-    def init_serial(port):
+    def init_gpio(self):
+        """set all GPIO pins to input mode, thereby putting them in a state of high impedence"""
         
-            
-        return 0
-        
-
-
-    def init_GPIO(self):
         self.write_to_ground_station("sys set pinmode GPIO0 digin")
         self.write_to_ground_station("sys set pinmode GPIO1 digin")
         self.write_to_ground_station("sys set pinmode GPIO2 digin")
@@ -50,41 +45,66 @@ class GroundStation:
         self.write_to_ground_station("sys set pinmode GPIO13 digin")    
 
     def init_ground_station(self):
-
+        """initialize the ground station with default parameters for the following parameters:
+           radio frequency: the frequency of the signal the radio uses to communicate with
+           power: the power of the signal (output)
+           spreading factor:
+           bandwidth:
+           length of preamble 
+           should cyclic redundancy check (CRC) be enabled?
+           should image quality indicators (IQI) be enabled?
+           setting the sync word
+           
+        """
+        # restart the radio module
+        self.write_to_ground_station('sys reset')
+        
         # initlize all the pins to be inputs
-        self.init_GPIO()
-
-        #set the frequency of the radio
-        self.radio_set_freq(433050000)
+        self.init_gpio()
         
-        # set the power to -14 db
-        self.radio_set_pwr(14)
+        # set modulation type to lora
+        self.set_mod('lora')
+    
+        #set the frequency of the radio (433 MHz)
+        self.set_freq(433000000)
         
-        # set the spreading factor
-        self.radio_set_sf("sf9")
+        # set the transmission power to 15 db (max POWARRRR)
+        self.set_pwr(15)
         
-        # set the coding rate
+        # set the transmission spreading factor. The higher the spreading factor,
+        # the slower the transmissions (symbols are spread out more) and the better
+        # the reception and error prone the system is.
+        self.set_sf(11)
+        
+        # set the coding rate (ratio of actual data to error-correcting data that
+        # is transmitted. The lower the coding rate the lower the data rate.
         self.radio_set_cr("4/7")
         
-        # set bandwdith
+        # set reception bandwidth. This should match the transmission bandwidth of the 
+        # node that this ground station is trying to recieve.
         self.radio_set_rxbw(500)
         
-        # set prlen preamble length
-        self.radio_set_prlen(6)
+        # set the length of the preamble. Preamble means introduction. It's a 
+        # transmission that is used to synchronize the reciever.
+        self.radio_set_prlen(8)
         
-        # set crc
-        self.radio_set_crc("on")
+        # set cyclic redundancy check on/off. This is used to detect errors
+        # in the recieved signal
+        self.radio_set_crc("off")
         
-        # set iqi
-        self.radio_set_iqi("on")
+        # set the invert IQ function
+        #self.radio_set_iqi("on")
         
         # set sync word to be 0x43
-        self.radio_set_sync("43")
+        #self.radio_set_sync("43")
         
-        print("sucessfully configured lora radio")
 
 
+    def read_ser(self):
+        rv = str(self.ser.readline())
         
+        return rv
+    
     def write_to_ground_station(self, command_string):
         """writes data to the ground station via UART
         author: Tarik
@@ -101,13 +121,17 @@ class GroundStation:
 
         data = str(command_string)
         
+        # flush the serial port
+        self.ser.flush()        
+        
         #must include carriage return for valid commands (see DS40001784B pg XX)
         data = data + "\r\n"
         
         # encode command_string as bytes and then transmit over serial port
         self.ser.write(data.encode('utf-8'))  
         
-        
+        # wait for response on the serial line. Return if 'ok' recieved 
+        return self.wait_for_ok()
     
 
     def process_response(self, response:str) -> str:
@@ -146,7 +170,7 @@ class GroundStation:
         else:
             return -1
     
-    def read_bitrate():
+    def read_bitrate(self):
         bitrate = int(strip_output(read_from_ground_station("bitrate")))
         UPPER_1 = 65535
         LOWER_1 = 0
@@ -155,7 +179,7 @@ class GroundStation:
         else:
             return -1
     
-    def read_bw():
+    def read_bw(self):
         bw = int(strip_output(read_from_ground_station("bw")))
         possibilities = [125,250,500] #the three possible values
         if (bw in possibilities):
@@ -165,13 +189,14 @@ class GroundStation:
     
     def read_cr(self):
         cr = self.read_from_ground_station("cr")
-        possibilities = ['4/5','4/6','4/7','4/8'] #the four possible strings
+        
+        possibilities = ['4/5','4/6','4/7','4/8'] #the four possible strings 
         if (cr in possibilities):
             return cr
         else:
             return -1
     
-    def read_bt():
+    def read_bt(elf):
         bt = strip_output(read_from_ground_station("bt"))
         possibilities = ['none','1.0','0.5','0.3'] #the four possible strings
         if (bt in possibilities):
@@ -182,51 +207,50 @@ class GroundStation:
     def read_crc(self):
         return read_from_ground_station("crc")
     
-    def read_fdev():
+    def read_fdev(elf):
         return read_from_ground_station("fdev")
     
-    def read_afcbw():
+    def read_afcbw(self):
         return read_from_ground_station("afcbw")
     
-    def read_iqi():
+    def read_iqi(self):
         return read_from_ground_station("iqi")
     
-    def read_mod():
-        return read_from_ground_station("mod")
+    def read_mod(self):
+        return self.read_from_ground_station("mod")
     
-    def read_prlen():
+    def read_prlen(self):
         return read_from_ground_station("prlen")
     
-    def read_pwr():
+    def read_pwr(self):
         return read_from_ground_station("pwr")
     
-    def read_rssi():
+    def read_rssi(self):
         return read_from_ground_station("rssi")
     
-    def read_rxbw():
+    def read_rxbw(self):
         return read_from_ground_station("rxbw")
     
-    def read_sf():
+    def read_sf(self):
         return read_from_ground_station("sf")
     
-    def read_snr():
+    def read_snr(self):
         return read_from_ground_station("snr")
     
-    def read_sync():
+    def read_sync(self):
         return read_from_ground_station("sync")
     
-    def read_wdt():
+    def read_wdt(self):
         return read_from_ground_station("wdt")
     
     #sys commands
-    
-    def read_ver():
+    def read_ver(self):
         return read_from_ground_station("ver")
     
-    def read_vdd():
+    def read_vdd(self):
         return read_from_ground_station("vdd")
     
-    def read_hweui(): #remove?
+    def read_hweui(self): #remove?
         return read_from_ground_station("hweui")
     
     def read_nvm(address: str):
@@ -235,13 +259,13 @@ class GroundStation:
         """
         return read_from_ground_station("nvm " + address)
     
-    def read_pindig(pinName: str): #remove
+    def read_pindig(self, pinName: str): #remove
         """
         Accepts GPIO0 - 13, UART_CTS, UART_RTS, TEST0-1.
         """
         return read_from_ground_station("pindig " + pinName)
     
-    def read_pinana(pinName: str): #remove
+    def read_pinana(self, pinName: str): #remove
         """
         Accepts GPIO0 - 3, and GPIO5 - 13
         Enter only the pin #, as GPIO is already accounted for
@@ -276,19 +300,15 @@ class GroundStation:
         return self.process_response(self.ser.readline())
 
         
-           
-
-
     def load_map(self):
         """load in a map that can be used offline
             author: """
 
-    # wait for serial response we have set a timeout value so it will wait for a response and checks if it's not ok
+    
     def wait_for_ok(self):
-        
-        
-        # flush the serial port
-        self.ser.flush()
+        """ 
+        wait for serial response.
+        """
         
         #read 'ok' from the terminal, if it's there.
         rv = str(self.ser.readline())
@@ -297,18 +317,19 @@ class GroundStation:
             return True
         
         elif rv != 'ok':
-            print("ERROR: wait for ok(): " + rv)
-            print(len(rv))
+            # returned after mac pause command
+            if '4294967245' in rv:
+                return True
+            
+            print('wait for ok: ' + rv)
+            
             return False
-
 
 
     def radio_set_freq(self, freq):
         """set the frequency of transmitted signals"""
         
-        self.write_to_ground_station("radio set freq " + str(freq))
-        
-        success = self.wait_for_ok()
+        success = self.write_to_ground_station("radio set freq " + str(freq))
         
         if(success):
             print("frequency sucessfully set")
@@ -317,7 +338,19 @@ class GroundStation:
             print("error: frequency not set")
             return False
                 
-
+    
+    def set_mod(self, mod):
+        
+        if mod in ['lora', 'fsk']:
+            success = self.write_to_ground_station('radio set mod ' + mod)
+            
+            if success:
+                print('successfully set modulation')
+            else:
+                print('error setting modulation')
+        else:
+            print('error setting modulation: either use fsk or lora')
+            
     
     def radio_set_pwr(self, pwr):
         """ set power possible values between -3 and 14 db"""
@@ -338,25 +371,28 @@ class GroundStation:
         return
     
 
-    # spreading factor can only be set to  sf7", "sf8", "sf9", "sf10", "sf11", "sf12"]
-    def radio_set_sf(self, sf):
+    def set_sf(self, sf):
+        """set the spreading factor for the ground station. Spreading factor
+           can only be set to 7, 8, 9, 10, 11, or 12.
         
-        if sf in ["sf7", "sf8", "sf9", "sf10", "sf11", "sf12"]:
-            sucess= self.write_to_ground_station("radio set sf " + sf)
+        """
+        
+        if sf in [7, 8, 9, 10, 11, 12]:
+            sucess = self.write_to_ground_station("radio set sf sf" + sf)
             if sucess:
                 print("value spreading factor sucessfully set")
                 return
             else:
-                print("spreading factor  error:radio unable to set")
+                print("ERROR: unable to set spreading factor")
                 return
                 
-        print("invalid spreading factor error")
+        print("ERROR: invalid spreading factor")
         return
-    
-    # set coding rate which can only be "4/5", "4/6", "4/7", "4/8"
 
 
-    def radio_set_cr(self, cr):
+    def set_cr(self, cr):
+        """set coding rate which can only be "4/5", "4/6", "4/7", "4/8"""
+        
         if cr in ["4/5", "4/6", "4/7", "4/8"]:
             sucess=self.write_to_ground_station("radio set cr " + str(cr))
             if sucess:
@@ -368,10 +404,9 @@ class GroundStation:
         print("invalid cycling rate ")
         return
 
-    # set the bandwidth which can only  be 125 250 or 500 hz
-
-
     def radio_set_rxbw(self, bw):
+        """set the bandwidth which can only  be 125, 250 or 500 hz"""
+        
         if bw in [125, 250, 500]:
             sucess= self.write_to_ground_station("radio set bw " + str(bw))
             if sucess:
@@ -383,9 +418,6 @@ class GroundStation:
             
         print("invalid recieving bandwidth  ")
         return
-    
-
-    # set IQI to be on or off
 
 
     def radio_set_iqi(self, iqi):
@@ -393,85 +425,246 @@ class GroundStation:
             sucess= self.write_to_ground_station("radio set iqi " + str(iqi))
             if sucess:
                 print("value sucessfully set")
+                return
             else:
                 print("iqi error:radio unable to set")
+                return
+            
         print("invalid iqi setting ")
-    # set sync word it's a 2 bytes no error checking is done because it's confusing to change between types
-
+        
 
     def radio_set_sync(self, sync):
-        sucess= self.write_to_ground_station("radio set sync" + str(sync))
+        
+        #TODO: convert sync into hexademical
+        #TODO: make sure sync is between 0- 255 for lora modulation
+        #TODO: make sure sync is between 0 - 2^8 - 1 for fsk modulation
+        
+        sucess= self.write_to_ground_station("radio set sync " + str(sync))
         if sucess:
             print("value sync word sucessfully set")
+            return
         else:
             print("sync param error:radio unable to set ")
+            return
 
 
-    # set the preamble length between 0 and  65535
     def radio_set_prlen(self, pr):
+        """set the preamble length between 0 and  65535"""
+        
         if pr in range(0, 65535):
-            sucess=self.write_to_ground_station("radio set pr" + str(pr))
+            sucess=self.write_to_ground_station("radio set prlen " + str(pr))
             if sucess:
-                print("value prlen sucessfully set")
+                print("preamble length sucessfully set")
+                return
             else:
-                print("prlen error:radio unable to set ")
-        print("invalid preamble length")
-
-    # crc can only be set to True or false to enable error checking
+                print("error: unable to set preamble length ")
+                return 
+            
+        print("error: invalid preamble length")
 
 
     def radio_set_crc(self, crc):
+        """enable or disable the cyclic redundancy check"""
+        
         if crc in ["on", "off"]:
-            sucess= self.write_to_ground_station("radio set crc" + str(crc))
+            sucess= self.write_to_ground_station("radio set crc " + str(crc))
             if sucess:
                 print("value crc sucessfully set")
+                return
             else:
                 print("crc error:radio unable to set")
+                return
+            
         print("invalid crc param ")
 
-
-    def radio_set_rxmode(self):
-        # set the timeout to 65535 the maximum amount
-        # we will set this value to be the transmission
-        #The mac pause command must be called before any radio transmission
-        #or reception, even if no MAC operations have been initiated before.
-
-        self.write_to_ground_station(str("mac pause", "utf-8"))
-
-        # set rx amount to the amount of bytes we need
-        #suggestion is to keep it to 0 since we know the packet lenght and anoumt of blocks is varible
-        self.write_to_ground_station(str("radio rx 0", "utf-8"))
+    
+    def _parse_packet_header(self, header):
+        pass
+    
+    
+    def _parse_block_header(self, header):
         
-    def test_radio(self):
-        #send a valid command which get's frequency
-
-        while(1):
-            self.write_to_ground_station(str("radio get freq "+ "\r\n", "utf-8"))
-            rv = ser.readline()
-            print(rv)
-    def radio_set_txmode(self, data):
-        self.write_to_ground_station(str("radio tx "+data+"\r\n", utf8)) 
+        # convert into binary 
+        header = binary(header)
         
+        # length of block in bytes (including header)
+        block_len = header[0:5]
+        
+        # the number of chars needed to represent the block_len value
+        # ex. 0b'10 == 0xA --> num chars needed to represent this == 1 
+        block_len_hex = (block_len // 16) + 1 
+        
+        # does the message have a cryptographic signiture?
+        sig = header[5]
+        if sig == 1: 
+            sig = True
+        else:
+            sig = False
+        
+        subtype = header[10:16]
+        if subtype == 3:
+            subtype = 'altitude_data'
+        elif subtype == 4:
+            subtype = 'acceleration'
+        elif subtype == 5:
+            subtype = 'angular_velocity_data'
+        elif subtype == 6:
+            subtype = 'GNSS_location_data'
+        elif subtype == 7:
+            subtype = 'GNSS_metadata'
+        elif subtype == 8:
+            subtype = 'power_information'
+        elif subtype == 9:
+            subtype = 'temperatures'
+        elif subtype == 'A':
+            subtype = 'MPU9250_IMU_data_data'
+        elif subtype == 'B':
+            subtype = 'KX134-1211_accelerometer_data'
+        else:
+            subtype = -1 
+            
+            
+        dest_addr = header[16:20]
+        
+    
+    
+    def parse_rx(data):
+        
+        # extract the packet header 
+        call_sign, length, version, srs_addr, packet_num = parse_packet_header(data[:24])
+        
+        # if this packet nothing more than just the packet header
+        if length < 24:
+            q.put(None)
+            return
+        
+        # remove the packet header
+        blocks = data[24:]
+        
+        while blocks != '':
+            block_header = blocks[:8]
+            
+            data_len, sig, _type, _subtype, dest_addr = self.parse_block_header(block_header)
+            
+            
+            data = blocks[8: 8 + data_len]
+            
+            if _type == 'altitude_data':
+                data = altitude(data)
+            
+            elif _type == 'acceleration_data':
+                pass
+            
+            elif _type == 'angular_velocity_data':
+                pass
+            
+            elif _type == 'GNSS_location_data':
+                pass
+            
+            elif _type == 'GNSS_metadata_data':
+                pass
+            
+            elif _type == 'MPU9250_IMU_data_data':
+                pass
+            
+            elif _type == 'KX134-1211_accelerometer_data':
+                pass
+            
+            else:
+                q.add(-1)
+                return
+            
+            # remove the data we processed from the whole
+            blocks = blocks[8 + data_len: ]
+            
+            q.add(data)
 
-rad = GroundStation()
-rad.init_ground_station()
-#rad.init_ground_station()
+    def set_rx_mode(self):
+        """set the ground station so that it constantly
+           listens for transmissions"""
+        
+        # turn off watch dog timer
+        self.write_to_ground_station('radio set wdt 0')
+        
+        # this command must be passed before any reception can occur 
+        self.write_to_ground_station("mac pause")
+
+        # command radio to go into continous reception mode 
+        command_recieved = self.write_to_ground_station("radio rx 0")
+        
+        # if radio recieved command from computer
+        return command_recieved
+        
+            
+    def _tx(self, data):
+        """transmit data, a method used for debugging"""
+        
+        # command that must be called before each transmission and recieve
+        self.write_to_ground_station("mac pause")
+        
+        # is the data we wish to transmit valid?
+        valid = self.write_to_ground_station("radio tx " + data )
+        
+        if not valid:
+            print('invalid transmission message')
+            return 
+        
+        else:
+            i = 0
+            
+            # radio will send 'radio_tx_ok' when message has been transmitted
+            while 'radio_tx_ok' not in str(self.read_ser()):
+                
+                # if message not transmitted then wait for 1/10th of a second
+                time.sleep(0.1)
+                
+                i += 1
+                
+                # if we have waited 0.3 seconds, then stop waiting. something 
+                # has gone wrong. 
+                if i == 3:
+                    print('unable to transmit message')
+                    return 
+                
+            print('successfully sent mesage')
+            
+
+# for debugging     
+
+import time
+import threading
+
+tx = GroundStation()
+rx = GroundStation('COM7')
+
+rx.init_ground_station()
+tx.init_ground_station()
+
+#rx.write_to_ground_station('radio rx 0')
+#tx.write_to_ground_station('radio rx 1')
+
+#rx.radio_set_rxmode()
+rx.write_to_ground_station('mac pause')
+rx.write_to_ground_station('radio rx 0')
+
+tx.write_to_ground_station('mac pause')
+tx.write_to_ground_station('radio set pwr 10')
+tx.write_to_ground_station('radio tx 1234562')
+
+
+
+
 print('_____________________________________')
-print(rad.read_cr())
 
-#rad.read_from_ground_station('pwr')
-#rad.read_from_ground_station('bw')
-#rad.read_from_ground_station('bt')
-#rad.read_from_ground_station('cr')
-#rad.read_from_ground_station('crc')
-#rad.read_from_ground_station('fdev')
-#rad.read_from_ground_station('freq')
-#rad.read_from_ground_station('iqi')
-#rad.read_from_ground_station('mod')
-#rad.read_from_ground_station('prlen')
-#rad.read_from_ground_station('rssi')
-#rad.read_from_ground_station('rxbw')
-#rad.read_from_ground_station('sf')
-#rad.read_from_ground_station('snr')
-#rad.read_from_ground_station('sync')
-#rad.read_from_ground_station('wdt')
+#t = threading.Thread(target=__tx, args=(tx,))F
+#t.start()
+#r = threading.Thread(target=__rx, args=(rx,))
+#r.start()
+
+while True:
+    rx.write_to_ground_station('mac pause')
+    rx.write_to_ground_station('radio rx 0')    
+    tx._tx('1000')
+    time.sleep(1)
+    #rx._tx('1000')
+    print('rx:', rx.wait_for_ok())
