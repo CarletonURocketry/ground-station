@@ -52,11 +52,13 @@ class DataBlock(ABC):
     @classmethod
     def from_payload(cls, block_subtype, payload):
         """ Unmarshal a bytes object to appropriate block class """
-
+        #0x00
         if block_subtype == DataBlockSubtype.DEBUG_MESSAGE:
             return DebugMessageDataBlock._parse(payload)
+        #0x01
         if block_subtype == DataBlockSubtype.STATUS:
             return StatusDataBlock._parse(payload)
+
         if block_subtype == DataBlockSubtype.ALTITUDE:
             return AltitudeDataBlock._parse(payload)
         if block_subtype == DataBlockSubtype.ACCELERATION:
@@ -69,6 +71,8 @@ class DataBlock(ABC):
             return MPU9250IMUDataBlock._parse(payload)
         if block_subtype == DataBlockSubtype.KX134_1211_ACCEL:
             return KX134AccelerometerDataBlock._parse(payload)
+        if block_subtype == DataBlockSubtype.ANGULAR_VELOCITY:
+            return AngularVelocityDataBlock._parse(payload)
 
         raise DataBlockUnkownException(f"Unknown data block subtype: {block_subtype}")
 

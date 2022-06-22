@@ -10,12 +10,15 @@ import packets
 import time
 import struct
 import data_block
+import os
 
 class GroundStation:
     
     def __init__(self, com_port='COM4'):
+        curr_dir = os.path.dirname(os.path.abspath(__file__))
+        log_path = os.path.join(curr_dir, 'data_log.txt')
+        self.log = open(log_path, 'w')
 
-        self.log = open('data_log.txt', 'w+')
 
         # initiate the USB serial connection
         self.ser = serial.Serial(port=com_port,
@@ -358,7 +361,12 @@ class GroundStation:
         self.write_to_ground_station('radio set bw {}'.format(str(bw)))
 
     def parse_rx(self, data):
-        packet = bytes.fromhex(data)
+
+        try:
+            packet = bytes.fromhex(data)
+        except:
+            print('error: data is {}'.format(data))
+            return
 
         call_sign = packet[0:6]
 
@@ -366,6 +374,7 @@ class GroundStation:
         packet = packet[12:]
 
         while len(packet) != 0:
+
             block_header = struct.unpack('<I', packet[0:4])
 
             length = ((block_header[0] & 0x1f)) * 4
@@ -387,21 +396,28 @@ class GroundStation:
                 print('the SNR is {} and the RSSI is {}'.format(snr, rssi))
                 print('-------------------------------------------------------------------------------------------------------')
 
-                self.log.write('signal report at {}. SNR is {}, RSSI is {}'.format(time.time(), snr, rssi))
+                logging_info = 'signal report at {}. SNR is {}, RSSI is {}\n'.format(time.time(), snr, rssi)
+                self.log.write(logging_info)
 
             else:
                 payload = packet[4:4 + length]
-                block = data_block.DataBlock.from_payload(subtype, payload)
+                try:
+                    block = data_block.DataBlock.from_payload(subtype, payload)
+                    print('-------------------------------------------------------------------------------------------------------')
+                    print('{} sent you a packet:\n'.format(str(call_sign)))
+                    print(block)
+                    print( '-------------------------------------------------------------------------------------------------------')
+                    logging_info = '{}\n'.format(block)
+                    self.log.write(logging_info)
 
-                print('-------------------------------------------------------------------------------------------------------')
-                print('{} sent you a packet:\n'.format(str(call_sign)))
-                print(block)
-                print( '-------------------------------------------------------------------------------------------------------')
-
-                self.log.write(block + '\n')
+                except:
+                    print('could not parse incoming packet of type {}, subtype: {}\n'.format(_type, subtype))
 
             # move to next block
             packet = packet[length + 4:]
+
+        self.log.flush()
+        os.fsync(self.log.fileno())
 
 
     def set_rx_mode(self, message_q:queue.Queue):
@@ -409,7 +425,7 @@ class GroundStation:
            listens for transmissions"""
         
         # turn off watch dog timer
-        #self.write_to_ground_station('radio set wdt 0')
+        self.write_to_ground_station('radio set wdt 0')
         
         # this command must be passed before any reception can occur 
         self.write_to_ground_station("mac pause")
@@ -433,7 +449,8 @@ class GroundStation:
             else:
                 # trim unecessary elements of the message
                 message = message[10:-5]
-                parse_rx(message, log)
+
+                self.parse_rx(message)
 
                 # put radio back into rx mode
                 self.set_rx_mode(message_q)
@@ -493,7 +510,7 @@ class GroundStation:
 
 
 # the COM port that is being used.
-tx = GroundStation('/dev/ttyUSB0')
+tx = GroundStation('COM8')
 
 # initialize the ground station
 tx.init_ground_station()
