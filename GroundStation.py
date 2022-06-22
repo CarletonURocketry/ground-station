@@ -14,7 +14,9 @@ import data_block
 class GroundStation:
     
     def __init__(self, com_port='COM4'):
-        
+
+        self.log = open('data_log.txt', 'w+')
+
         # initiate the USB serial connection
         self.ser = serial.Serial(port=com_port,
                                  timeout=1,
@@ -154,7 +156,8 @@ class GroundStation:
         
         # wait for response on the serial line. Return if 'ok' received
         # sys reset gives us info about the board which we want to process differently from other commands
-        if command_string != 'sys reset':
+        if command_string != 'sys reset' and command_string != 'radio get snr' and command_string != 'radio get rssi':
+            #TODO: clean this up with read functions
             return self.wait_for_ok()
 
     def process_response(self, response:str) -> str:
@@ -354,6 +357,52 @@ class GroundStation:
         #TODO finish this function
         self.write_to_ground_station('radio set bw {}'.format(str(bw)))
 
+    def parse_rx(self, data):
+        packet = bytes.fromhex(data)
+
+        call_sign = packet[0:6]
+
+        # remove packet header from rest of data
+        packet = packet[12:]
+
+        while len(packet) != 0:
+            block_header = struct.unpack('<I', packet[0:4])
+
+            length = ((block_header[0] & 0x1f)) * 4
+            signed = ((block_header[0] >> 5) & 0x1)
+            _type = ((block_header[0] >> 6) & 0xf)
+            subtype = ((block_header[0] >> 10) & 0x3f)
+            dest_addr = ((block_header[0] >> 16) & 0xf)
+
+            if _type == 0 and subtype == 0:
+                # this is a signal report
+                self.write_to_ground_station('radio get snr')
+                snr = self._read_ser()
+
+                self.write_to_ground_station('radio get rssi')
+                rssi = self._read_ser()
+
+                print('-------------------------------------------------------------------------------------------------------')
+                print('{} has asked for a signal report\n'.format(call_sign))
+                print('the SNR is {} and the RSSI is {}'.format(snr, rssi))
+                print('-------------------------------------------------------------------------------------------------------')
+
+                self.log.write('signal report at {}. SNR is {}, RSSI is {}'.format(time.time(), snr, rssi))
+
+            else:
+                payload = packet[4:4 + length]
+                block = data_block.DataBlock.from_payload(subtype, payload)
+
+                print('-------------------------------------------------------------------------------------------------------')
+                print('{} sent you a packet:\n'.format(str(call_sign)))
+                print(block)
+                print( '-------------------------------------------------------------------------------------------------------')
+
+                self.log.write(block + '\n')
+
+            # move to next block
+            packet = packet[length + 4:]
+
 
     def set_rx_mode(self, message_q:queue.Queue):
         """set the ground station so that it constantly
@@ -384,10 +433,7 @@ class GroundStation:
             else:
                 # trim unecessary elements of the message
                 message = message[10:-5]
-                message_q.put(message)
-                print('message received:', message)
-                UI_functions._parse_rx(message)
-
+                parse_rx(message, log)
 
                 # put radio back into rx mode
                 self.set_rx_mode(message_q)
@@ -425,48 +471,7 @@ class GroundStation:
             print('successfully sent message')
 
 
-def parse_packet_header(header):
-    # extract call sign in hex
-    call_sign = header[0:12]
 
-    # convert header from hex to binary
-    header = bin(int(header, 16))
-
-    # extract values and then convert them to ints
-    length = (int(header[47:53], 2) + 1) * 4
-    version = int(header[53:58], 2)
-    src_addr = int(header[63:67], 2)
-    packet_num = int(header[67:79], 2)
-
-    print(call_sign, length, version, src_addr, packet_num)
-
-
-def parse_rx(data):
-    packet = bytes.fromhex(data)
-
-    call_sign = packet[0:6]
-
-    # remove packet header from rest of data
-    packet = packet[12:]
-
-    while len(packet) != 0:
-        block_header = struct.unpack('<I', packet[0:4])
-
-        length = ((block_header[0] & 0x1f)) * 4
-        signed = ((block_header[0] >> 5) & 0x1)
-        _type = ((block_header[0] >> 6) & 0xf)
-        subtype = ((block_header[0] >> 10) & 0x3f)
-        dest_addr = ((block_header[0] >> 16) & 0xf)
-
-        payload = packet[4:4 + length]
-        block = data_block.DataBlock.from_payload(subtype, payload)
-
-        print('-------------------------------------------------------------------------------------------------------')
-        print('{} sent you a packet:\n'.format(str(call_sign)))
-        print(block)
-        print('-------------------------------------------------------------------------------------------------------')
-
-        packet = packet[length + 4:]
 
 
     # header = bytes.fromhex('840C0000')
@@ -486,28 +491,7 @@ def parse_rx(data):
     # signal report
     # get snr over time and log it.
 
-print(len('564533454F58120044000000840C0000EC1300008B540100B2570000D6FEFFFF01000F0000003800881800FF761600007E6628016D7C2EFC4295AF62E0C613009400A22F140104015E00041F'))
 
-parse_rx('56453345'
-'4F581200'
-'44000000'
-'840C0000'
-'EC130000'
-'8B540100'
-'B2570000'
-'D6FEFFFF'
-'01000F00'
-'00003800'
-'881800FF'
-'76160000'
-'7E662801'
-'6D7C2EFC'
-'4295AF62'
-'E0C61300'
-'9400A22F'
-'14010401'
-'5E00041F')
-quit()
 # the COM port that is being used.
 tx = GroundStation('/dev/ttyUSB0')
 
