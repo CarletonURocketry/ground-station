@@ -1,22 +1,16 @@
 # Ground station software for communication with the CU-InSpace rocket via an
 # RN2483 LoRa radio module.
 # Authors:
-# 
+# Arsalan
+# Thomas Selwyn
+# Zacchaeus Liang
 
-import time
-import threading
-import sys
 import glob
-from typing import Tuple, List
+import sys
+import time
 
 import serial
 
-import serial
-import queue
-import packets
-import UI_functions
-
-from read_functions import *
 from ConfigureFunctions import *
 
 
