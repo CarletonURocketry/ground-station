@@ -1,6 +1,7 @@
 #
 # Functions that are used to configure the ground station
 #
+import queue
 
 
 def wait_for_ok(self):
