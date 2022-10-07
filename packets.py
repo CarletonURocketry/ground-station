@@ -108,13 +108,24 @@ def signed_bin_str_to_int(bin_string: str) -> int:
 
 
 # Packet classes
+def convert_raw(raw_data: str, hex_length: int) -> int:
+
+    """Converts a hexadecimal string to an integer."""
+
+    # Value error if string is not the right length
+    if len(raw_data) != hex_length:
+        raise ValueError(f"Hexadecimal string must be of length {hex_length}.")
+
+    return hex_str_to_int(raw_data)
+
+
 class AltitudeData:
 
     def __init__(self):
-        self._time: int
-        self._pressure: int
-        self._temperature: int
-        self._altitude: int
+        self._time: int = None
+        self._pressure: int = None
+        self._temperature: int = None
+        self._altitude: int = None
 
     # Creation
     @classmethod
@@ -152,44 +163,33 @@ class AltitudeData:
         return self._altitude
 
     # Setters
-    @staticmethod
-    def __convert_raw(raw_data: str) -> int:
-
-        """Checks that the raw data contains 8 nybbles (hex characters) and converts it to an integer."""
-
-        # Error if too many or too little nybbles (hex characters)
-        if len(raw_data) != 8:
-            raise ValueError("Hexadecimal strings must contain 8 hexadecimal characters.")
-
-        return hex_str_to_int(raw_data)
-
     @time.setter
     def time(self, raw_time: str) -> None:
 
         """Time is received in milliseconds."""
 
-        self._time = self.__convert_raw(raw_time)
+        self._time = convert_raw(raw_time, hex_length=8)
 
     @pressure.setter
     def pressure(self, raw_pressure: str) -> None:
 
         """Pressure in kilopascals is converted to Pascals."""
 
-        self._pressure = self.__convert_raw(raw_pressure) / 1000
+        self._pressure = convert_raw(raw_pressure, hex_length=8) / 1000
 
     @temperature.setter
     def temperature(self, raw_temperature: str) -> None:
 
         """Temperature in millidegrees Celsius is converted to a degrees Celsius."""
 
-        self._temperature = self.__convert_raw(raw_temperature) / 1000
+        self._temperature = convert_raw(raw_temperature, hex_length=8) / 1000
 
     @altitude.setter
     def altitude(self, raw_altitude: str) -> None:
 
         """Altitude in millimeters is converted to meters."""
 
-        self._altitude = self.__convert_raw(raw_altitude) / 1000
+        self._altitude = convert_raw(raw_altitude, hex_length=8) / 1000
 
     # String representation
     def __str__(self):
@@ -201,17 +201,17 @@ class AltitudeData:
 
 class AccelerationData:
 
-    def __init__(self, resolution):
-        self.resolution = resolution  # Resolution for calculations
+    def __init__(self, resolution: int):
+        self.resolution: int = resolution  # Resolution for calculations
 
-        self._time: int
-        self._fsr: int
-        self._x_axis: int
-        self._y_axis: int
-        self._z_axis: int
+        self._time: int = None
+        self._fsr: int = None
+        self._x_axis: int = None
+        self._y_axis: int = None
+        self._z_axis: int = None
 
     @classmethod
-    def create_from_raw(cls, raw_data: str, resolution) -> AccelerationData:
+    def create_from_raw(cls, raw_data: str, resolution: int) -> AccelerationData:
 
         """Returns an AccelerationData packet from raw data."""
 
@@ -250,20 +250,9 @@ class AccelerationData:
         return self._z_axis
 
     # Setters
-    @staticmethod
-    def __convert_raw(raw_data: str, hex_length: int) -> int:
-
-        """Converts a hexadecimal string to an integer."""
-
-        # Value error if string is not the right length
-        if len(raw_data) != hex_length:
-            raise ValueError(f"Hexadecimal string must be of length {hex_length}.")
-
-        return hex_str_to_int(raw_data)
-
     @time.setter
     def time(self, raw_time: str) -> None:
-        self._time = self.__convert_raw(raw_time, hex_length=8)
+        self._time = convert_raw(raw_time, hex_length=8)
 
     @fsr.setter
     def fsr(self, raw_fsr: str) -> None:
@@ -271,22 +260,22 @@ class AccelerationData:
         """Adjusts the FSR based on the resolution."""
 
         adjustment_factor = 16 - self.resolution + 1
-        unadjusted_fsr = self.__convert_raw(raw_fsr, hex_length=4)
+        unadjusted_fsr = convert_raw(raw_fsr, hex_length=4)
 
         self._fsr = unadjusted_fsr // 2 ** adjustment_factor
 
     @x_axis.setter
     def x_axis(self, raw_x_axis) -> None:
         # TODO: These are signed values and so must be fixed
-        self._x_axis = self.__convert_raw(raw_x_axis, hex_length=4) * self.fsr / 2 ** 15
+        self._x_axis = convert_raw(raw_x_axis, hex_length=4) * self.fsr / 2 ** 15
 
     @y_axis.setter
     def y_axis(self, raw_y_axis) -> None:
-        self._y_axis = self.__convert_raw(raw_y_axis, hex_length=4) * self.fsr / 2 ** 15
+        self._y_axis = convert_raw(raw_y_axis, hex_length=4) * self.fsr / 2 ** 15
 
     @z_axis.setter
     def z_axis(self, raw_z_axis) -> None:
-        self._z_axis = self.__convert_raw(raw_z_axis, hex_length=4) * self.fsr / 2 ** 15
+        self._z_axis = convert_raw(raw_z_axis, hex_length=4) * self.fsr / 2 ** 15
 
     # String representation
     def __str__(self):
@@ -299,41 +288,83 @@ class AccelerationData:
 
 class AngularVelocityData:
 
-    def __init__(self, raw, resolution):
-        self.time_stamp = None
-        self.fsr = None
-        self.x_velocity = None
-        self.y_velocity = None
-        self.z_velocity = None
+    def __init__(self, resolution):
+        self.resolution = resolution
 
-        self.set_time(raw)
-        self.set_fsr(raw, resolution)
-        self.set_x_velocity(raw, resolution)
-        self.set_y_velocity(raw, resolution)
-        self.set_z_velocity(raw, resolution)
+        self._time: int = None
+        self._fsr: int = None
+        self._x_velocity: int = None
+        self._y_velocity: int = None
+        self._z_velocity: int = None
 
-    def set_time(self, raw):
-        self.time_stamp = hex_str_to_int(raw[0:8])
+    @classmethod
+    def create_from_raw(cls, raw_data: str, resolution: int) -> AngularVelocityData:
 
-    def set_fsr(self, raw, resolution):
-        unadjusted_fsr = hex_str_to_int(raw[8:12])
+        """Returns an AngularVelocityData packet from raw data."""
 
-        adjustment_factor = 16 - (resolution + 1)
+        print(f"Packet data being set from {raw_data}")
 
-        self.fsr = unadjusted_fsr // (2 ** adjustment_factor)
+        packet = AngularVelocityData(resolution)
 
-    def set_x_velocity(self, raw, resolution):
-        measurement = hex_str_to_int(raw[12:16])
-        self.x_velocity = measurement * (self.fsr / (2 ** 15))
+        # Set attributes from raw data
+        packet.time = raw_data[:8]
+        packet.fsr = raw_data[8:12]  # Must be set before velocities, as they depend on this value
+        packet.x_axis = raw_data[12:16]
+        packet.y_axis = raw_data[16:20]
+        packet.z_axis = raw_data[20:24]
 
-    def set_y_velocity(self, raw, resolution):
-        measurement = hex_str_to_int(raw[16:20])
-        self.y_velocity = measurement * (self.fsr / (2 ** 15))
+        return packet
 
-    def set_z_velocity(self, raw, resolution):
-        measurement = hex_str_to_int(raw[20:24])
-        self.z_velocity = measurement * (self.fsr / (2 ** 15))
+    # Getters
+    @property
+    def time(self):
+        return self._time
 
+    @property
+    def fsr(self):
+        return self._fsr
+
+    @property
+    def x_velocity(self):
+        return self._x_velocity
+
+    @property
+    def y_velocity(self):
+        return self._y_velocity
+
+    @property
+    def z_velocity(self):
+        return self._z_velocity
+
+    # Setters
+
+    @time.setter
+    def time(self, raw_time: str) -> None:
+        self._time = convert_raw(raw_time, hex_length=8)
+
+    @fsr.setter
+    def fsr(self, raw_fsr: str) -> None:
+
+        """Adjusts the FSR based on the resolution."""
+
+        adjustment_factor = 16 - self.resolution + 1
+        unadjusted_fsr = convert_raw(raw_fsr, hex_length=4)
+
+        self._fsr = unadjusted_fsr // 2 ** adjustment_factor
+
+    @x_velocity.setter
+    def x_velocity(self, raw_x_velocity: str) -> None:
+        self._x_velocity = convert_raw(raw_x_velocity, hex_length=4) * self.fsr / 2 ** 15
+
+    @y_velocity.setter
+    def y_velocity(self, raw_y_velocity: str) -> None:
+        self._y_velocity = convert_raw(raw_y_velocity, hex_length=4) * self.fsr / 2 ** 15
+
+    @z_velocity.setter
+    def z_velocity(self, raw_z_velocity: str) -> None:
+        self._z_velocity = convert_raw(raw_z_velocity, hex_length=4) * self.fsr / 2 ** 15
+
+    # String representation
     def __str__(self):
         return f"fsr: {self.fsr}\n" \
                f"x_velocity: {self.x_velocity}\n" \
