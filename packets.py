@@ -372,6 +372,90 @@ class AngularVelocityData:
                f"z_velocity: {self.z_velocity}\n"
 
 
+class GNSSMetaDataInfo:
+
+    """stores metadata on satellites used in the GNSS"""
+
+    def __init__(self):
+        self._elevation: int = None  # Elevation of GNSS satellite in degrees
+        self._snr: int = None  # Signal to noise ratio in dB Hz
+        self._id: int = None  # The pseudo-random noise sequence for GPS satellites or the ID for GLONASS satellites
+        self._azimuth: int = None  # Satellite's azimuth in degrees
+        self._satellite_type: str = None  # The type of satellite (GPS or GLONASS)
+
+    @classmethod
+    def create_from_raw(cls, raw_data: str) -> GNSSMetaDataInfo:
+
+        """Returns an GNSSMetaDataInfo packet from raw data."""
+
+        print(f"Packet data being set from {raw_data}")
+
+        packet = GNSSMetaDataInfo()
+
+        # Set attributes from raw data
+        packet.elevation = raw_data[0:8]
+        packet.SNR = raw_data[8:16]
+        packet.id_ = raw_data[16:21]
+        packet.azimuth = raw_data[21:30]
+        packet.type = raw_data[31]
+
+        return packet
+
+    # Getters
+    @property
+    def elevation(self) -> int:
+        return self._elevation
+
+    @property
+    def snr(self) -> int:
+        return self._SNR
+
+    @property
+    def id_(self) -> int:
+        return self._id
+
+    @property
+    def azimuth(self) -> int:
+        return self._azimuth
+
+    @property
+    def satellite_type(self) -> str:
+        return self._satellite_type
+
+    # Setters
+    @elevation.setter
+    def elevation(self, raw_elevation) -> None:
+        self._elevation = int(raw_elevation, 2)
+        
+    @snr.setter
+    def snr(self, raw_snr) -> None:
+        self._SNR = int(raw_snr, 2)
+        
+    @id_.setter
+    def id_(self, raw_id) -> None:
+        self._ID = int(raw_id, 2)
+
+    @azimuth.setter
+    def azimuth(self, raw_azimuth) -> None:
+        self._azimuth = int(raw_azimuth, 2)
+
+    @satellite_type.setter
+    def satellite_type(self, raw_type: str) -> None:
+
+        if raw_type == "1":
+            self._satellite_type = "GLONASS"
+        else:
+            self._satellite_type = "GPS"
+
+    # String representation
+    def __str__(self):
+        return f"elevation: {self.elevation}\n" \
+               f"SNR: {self.SNR}\n" \
+               f"ID: {self.ID}\n" \
+               f"Azimuth: {self.azimuth}\n" \
+               f"type: {self.type}\n"
+
+
 class GNSSMetaData:
     class Info:
         """stores metadata on satellites used in the GNSS"""
