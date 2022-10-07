@@ -108,13 +108,16 @@ def signed_bin_str_to_int(bin_string: str) -> int:
 
 
 # Packet classes
-def convert_raw(raw_data: str, hex_length: int) -> int:
+def convert_raw(raw_data: str, hex_length: int, signed: bool = False) -> int:
 
     """Converts a hexadecimal string to an integer."""
 
     # Value error if string is not the right length
     if len(raw_data) != hex_length:
         raise ValueError(f"Hexadecimal string must be of length {hex_length}.")
+
+    if signed:
+        return signed_hex_str_to_int(raw_data)
 
     return hex_str_to_int(raw_data)
 
@@ -579,78 +582,159 @@ class GNSSMetaData:
 
 class GNSSLocationData:
 
-    def __init__(self, raw):
+    def __init__(self):
+        self._fix_time: int = None  # Mission time when fix was received
+        self._latitude: int = None  # Latitude in units of 100 micro arcminute, or 10^-4 arc minutes per LSB
+        self._longitude: int = None  # Longitude in units of 100 micro arcminute, or 10^-4 arc minutes per LSB
+        self._utc_time: int = None  # The time (in UTX) when the fix was received in seconds since the Unix apoch
+        self._altitude: int = None  # Millimeters above sea level
+        self._rocket_speed: int = None  # Speed of the rocket over the ground in units of 1/100th of a knot
+        self._rocket_course: int = None  # Course of rocket in units of 1/100th of a degree
+        self._pdop: int = None  # Position dilution of precision * 100
+        self._hdop: int = None  # Horizontal dilution of precision * 100
+        self._vdop: int = None  # Vertical dilution of precision * 100
+        self._num_satellites: int = None  # Number of GNSS satellites used to get this fix
+        self._fix_type: int = None  # The type of fix, can be either 'unknown', 'not available', '2D fix', or '3D fix'
 
-        # mission time when fix was received
-        self.fix_time = None
+    @classmethod
+    def create_from_raw(cls, raw_data: str) -> GNSSLocationData:
 
-        # latitude in units of 100u' (100 micro arcminute) or 10^-4 arc minutes per least significant bit
-        self.latitude = None
+        """Returns an GNSSLocationData packet from raw data."""
 
-        # latitude in units of 100u' (100 micro arcminute) or 10^-4 arc minutes per least significant bit
-        self.longitude = None
+        print(f"Packet data being set from {raw_data}")
 
-        # the time (in UTX) when the fix was received in seconds since the Unix apoch
-        self.utc_time = None
+        packet = GNSSLocationData()
 
-        # millimeters above sea level
-        self.altitude = None
+        # Set attributes from raw data
+        packet.fix_time = raw_data[:8]
+        packet.latitude = raw_data[8:16]
+        packet.longitude = raw_data[16:24]
+        packet.utc_time = raw_data[24:32]
+        packet.altitude = raw_data[32:40]
+        packet.rocket_speed = raw_data[40:44]
+        packet.rocket_course = raw_data[44:48]
+        packet.pdop = raw_data[48:52]
+        packet.hdop = raw_data[52:56]
+        packet.vdop = raw_data[56:60]
+        packet._num_satellites = raw_data[60:62]
+        packet.fix_type = raw_data[62:]
 
-        # speed of the rocket over the ground in units of 1/100th of a knot
-        self.rocket_speed = None
+        return packet
 
-        # course of rocket in units of 1/100th of a degree
-        self.rocket_course = None
+    # Getters
+    @property
+    def fix_time(self) -> int:
+        return self._fix_time
 
-        # position dilution of precision * 100
-        self.pdop = None
+    @property
+    def latitude(self) -> int:
+        return self._latitude
 
-        # horizontal dilution of precision * 100
-        self.hdop = None
+    @property
+    def longitude(self) -> int:
+        return self._longitude
 
-        # veritcal dilution of precision * 100
-        self.vdop = None
+    @property
+    def utc_time(self) -> int:
+        return self._utc_time
 
-        # number of GNSS satellites used to get this fix
-        self.num_sats = None
+    @property
+    def altitude(self) -> int:
+        return self._altitude
 
-        # the type of fix, can be either 'unknown', 'not available', '2D fix', or '3D fix'
-        self.fix_type = None
+    @property
+    def rocket_speed(self) -> int:
+        return self._rocket_speed
 
-        self.setup(raw)
+    @property
+    def rocket_course(self) -> int:
+        return self._rocket_course
 
-    def setup(self, raw):
-        print(raw)
+    @property
+    def pdop(self) -> int:
+        return self._pdop
 
-        self.fix_time = hex_str_to_int(raw[0:8])
-        self.latitude = signed_hex_str_to_int(raw[8:16])
-        self.longitude = signed_hex_str_to_int((raw[16:24]))
-        self.utc_time = hex_str_to_int(raw[24:32])
-        self.altitude = hex_str_to_int(raw[32:40])
+    @property
+    def hdop(self) -> int:
+        return self._hdop
 
-        self.rocket_speed = signed_hex_str_to_int(raw[40:44])
-        self.rocket_course = signed_hex_str_to_int(raw[44:48])
-        self.pdop = hex_str_to_int(raw[48:52])
-        self.hdop = hex_str_to_int(raw[52:56])
+    @property
+    def vdop(self) -> int:
+        return self._vdop
 
-        self.vdop = hex_str_to_int(raw[56:60])
-        self.num_sats = hex_str_to_int(raw[60:62])
+    @property
+    def num_satellites(self) -> int:
+        return self._num_satellites
 
-        fix_type_temp = hex_to_bin(raw[62:])
-        fix_type_temp = fix_type_temp[2:4]
-        fix_type = int(fix_type_temp, 2)
+    @property
+    def fix_type(self) -> int:
+        return self._fix_type
 
-        if fix_type == 0:
-            self.fix_type = 'unknown'
-        elif fix_type == 1:
-            self.fix_type = 'not available'
-        elif fix_type == 2:
-            self.fix_type = '2D fix'
-        elif fix_type == 3:
-            self.fix_type = '3D fix'
-        else:
-            self.fix_type = 'error'
+    # Setters
+    @fix_time.setter
+    def fix_time(self, raw_fix_time: str) -> None:
+        self._fix_time = convert_raw(raw_fix_time, hex_length=8)
 
+    @latitude.setter
+    def latitude(self, raw_latitude: str) -> None:
+        self._latitude = convert_raw(raw_latitude, hex_length=8, signed=True)
+
+    @longitude.setter
+    def longitude(self, raw_longitude: str) -> None:
+        self._longitude = convert_raw(raw_longitude, hex_length=8, signed=True)
+
+    @utc_time.setter
+    def utc_time(self, raw_utc_time) -> None:
+        self._utc_time = convert_raw(raw_utc_time, hex_length=8)
+
+    @altitude.setter
+    def altitude(self, raw_altitude: str) -> None:
+        self._altitude = convert_raw(raw_altitude, hex_length=8)
+
+    @rocket_speed.setter
+    def rocket_speed(self, raw_rocket_speed: str) -> None:
+        self._rocket_speed = convert_raw(raw_rocket_speed, hex_length=4, signed=True)
+
+    @rocket_course.setter
+    def rocket_course(self, raw_rocket_course: str) -> None:
+        self._rocket_course = convert_raw(raw_rocket_course, hex_length=4, signed=True)
+
+    @pdop.setter
+    def pdop(self, raw_pdop: str) -> None:
+        self._pdop = convert_raw(raw_pdop, hex_length=4)
+
+    @hdop.setter
+    def hdop(self, raw_hdop: str) -> None:
+        self._hdop = convert_raw(raw_hdop, hex_length=4)
+
+    @vdop.setter
+    def vdop(self, raw_vdop: str) -> None:
+        self._vdop = convert_raw(raw_vdop, hex_length=4)
+
+    @num_satellites.setter
+    def num_satellites(self, raw_num_satellites) -> None:
+        self._num_satellites = convert_raw(raw_num_satellites, hex_length=2)
+
+    @fix_type.setter
+    def fix_type(self, raw_fix_type: str) -> None:
+
+        # Convert type to integer
+        fix_type_int = int(hex_to_bin(raw_fix_type)[2:4], 2)
+
+        fix_type = "error"  # Assume error by default
+        match fix_type_int:
+            case 0:
+                fix_type = "unknown"
+            case 1:
+                fix_type = "not available"
+            case 2:
+                fix_type = "2D fix"
+            case 3:
+                fix_type = "3D"
+
+        self._fix_type = fix_type
+
+    # String representation
     def __str__(self):
         return f"fix time: {self.fix_time}\n" \
                 f"latitude: {self.latitude}\n" \
