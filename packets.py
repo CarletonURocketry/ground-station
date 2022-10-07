@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 # Imports
 from random import randrange
+from dataclasses import dataclass
 
 # Conversion tables
 hex_bin_dic = {
@@ -105,53 +108,96 @@ def signed_bin_str_to_int(bin_string: str) -> int:
     return signed_hex_str_to_int(hex(int(bin_string, 2)))
 
 
+# Packet classes
 class AltitudeData:
 
-    def __init__(self, raw):
-        print('setting altitude data. Raw is ', raw)
-        self.time = None
-        self.pressure = None
-        self.temperature = None
-        self.altitude = None
+    def __init__(self):
+        self._time: int
+        self._pressure: int
+        self._temperature: int
+        self._altitude: int
 
-        self.set_time(raw)
-        self.set_pressure(raw)
-        self.set_temp(raw)
-        self.set_altitude(raw)
+    # Creation
+    @classmethod
+    def create_from_raw(cls, raw_data: str) -> AltitudeData:
 
+        """Returns an AltitudeData packet from raw data."""
+
+        print(f"Packet data being set from {raw_data}")
+
+        packet = AltitudeData()
+
+        # Set attributes from raw data
+        packet.time = raw_data[:8]
+        packet.pressure = raw_data[8:16]
+        packet.temperature = raw_data[16:24]
+        packet.altitude = raw_data[24:32]
+
+        return packet
+
+    # Getters
+    @property
+    def time(self) -> int:
+        return self._time
+
+    @property
+    def pressure(self) -> int:
+        return self._pressure
+
+    @property
+    def temperature(self) -> int:
+        return self._temperature
+
+    @property
+    def altitude(self) -> int:
+        return self._altitude
+
+    # Setters
+    @staticmethod
+    def __convert_raw(raw_data: str) -> int:
+
+        """Checks that the raw data contains 8 nybbles (hex characters) and converts it to an integer."""
+
+        # Error if too many or too little nybbles (hex characters)
+        if len(raw_data) != 8:
+            raise ValueError("Hexadecimal strings must contain 8 hexadecimal characters.")
+
+        return hex_str_to_int(raw_data)
+
+    @time.setter
+    def time(self, raw_time: str) -> None:
+
+        """Time is received in milliseconds."""
+
+        self._time = self.__convert_raw(raw_time)
+
+    @pressure.setter
+    def pressure(self, raw_pressure: str) -> None:
+
+        """Pressure in kilopascals is converted to Pascals."""
+
+        self._pressure = self.__convert_raw(raw_pressure) / 1000
+
+    @temperature.setter
+    def temperature(self, raw_temperature: str) -> None:
+
+        """Temperature in millidegrees Celsius is converted to a degrees Celsius."""
+
+        self._temperature = self.__convert_raw(raw_temperature) / 1000
+
+    @altitude.setter
+    def altitude(self, raw_altitude: str) -> None:
+
+        """Altitude in millimeters is converted to meters."""
+
+        self._altitude = self.__convert_raw(raw_altitude) / 1000
+
+    # String representation
     def __str__(self):
         return f"time:{self.time}\n" \
                f"pressure:{self.pressure}\n" \
                f"temperature:{self.temperature}\n" \
                f"altitude:{self.altitude}\n"
-
-    def set_time(self, raw):
-        """
-        :param raw: the raw message, a string, that is recieved from the rocket's stack
-        :return:
-        """
-
-        # time in milliseconds
-        self.time = hex_str_to_int(raw[0:8])
-
-    def set_pressure(self, raw):
-        # pressure in kilo pascals
-        pressure = hex_str_to_int(raw[8:16]) / 1000
-
-        self.pressure = pressure
-
-    def set_temp(self, raw):
-        # temperature in recieved in millidegree celcius
-        temperature = hex_str_to_int(raw[16:24]) / 1000
-
-        self.temperature = temperature
-
-    def set_altitude(self, raw):
-        # altitude in mm
-        altitude_mm = hex_str_to_int(raw[24:32])
-
-        altitude_m = altitude_mm / 1000
-        self.altitude = altitude_m
 
 
 class AccelerationData:
