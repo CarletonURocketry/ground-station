@@ -374,7 +374,7 @@ class AngularVelocityData:
 
 class GNSSMetaDataInfo:
 
-    """stores metadata on satellites used in the GNSS"""
+    """Stores metadata on satellites used in the GNSS."""
 
     def __init__(self):
         self._elevation: int = None  # Elevation of GNSS satellite in degrees
@@ -408,7 +408,7 @@ class GNSSMetaDataInfo:
 
     @property
     def snr(self) -> int:
-        return self._SNR
+        return self._snr
 
     @property
     def id_(self) -> int:
@@ -429,11 +429,11 @@ class GNSSMetaDataInfo:
         
     @snr.setter
     def snr(self, raw_snr) -> None:
-        self._SNR = int(raw_snr, 2)
+        self._snr = int(raw_snr, 2)
         
     @id_.setter
     def id_(self, raw_id) -> None:
-        self._ID = int(raw_id, 2)
+        self._id = int(raw_id, 2)
 
     @azimuth.setter
     def azimuth(self, raw_azimuth) -> None:
@@ -457,6 +457,7 @@ class GNSSMetaDataInfo:
 
 
 class GNSSMetaData:
+
     class Info:
         """stores metadata on satellites used in the GNSS"""
 
@@ -502,40 +503,78 @@ class GNSSMetaData:
                     f"Azimuth: {self.azimuth}\n" \
                     f"type: {self.type}\n"
 
-    def __init__(self, raw):
-        self.mission_time = None
-        self.gps_sats_in_use = []
-        self.glonass_sats_in_use = []
-        self.sat_info = {}
-        self.setup(raw)
+    def __init__(self):
+        self._mission_time: int = None
+        self._gps_satellites_in_use: list[int] = []
+        self._glonass_satellites_in_use: list[int] = []
+        self._satellite_info: dict[int, GNSSMetaDataInfo] = {}
 
-    def setup(self, raw):
-        self.mission_time = hex_str_to_int(raw[0:8])
+    @classmethod
+    def create_from_raw(cls, raw_data: str) -> GNSSMetaData:
 
-        # convert to binary
-        bin_raw = bin(int(raw, 16))
+        """Returns an GNSSMetaData packet from raw data."""
 
-        bin_GPS_sats_in_use = bin_raw[34:66]
-        bin_GLONASS_sats_in_use = bin_raw[66:98]
+        print(f"Packet data being set from {raw_data}")
 
-        # figure out which satellites are in use
-        for i in range(32):
+        packet = GNSSMetaData()
+        binary_raw = bin(int(raw_data, 16))
 
-            if bin_GPS_sats_in_use[i] == '1':
-                self.gps_sats_in_use.append(i + 1)
+        # Set attributes from raw data
+        packet.mission_time = raw_data[0:8]
+        packet.gps_satellites_in_use = binary_raw[34:66]
+        packet.glonass_satellites_in_use = binary_raw[66:98]
+        packet.satellite_info = binary_raw[98:]
 
-            if bin_GLONASS_sats_in_use[i] == '1':
-                self.glonass_sats_in_use.append(i + 1)
+        return packet
 
-        # parse information about the satellites
-        sat_info = bin_raw[98:]
+    # Getters
+    @property
+    def mission_time(self) -> int:
+        return self._mission_time
+    
+    @property
+    def gps_satellites_in_use(self) -> list[int]:
+        return self._gps_satellites_in_use
+    
+    @property
+    def glonass_satellites_in_use(self) -> list[int]:
+        return self._glonass_satellites_in_use
 
-        num_sats = len(sat_info) // 32
+    @property
+    def satellite_info(self) -> list[GNSSMetaDataInfo]:
+        return self._satellite_info
+    
+    # Setters
+    @mission_time.setter
+    def mission_time(self, raw_mission_time: str) -> None:
+        self._mission_time = convert_raw(raw_mission_time, hex_length=8)
+        
+    @gps_satellites_in_use.setter
+    def gps_satellites_in_use(self, raw_gps_satellites: bin) -> None:
 
-        for i in range(num_sats):
-            # each satellite's info is stored in 32 bits
-            meta_data = self.Info(sat_info[i * 32: i * 32 + 32])
-            self.sat_info[meta_data.ID] = meta_data
+        self._gps_satellites_in_use = []
+        for _ in range(32):
+            if raw_gps_satellites[_] == "1":  # Append GPS satellite IDs if they are in use
+                self._gps_satellites_in_use.append(_ + 1)
+
+    @glonass_satellites_in_use.setter
+    def glonass_satellites_in_use(self, raw_glonass_satellites: bin) -> None:
+
+        self._glonass_satellites_in_use = []
+        for _ in range(32):
+            if raw_glonass_satellites[_] == "1":  # Append IDs of GLONASS satellites in use
+                self._glonass_satellites_in_use.append(_ + 1)
+
+    @satellite_info.setter
+    def satellite_info(self, raw_satellite_info: bin) -> None:
+
+        self.satellite_info = {}  # Start with a fresh dictionary
+        num_satellites = len(raw_satellite_info) // 32  # Determine the number of satellites
+
+        for _ in range(num_satellites):
+            # Create a metadata packet using a 32 bit snippet from the raw_satellite info
+            meta_data = GNSSMetaDataInfo.create_from_raw(raw_satellite_info[_ * 32: _ * 32 + 32])
+            self.satellite_info[meta_data.id_] = meta_data  # Store metadata in dictionary using the ID as a key
 
 
 class GNSSLocationData:
