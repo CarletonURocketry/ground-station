@@ -1,5 +1,7 @@
+# Imports
 from random import randrange
 
+# Conversion tables
 hex_bin_dic = {
     '0': '0000',
     '1': '0001',
@@ -24,9 +26,7 @@ hex_bin_dic = {
     'e': '1110',
     'f': '1111'
 }
-
 bin_hex_dic = {v: k for k, v in hex_bin_dic.items()}
-
 kx134_1211_dic = {
     '0x0': 0.781,
     '0x1': 1.563,
@@ -53,40 +53,55 @@ kx134_1211_dic = {
 }
 
 
-def hex_str_to_int(hex_string):
+# Conversion functions
+def hex_str_to_int(hex_string: str) -> int:
+
+    """Returns the integer value of a hexadecimal string."""
+
     return int(hex_string, 16)
 
 
-def bin_to_hex(bin_string):
+def bin_to_hex(bin_string: str) -> hex:
+
+    """Returns a hexidecimal code for a given binary string."""
+
     return hex(int(bin_string, 2))
 
 
-def hex_to_bin(hex_string):
-    """better to use this method than the built in 'bin()' method because this method will preserve the number of
-       bits. For example bin(0x10) will produce 0b'10000 when we actually want 0b' 00010000"""
+def hex_to_bin(hex_string: str) -> str:
 
-    # remove '0x' from start of string, if it's present
+    """Returns a binary string from a hexadecimal string.
 
+    It is better to use this method than the built-in 'bin()' method because this method will preserve the number of
+    bits. For example bin(0x10) will produce 0b'10000 when we actually want 0b'00010000."""
+
+    # Removes '0x' from start of string, if it's present
     if hex_string[0:2] == '0x':
         hex_string = hex_string[2:]
 
-    ret_string = ''
+    converted_string = ""
     for char in hex_string:
-        ret_string += hex_bin_dic[char]
+        converted_string += hex_bin_dic[char]
 
-    return ret_string
+    return converted_string
 
 
-def signed_hex_str_to_int(hex_string, ):
-    # this function preserves number of bits
+def signed_hex_str_to_int(hex_string: str) -> int:
+
+    """Returns an integer value for a given signed hexadecimal string. Return value preservces the number of bits."""
+
     bin_input = hex_to_bin(hex_string)
+
     if bin_input[0] == '1':
         return int(bin_input[1:], 2) - (2 ** (len(bin_input) - 1))
     else:
         return int(bin_input[1:], 2)
 
 
-def signed_bin_str_to_int(bin_string):
+def signed_bin_str_to_int(bin_string: str) -> int:
+
+    """Returns an integer value for a signed binary string."""
+
     return signed_hex_str_to_int(hex(int(bin_string, 2)))
 
 
