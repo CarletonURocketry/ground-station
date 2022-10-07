@@ -2,7 +2,6 @@ from __future__ import annotations
 
 # Imports
 from random import randrange
-from dataclasses import dataclass
 
 # Conversion tables
 hex_bin_dic = {
