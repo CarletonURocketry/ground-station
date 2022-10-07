@@ -864,32 +864,98 @@ class MPU9250Data:
                f"Gyroscope BW: {self.gyroscope_bw}"
 
 
+class KX1341211MeasurementData:
+
+    """Contains measurement data for the KX1341211 packet."""
+
+    def __init__(self):
+        self._x_acceleration: int = None
+        self._y_acceleration: int = None
+        self._z_acceleration: int = None
+
+    @classmethod
+    def create_from_raw(cls, raw_data: str) -> KX1341211MeasurementData:
+
+        """Returns an KX1341211MeasurementData packet from raw data."""
+
+        print(f"Packet data being set from {raw_data}")
+
+        packet = KX1341211MeasurementData()
+
+        # Set attributes from raw data
+        resolution = len(raw_data)
+
+        if resolution == 24:
+            packet.x_acceleration = raw_data[:8]
+            packet.y_acceleration = raw_data[8:16]
+            packet.z_acceleration = raw_data[16:24]
+        elif resolution == 48:
+            packet.x_acceleration = raw_data[:16]
+            packet.y_acceleration = raw_data[16:32]
+            packet.z_acceleration = raw_data[32:48]
+        else:
+            raise ValueError(f"Measurement data only supports 24 or 48 bit resolution, not {resolution} bit.")
+
+        return packet
+
+    # Getters
+    @property
+    def x_acceleration(self):
+        return self._x_acceleration
+
+    @property
+    def y_acceleration(self):
+        return self._y_acceleration
+
+    @property
+    def z_acceleration(self):
+        return self._z_acceleration
+
+    # Setters
+    @x_acceleration.setter
+    def x_acceleration(self, raw_x_accel: str) -> None:
+
+        resolution = len(raw_x_accel)
+
+        if resolution == 8:
+            self._x_acceleration = signed_bin_str_to_int(raw_x_accel)
+        elif resolution == 16:
+            self._x_acceleration = int(raw_x_accel, 2)
+        else:
+            raise ValueError(f"Acceleration only supports 8 or 16 bit resolution, not {resolution} bit.")
+
+    @y_acceleration.setter
+    def y_acceleration(self, raw_y_accel: str) -> None:
+
+        resolution = len(raw_y_accel)
+
+        if resolution == 8:
+            self._y_acceleration = signed_bin_str_to_int(raw_y_accel)
+        elif resolution == 16:
+            self._y_acceleration = int(raw_y_accel, 2)
+        else:
+            raise ValueError(f"Acceleration only supports 8 or 16 bit resolution, not {resolution} bit.")
+
+    @z_acceleration.setter
+    def z_acceleration(self, raw_z_accel: str) -> None:
+
+        resolution = len(raw_z_accel)
+
+        if resolution == 8:
+            self._z_acceleration = signed_bin_str_to_int(raw_z_accel)
+        elif resolution == 16:
+            self._z_acceleration = int(raw_z_accel, 2)
+        else:
+            raise ValueError(f"Acceleration only supports 8 or 16 bit resolution, not {resolution} bit.")
+
+    # String representation
+    def __str__(self):
+        return f"x: {self.x_accel}\n" \
+               f"y: {self.y_accel}\n" \
+               f"z: {self.z_accel}\n"
+
+
 class KX1341211Data:
-    class Measurement:
-        def __init__(self, raw):
-            self.x_accel = None
-            self.y_accel = None
-            self.z_accel = None
-
-            self.setup(raw)
-
-        def setup(self, raw):
-            # if resolution of data is 8 bit (three 8 bit readings)
-            if len(raw) == 24:
-                self.x_accel = signed_bin_str_to_int(raw[0:8])
-                self.y_accel = signed_bin_str_to_int(raw[8:16])
-                self.z_accel = signed_bin_str_to_int(raw[16:24])
-
-            # if resolution of data is 16 bit (three 16 bit readings)
-            elif len(raw) == 48:
-                self.x_accel = int(raw[0:16], 2)
-                self.y_accel = int(raw[16:32], 2)
-                self.z_accel = int(raw[32:48], 2)
-
-        def __str__(self):
-            return f"x: {self.x_accel}\n" \
-                   f"y: {self.y_accel}\n" \
-                   f"z: {self.z_accel}\n"
 
     def __init__(self, raw):
 
