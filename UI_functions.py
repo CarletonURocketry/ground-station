@@ -1,5 +1,5 @@
 import queue
-import packet
+import packets
 
 
 def _parse_packet_header(header):
@@ -16,7 +16,7 @@ def _parse_packet_header(header):
     src_addr = int(header[63:67], 2)
     packet_num = int(header[67:79], 2)
 
-    print( call_sign, length, version, src_addr, packet_num
+    print( call_sign, length, version, src_addr, packet_num)
 
 
 def _parse_block_header(header):

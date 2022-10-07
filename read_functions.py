@@ -1,168 +1,239 @@
-# radio commands
-def read_frequency(self):
-    freq = int(self.read_from_ground_station("freq"))
-    UPPER_1 = 434800000
-    LOWER_1 = 433000000
-    UPPER_2 = 870000000
-    LOWER_2 = 863000000
+#
+# commands for reading information from the ground station
+# Author: Fahim
+# editors: Arsalan
+#
 
-    if (freq > LOWER_1 and freq < UPPER_1):
-        return freq
-    elif (freq > LOWER_2 and freq < UPPER_2):
-        return freq
-    else:
+
+#
+# Define Section
+#
+
+
+# the pins that we can read analog values from
+VALID_ANALOG_PINS_RANGE1 = [i for i in range(1,4)]
+VALID_ANALOG_PINS_RANGE2 = [i for i in range(5,14)]
+VALID_ANALOG_PINS = VALID_ANALOG_PINS_RANGE1 + VALID_ANALOG_PINS_RANGE2
+
+# the pins that we can read digital values from
+VALID_DIGITAL_PINS = [i for i in range(14)]
+
+
+#
+# End of Define Section
+#
+class GroundStationReader():
+
+    def __init__(self, serial, writer):
+        """
+
+        :param serial: a reference to the Serial::Serial object that is being used to communicate with the ground
+                       station
+
+        """
+
+        self.ser = serial
+
+    def read_frequency(self):
+        """read the central frequency that the ground station is tuned to/transmitting at. If
+           there is a problem reading the frequency, for example, if the ground station does not
+           respond, or if it returns a string instead of a number, or it returns a frequency
+           value that is not possible for the ground station, then returns -1"""
+
+        freq = int(self.self.read_from_radio("freq"))
+
+        # the lower (433 MHZ) freq range
+        upper_1 = 434800000
+        lower_1 = 433000000
+
+        # the higher (866 MHZ) freq range
+        upper_2 = 870000000
+        lower_2 = 863000000
+
+        if (upper_1 > freq > lower_1) or (upper_2 > freq > lower_2):
+            return freq
+        else:
+            return -1
+
+    def read_bitrate(self):
+        """return the bit rate of the radio"""
+
+        bitrate = int(self.read_from_radio("bitrate"))
+
+        # the upper and lower limit values that the bit rate can take on
+        upper_value = 65535
+        lower_value = 0
+        if lower_value < bitrate < upper_value:
+            return bitrate
+        else:
+            return -1
+
+    def read_bw(self):
+        bw = int(self.read_from_radio("bw"))
+
+        # the three possible values
+        possibilities = [125, 250, 500]
+
+        if bw in possibilities:
+            return bw
+        else:
+            return -1
+
+    def read_cr(self):
+        cr = self.self.read_from_radio("cr")
+
+        # the four possible strings
+        possibilities = ['4/5', '4/6', '4/7', '4/8']
+
+        if cr in possibilities:
+            return cr
+        else:
+            return -1
+
+    def read_bt(elf):
+        bt = self.read_from_radio("bt")
+
+        # the four possible strings that could be returned
+        possibilities = ['none', '1.0', '0.5', '0.3']
+        if bt in possibilities:
+            return bt
+        else:
+            return -1
+
+    def read_crc(self):
+        return self.read_from_radio("crc")
+
+    def read_fdev(self):
+        return self.read_from_radio("fdev")
+
+    def read_afcbw(self):
+        return self.read_from_radio("afcbw")
+
+    def read_iqi(self):
+        return self.read_from_radio("iqi")
+
+    def read_mod(self):
+        return self.self.read_from_radio("mod")
+
+    def read_prlen(self):
+        return self.read_from_radio("prlen")
+
+    def read_pwr(self):
+        return self.read_from_radio("pwr")
+
+    def read_rssi(self):
+        return self.read_from_radio("rssi")
+
+    def read_rxbw(self):
+        return self.read_from_radio("rxbw")
+
+    def read_sf(self):
+        return self.read_from_radio("sf")
+
+    def read_snr(self):
+        return self.read_from_radio("snr")
+
+    def read_sync(self):
+        return self.read_from_radio("sync")
+
+    def read_wdt(self):
+        return self.read_from_radio("wdt")
+
+    # sys commands
+    def read_ver(self):
+        return self.read_from_radio("ver")
+
+    def read_vdd(self):
+        return self.read_from_radio("vdd")
+
+    def read_hweui(self): 
+        return self.read_from_radio("hweui")
+
+    def read_nvm(self, address: str):
+        """
+        Accepts hexadecimal address from 300 to 3FF.
+        """
+        return self.read_from_radio("nvm " + address)
+
+    def read_pin_dig(self, pin_name: str):
+        """
+        Accepts GPIO 0 - 13, UART_CTS, UART_RTS, TEST0-1.
+        """
+
+        if isinstance(pin_name, int):
+            if pin_name in VALID_DIGITAL_PINS:
+                pin_name = str(pin_name)
+                return self.self.read_from_radio("pindig " + pin_name)
+
         return -1
 
+    def read_pin_ana(self, pin_name: int):
+        """
+        reads the voltage value on a pin that has been set as an analog pin
+        """
 
-def read_bitrate(self):
-    bitrate = int(strip_output(read_from_ground_station("bitrate")))
-    UPPER_1 = 65535
-    LOWER_1 = 0
-    if (bitrate > LOWER_1 and bitrate < UPPER_1):
-        return bitrate
-    else:
+        if isinstance(pin_name, int):
+            if pin_name in VALID_ANALOG_PINS:
+                pin_name = str(pin_name)
+                return self.self.read_from_radio("pinana GPIO" + pin_name)
+
         return -1
 
-
-def read_bw(self):
-    bw = int(strip_output(read_from_ground_station("bw")))
-    possibilities = [125, 250, 500]  # the three possible values
-    if (bw in possibilities):
-        return bw
-    else:
-        return -1
+    @staticmethod
+    def process_response(response: str):
+        """
+        Removes the carriage return and newline characters from the output received
+        from the radio.
 
 
-def read_cr(self):
-    cr = self.read_from_ground_station("cr")
+        @param  response: contains response from radio
+        @return: the response received from radio in a clean format.
+        will return -1 if error is found.
 
-    possibilities = ['4/5', '4/6', '4/7', '4/8']  # the four possible strings
-    if (cr in possibilities):
-        return cr
-    else:
-        return -1
+        examples:
+        >>process_response("b'21313123321\r\n'")
+        21313123321
+        """
+        # if we don't get a response
+        if len(response) == 0:
+            return -1
+        if response == '\r\n':
+            return -1
 
+            # remove carriage return value
+        return response.decode('UTF-8')[:-2]
 
-def read_bt(elf):
-    bt = strip_output(read_from_ground_station("bt"))
-    possibilities = ['none', '1.0', '0.5', '0.3']  # the four possible strings
-    if (bt in possibilities):
-        return bt
-    else:
-        return -1
+    def read_from_radio(self, command: str):
+        """reads data from the rn2483 via UART
 
+       @param  command: command that will be written to ground station
+       @return: the message received from station
+                will return -1 if error is found
+        """
+        command = str(command)
 
-def read_crc(self):
-    return read_from_ground_station("crc")
+        # split command into individual words if command is more than one word
+        # long. Example:  'nvm 300'
+        cmds = command.split()
 
+        # these are parameters that require a 'sys' call. Ex. 'sys get vdd'
+        sys_commands = ['vdd', 'nvm', 'ver', 'hweui', 'pindig', 'pinana']
 
-def read_fdev(elf):
-    return read_from_ground_station("fdev")
+        if cmds[0] in sys_commands:
+            command = f"sys get {command}"
 
+        # if parameter to be read is not covered by 'sys', it requires 'radio'
+        else:
+            command = f"radio get {command}"
 
-def read_afcbw(self):
-    return read_from_ground_station("afcbw")
+        # flush the serial port
+        self.ser.flush()
 
+        # must include carriage return for valid commands (see DS40001784B pg XX)
+        data = command + "\r\n"
 
-def read_iqi(self):
-    return read_from_ground_station("iqi")
+        # encode command_string as bytes and then transmit over serial port
+        self.ser.write(data.encode('utf-8'))
 
-
-def read_mod(self):
-    return self.read_from_ground_station("mod")
-
-
-def read_prlen(self):
-    return read_from_ground_station("prlen")
-
-
-def read_pwr(self):
-    return read_from_ground_station("pwr")
-
-
-def read_rssi(self):
-    return read_from_ground_station("rssi")
-
-
-def read_rxbw(self):
-    return read_from_ground_station("rxbw")
-
-
-def read_sf(self):
-    return read_from_ground_station("sf")
-
-
-def read_snr(self):
-    return read_from_ground_station("snr")
-
-
-def read_sync(self):
-    return read_from_ground_station("sync")
-
-
-def read_wdt(self):
-    return read_from_ground_station("wdt")
-
-
-# sys commands
-def read_ver(self):
-    return read_from_ground_station("ver")
-
-
-def read_vdd(self):
-    return read_from_ground_station("vdd")
-
-
-def read_hweui(self):  # remove?
-    return read_from_ground_station("hweui")
-
-
-def read_nvm(address: str):
-    """
-    Accepts hexadecimal address from 300 to 3FF.
-    """
-    return read_from_ground_station("nvm " + address)
-
-
-def read_pindig(self, pinName: str):  # remove
-    """
-    Accepts GPIO0 - 13, UART_CTS, UART_RTS, TEST0-1.
-    """
-    return read_from_ground_station("pindig " + pinName)
-
-
-def read_pinana(self, pinName: str):  # remove
-    """
-    Accepts GPIO0 - 3, and GPIO5 - 13
-    Enter only the pin #, as GPIO is already accounted for
-    """
-    return read_from_ground_station("pinana GPIO" + pinName)
-
-
-def read_from_ground_station(self, command: str):
-    """reads data from the ground station via UART
-   author: Fahim
-
-   @param  command: contains commmand that will be written to ground station
-   @return: the message received from station
-            will return -1 if error is found
-    """
-    command = str(command)
-
-    # split command into individual words if command is more than one word
-    # long. Example:  'nvm 300'
-    cmds = command.split()
-
-    # these are parameters that require a 'sys' call. Ex. 'sys get vdd'
-    sys_commands = ['vdd', 'nvm', 'ver', 'hweui', 'pindig', 'pinana']
-
-    if (cmds[0] in sys_commands):
-        self.write_to_ground_station("sys get " + command)
-
-    # if parameter to be read is not covered by 'sys', it requires 'radio'
-    else:
-        self.write_to_ground_station("radio get " + command)
-
-    # if command was recieved and valid:
-    return self.process_response(self.ser.readline())
-
+        # if command was received and valid, process it into an easy-to-use form.
+        return self.process_response(self.ser.readline())
