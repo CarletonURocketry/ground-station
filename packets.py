@@ -90,7 +90,7 @@ def hex_to_bin(hex_string: str) -> str:
 
 def signed_hex_str_to_int(hex_string: str) -> int:
 
-    """Returns an integer value for a given signed hexadecimal string. Return value preservces the number of bits."""
+    """Returns an integer value for a given signed hexadecimal string. Return value preserves the number of bits."""
 
     bin_input = hex_to_bin(hex_string)
 

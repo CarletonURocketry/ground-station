@@ -94,25 +94,25 @@ def parse_rx(q:queue.Queue):
         payload = blocks[8: 8 + block_len]
 
         if _subtype == 'altitude_data':
-            data = packet.AltitudeData(payload)
+            data = packets.AltitudeData(payload)
 
         elif _type == 'acceleration_data':
-            data = packet.AccelerationData(payload)
+            data = packets.AccelerationData(payload)
 
         elif _type == 'angular_velocity_data':
-            data = packet.AngularVelocityData(payload)
+            data = packets.AngularVelocityData(payload)
 
         elif _type == 'GNSS_location_data':
-            data = packet.GNSSLocationData(payload)
+            data = packets.GNSSLocationData(payload)
 
         elif _type == 'GNSS_metadata_data':
-            data = packet.GNSSMetaData(payload)
+            data = packets.GNSSMetaData(payload)
 
         elif _type == 'MPU9250_IMU_data_data':
-            data = packet.MPU9250Data(payload)
+            data = packets.MPU9250Data(payload)
 
         elif _type == 'KX134-1211_accelerometer_data':
-            data = packet.KX1341211Data(payload)
+            data = packets.KX1341211Data(payload)
 
         else:
             data = -1
@@ -147,25 +147,25 @@ def _parse_rx(data):
         payload = blocks[8: 8 + block_len]
 
         if _subtype == 'altitude_data':
-            data = packet.AltitudeData(payload)
+            data = packets.AltitudeData(payload)
 
         elif _type == 'acceleration_data':
-            data = packet.AccelerationData(payload)
+            data = packets.AccelerationData(payload)
 
         elif _type == 'angular_velocity_data':
-            data = packet.AngularVelocityData(payload)
+            data = packets.AngularVelocityData(payload)
 
         elif _type == 'GNSS_location_data':
-            data = packet.GNSSLocationData(payload)
+            data = packets.GNSSLocationData(payload)
 
         elif _type == 'GNSS_metadata_data':
-            data = packet.GNSSMetaData(payload)
+            data = packets.GNSSMetaData(payload)
 
         elif _type == 'MPU9250_IMU_data_data':
-            data = packet.MPU9250Data(payload)
+            data = packets.MPU9250Data(payload)
 
         elif _type == 'KX134-1211_accelerometer_data':
-            data = packet.KX1341211Data(payload)
+            data = packets.KX1341211Data(payload)
 
         else:
             data = -1

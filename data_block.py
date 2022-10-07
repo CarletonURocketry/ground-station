@@ -6,7 +6,8 @@ from enum import Enum, IntEnum, auto
 class DataBlockException(Exception):
     pass
 
-class DataBlockUnkownException(DataBlockException):
+
+class DataBlockUnknownException(DataBlockException):
     pass
 
 
@@ -24,12 +25,13 @@ class DataBlockSubtype(IntEnum):
     MPU9250_IMU = 0x0a
     KX134_1211_ACCEL = 0x0b
 
+
 class DataBlock(ABC):
     @property
     @abstractmethod
     def length(self):
         """ Length of block """
-    
+
     @property
     @abstractmethod
     def subtype(self):
@@ -52,10 +54,10 @@ class DataBlock(ABC):
     @classmethod
     def from_payload(cls, block_subtype, payload):
         """ Unmarshal a bytes object to appropriate block class """
-        #0x00
+        # 0x00
         if block_subtype == DataBlockSubtype.DEBUG_MESSAGE:
             return DebugMessageDataBlock._parse(payload)
-        #0x01
+        # 0x01
         if block_subtype == DataBlockSubtype.STATUS:
             return StatusDataBlock._parse(payload)
 
@@ -74,9 +76,7 @@ class DataBlock(ABC):
         if block_subtype == DataBlockSubtype.ANGULAR_VELOCITY:
             return AngularVelocityDataBlock._parse(payload)
 
-        raise DataBlockUnkownException(f"Unknown data block subtype: {block_subtype}")
-
-
+        raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype}")
 
 
 #
@@ -94,7 +94,7 @@ class DebugMessageDataBlock(DataBlock):
     @property
     def subtype(self):
         return DataBlockSubtype.DEBUG_MESSAGE
-    
+
     @staticmethod
     def type_desc():
         return "Debug Message"
@@ -138,6 +138,7 @@ class SensorStatus(IntEnum):
         else:
             return "unknown"
 
+
 class SDCardStatus(IntEnum):
     SD_CARD_STATUS_NOT_PRESENT = 0x0
     SD_CARD_STATUS_INITIALIZING = 0x1
@@ -155,6 +156,7 @@ class SDCardStatus(IntEnum):
             return "failed"
         else:
             return "unknown"
+
 
 class DeploymentState(IntEnum):
     DEPLOYMENT_STATE_IDLE = 0x0,
@@ -215,27 +217,27 @@ class StatusDataBlock(DataBlock):
         try:
             kx134_state = SensorStatus((parts[1] >> 16) & 0x7)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid KX134 state: {(parts[1] >> 16) & 0x7}") from error
+            raise DataBlockException(f"Invalid KX134 state: {(parts[1] >> 16) & 0x7}") from error
 
         try:
             alt_state = SensorStatus((parts[1] >> 19) & 0x7)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid altimeter state: {(parts[1] >> 19) & 0x7}") from error
+            raise DataBlockException(f"Invalid altimeter state: {(parts[1] >> 19) & 0x7}") from error
 
         try:
             imu_state = SensorStatus((parts[1] >> 22) & 0x7)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid IMU state: {(parts[1] >> 22) & 0x7}") from error
+            raise DataBlockException(f"Invalid IMU state: {(parts[1] >> 22) & 0x7}") from error
 
         try:
             sd_state = SDCardStatus((parts[1] >> 25) & 0x7)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid SD card state: {(parts[1] >> 25) & 0x7}") from error
+            raise DataBlockException(f"Invalid SD card state: {(parts[1] >> 25) & 0x7}") from error
 
         try:
             deployment_state = DeploymentState((parts[1] >> 28) & 0xf)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid deployment state: {(parts[1] >> 28) & 0xf}") from error
+            raise DataBlockException(f"Invalid deployment state: {(parts[1] >> 28) & 0xf}") from error
 
         return StatusDataBlock(parts[0], kx134_state, alt_state, imu_state, sd_state,
                                deployment_state, parts[2], parts[3])
@@ -258,7 +260,6 @@ class StatusDataBlock(DataBlock):
                 f" {self.sd_blocks_recorded}, checkouts missed: {self.sd_checkouts_missed}")
 
 
-
 #
 #   Altitude
 #
@@ -276,7 +277,7 @@ class AltitudeDataBlock(DataBlock):
     @property
     def subtype(self):
         return DataBlockSubtype.ALTITUDE
-    
+
     @staticmethod
     def type_desc():
         return "Altitude"
@@ -288,7 +289,7 @@ class AltitudeDataBlock(DataBlock):
 
     def to_payload(self):
         return struct.pack("<Iiii", self.mission_time, int(self.pressure),
-                           int(self.temperature * 1000). int(self.altitude * 1000))
+                           int(self.temperature * 1000).int(self.altitude * 1000))
 
     def __str__(self):
         return (f"{self.type_desc()} -> time: {self.mission_time}, pressure: {self.pressure} Pa, "
@@ -390,6 +391,7 @@ class GNSSLocationFixType(IntEnum):
     FIX_2D = 0x2
     FIX_3D = 0x3
 
+
 class GNSSLocationBlock(DataBlock):
     def __init__(self, mission_time, latitude, longitude, utc_time, altitude, speed, course, pdop,
                  hdop, vdop, sats, fix_type):
@@ -433,12 +435,12 @@ class GNSSLocationBlock(DataBlock):
 
     def to_payload(self):
         return struct.pack("<IiiIihhHHHBB", self.mission_time, self.latitude, self.longitude,
-                           self.utc_time, int(self.altitude * 1000), int(speed * 100),
+                           self.utc_time, int(self.altitude * 1000), int(self.speed * 100),
                            int(self.course * 100), int(self.pdop * 100), int(self.hdop * 100),
                            int(self.vdop * 100), self.sats, self.fix_type & 0x3)
 
     @staticmethod
-    def coord_to_str(coord, ew = False):
+    def coord_to_str(coord, ew=False):
         direction = coord >= 0;
         coord = abs(coord)
         degrees = coord // 600000
@@ -458,7 +460,7 @@ class GNSSLocationBlock(DataBlock):
     def __str__(self):
         return (f"{self.type_desc()} -> time: {self.mission_time}, position: "
                 f"{GNSSLocationBlock.coord_to_str(self.latitude)} "
-                f"{GNSSLocationBlock.coord_to_str(self.longitude, ew = True)}, utc time: "
+                f"{GNSSLocationBlock.coord_to_str(self.longitude, ew=True)}, utc time: "
                 f"{self.utc_time}, altitude: {self.altitude} m, speed: {self.speed} knots, "
                 f"course: {self.course}°, pdop: {self.pdop}, hdop: {self.hdop}, vdop: "
                 f"{self.vdop}, sats in use: {self.sats}, type: {self.fix_type.name}")
@@ -470,6 +472,7 @@ class GNSSLocationBlock(DataBlock):
 class GNSSSatType(IntEnum):
     GPS = 0
     GLONASS = 1
+
 
 class GNSSSatInfo:
     GPS_SV_OFFSET = 0
@@ -486,11 +489,11 @@ class GNSSSatInfo:
     def from_bytes(cls, data):
         parts = struct.unpack("<BBH", data)
         identifier = parts[2] & 0x1f
-        
+
         try:
             sat_type = GNSSSatType((parts[2] >> 15) & 0x1)
         except ValueError:
-            raise DataBlockExcpetion(f"Invalid GNSS sat type: {(parts[2] >> 15) & 0x1}") from error
+            raise DataBlockException(f"Invalid GNSS sat type: {(parts[2] >> 15) & 0x1}")
 
         if sat_type == GNSSSatType.GPS:
             identifier = identifier + GNSSSatInfo.GPS_SV_OFFSET
@@ -507,7 +510,7 @@ class GNSSSatInfo:
         elif self.sat_type == GNSSSatType.GLONASS:
             id_adjusted = self.identifier - GNSSSatInfo.GLONASS_SV_OFFSET
 
-        id_and_azimuth = ((id_adjusted & 0x1f) | ((self.aximuth & 0x1ff) << 5) |
+        id_and_azimuth = ((id_adjusted & 0x1f) | ((self.azimuth & 0x1ff) << 5) |
                           (self.sat_type << 15))
 
         return struct.pack("<BBH", self.elevation, self.snr, id_and_azimuth)
@@ -609,7 +612,7 @@ class KX134ODR(IntEnum):
 
     @property
     def samples_per_sec(self):
-        return 25600.0/(2 ** (15 - self.value))
+        return 25600.0 / (2 ** (15 - self.value))
 
     def __str__(self):
         return f"{self.samples_per_sec} Hz"
@@ -636,12 +639,14 @@ class KX134Range(IntEnum):
     def __str__(self):
         return f"±{self.acceleration} g"
 
+
 class KX134LPFRolloff(IntEnum):
     ODR_OVER_9 = 0
     ODR_OVER_2 = 1
 
     def __str__(self):
         return "ODR / 9" if self == KX134LPFRolloff.ODR_OVER_9 else "ODR / 2"
+
 
 class KX134Resolution(IntEnum):
     RES_8_BIT = 0
@@ -657,6 +662,7 @@ class KX134Resolution(IntEnum):
 
     def __str__(self):
         return f"{self.bits} bits per sample"
+
 
 class KX134AccelerometerDataBlock(DataBlock):
     TYPE_DESC = "KX134 Accelerometer Data"
@@ -691,22 +697,22 @@ class KX134AccelerometerDataBlock(DataBlock):
         try:
             odr = KX134ODR(parts[1] & 0xf)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid KX134 ODR: {parts[1] & 0xf}") from error
+            raise DataBlockException(f"Invalid KX134 ODR: {parts[1] & 0xf}") from error
 
         try:
             accel_range = KX134Range((parts[1] >> 4) & 0x3)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid KX134 range: {(parts[1] >> 4) & 0x3}") from error
+            raise DataBlockException(f"Invalid KX134 range: {(parts[1] >> 4) & 0x3}") from error
 
         try:
             rolloff = KX134LPFRolloff((parts[1] >> 6) & 0x1)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid KX134 rolloff: {(parts[1] >> 6) & 0x1}") from error
+            raise DataBlockException(f"Invalid KX134 rolloff: {(parts[1] >> 6) & 0x1}") from error
 
         try:
             resolution = KX134Resolution((parts[1] >> 6) & 0x1)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid KX134 res: {(parts[1] >> 7) & 0x1}") from error
+            raise DataBlockException(f"Invalid KX134 res: {(parts[1] >> 7) & 0x1}") from error
 
         padding = (parts[1] >> 14) & 0x3
         num_samples = (len(payload) - (6 + padding)) // ((resolution.bits // 8) * 3)
@@ -725,7 +731,7 @@ class KX134AccelerometerDataBlock(DataBlock):
             y = samp_parts[1] / sensitivity
             z = samp_parts[2] / sensitivity
 
-            #print(f"i: {i}, samp_start: {samp_start}, x: {x}, y: {y}, z: {z}, samp_parts: {samp_parts}")
+            # print(f"i: {i}, samp_start: {samp_start}, x: {x}, y: {y}, z: {z}, samp_parts: {samp_parts}")
 
             samples.append((x, y, z))
 
@@ -747,17 +753,16 @@ class KX134AccelerometerDataBlock(DataBlock):
             z = int(sample[2] * sensitivity)
 
             if self.resolution == KX134Resolution.RES_8_BIT:
-                head = head + struct.pack("<bbb", x, y ,z)
+                head = head + struct.pack("<bbb", x, y, z)
             else:
                 head = head + struct.pack("<hhh", x, y, z)
 
         return head + (b'\x00' * padding)
-            
 
     def gen_samples(self):
         count = len(self.samples)
-        for i,samp in enumerate(self.samples):
-            time = (self.mission_time * (1000 / 1024)) -((count - i) * (self.sample_period * 1024))
+        for i, samp in enumerate(self.samples):
+            time = (self.mission_time * (1000 / 1024)) - ((count - i) * (self.sample_period * 1024))
             yield time, samp[0], samp[1], samp[2]
 
     def __str__(self):
@@ -786,6 +791,7 @@ class MPU9250MagSR(IntEnum):
     def __str__(self):
         return f"{self.samples_per_sec} Hz"
 
+
 class MPU9250AccelFSR(IntEnum):
     ACCEL_2G = 0,
     ACCEL_4G = 1,
@@ -811,6 +817,7 @@ class MPU9250AccelFSR(IntEnum):
     def __str__(self):
         return f"±{self.acceleration} g"
 
+
 class MPU9250GyroFSR(IntEnum):
     AV_250DPS = 0,
     AV_500DPS = 1,
@@ -835,6 +842,7 @@ class MPU9250GyroFSR(IntEnum):
 
     def __str__(self):
         return f"±{self.angular_velocity} °/s"
+
 
 class MPU9250AccelBW(IntEnum):
     BW_5_HZ = 0,
@@ -866,6 +874,7 @@ class MPU9250AccelBW(IntEnum):
     def __str__(self):
         return f"{self.bandwidth} Hz"
 
+
 class MPU9250GyroBW(IntEnum):
     BW_5_HZ = 0,
     BW_10_HZ = 1,
@@ -896,6 +905,7 @@ class MPU9250GyroBW(IntEnum):
     def __str__(self):
         return f"{self.bandwidth} Hz"
 
+
 class MPU9250MagResolution(IntEnum):
     RES_14_BIT = 0
     RES_16_BIT = 1
@@ -918,6 +928,7 @@ class MPU9250MagResolution(IntEnum):
 
     def __str__(self):
         return f"{self.bits} bits per sample"
+
 
 class MPU9250Sample:
     def __init__(self, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z, mag_x,
@@ -1021,31 +1032,31 @@ class MPU9250IMUDataBlock(DataBlock):
         try:
             mag_sample_rate = MPU9250MagSR((parts[1] >> 8) & 0x1)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid MPU9250 magnetometer sample "
+            raise DataBlockException(f"Invalid MPU9250 magnetometer sample "
                                      f"rate: {(parts[1] >> 8) & 0x1}") from error
 
         try:
             accel_fsr = MPU9250AccelFSR((parts[1] >> 9) & 0x3)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid MPU9250 accelerometer full scale "
+            raise DataBlockException(f"Invalid MPU9250 accelerometer full scale "
                                      f"range: {(parts[1] >> 9) & 0x3}") from error
 
         try:
             gyro_fsr = MPU9250GyroFSR((parts[1] >> 11) & 0x3)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid MPU9250 gyroscope full scale "
+            raise DataBlockException(f"Invalid MPU9250 gyroscope full scale "
                                      f"range: {(parts[1] >> 11) & 0x3}") from error
 
         try:
             accel_bw = MPU9250AccelBW((parts[1] >> 13) & 0x7)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid MPU9250 accelerometer bandwidth: "
+            raise DataBlockException(f"Invalid MPU9250 accelerometer bandwidth: "
                                      f"{(parts[1] >> 13) & 0x7}") from error
 
         try:
             gyro_bw = MPU9250GyroBW((parts[1] >> 16) & 0x7)
         except ValueError as error:
-            raise DataBlockExcpetion(f"Invalid MPU9250 gyroscope bandwidth: "
+            raise DataBlockException(f"Invalid MPU9250 gyroscope bandwidth: "
                                      f"{(parts[1] >> 16) & 0x7}") from error
 
         num_samples = (len(payload) - 8) // 21

@@ -517,54 +517,61 @@ if __name__ == '__main__':
     print("%s ports found. " % len(ports))
     print("Possible COM Serial Ports:", results)
 
-    if len(results) > 5:
-        # rx = GroundStation('/dev/ttyUSB1')
-        tx = GroundStation('/dev/ttyUSB0')
+    if len(results) >= 1:
+        port = input("What COM Port? \n")
 
-        # the COM port that is being used.
-        # tx = GroundStation('COM8')
+        try:
+            # rx = GroundStation('/dev/ttyUSB1')
+            tx = GroundStation(port)
 
-        # xxxxxxxxxxxxxxxxxxxxxtx.init_ground_station()
+            # the COM port that is being used.
+            # tx = GroundStation('COM8')
 
-        # rx.init_ground_station()
-        tx.init_ground_station()
-        tx.write_to_ground_station('radio set bw 500')
+            # xxxxxxxxxxxxxxxxxxxxxtx.init_ground_station()
 
-        # rx.write_to_ground_station('radio rx 0')
-        # tx.write_to_ground_station('radio rx 1')
+            # rx.init_ground_station()
+            tx.init_ground_station()
+            tx.write_to_ground_station('radio set bw 500')
 
-        # rx.set_rxmode()
-        # rx.write_to_ground_station('radio set wdt 0')
-        # rx.write_to_ground_station('mac pause')
-        # rx.write_to_ground_station('radio rx 0')
+            # rx.write_to_ground_station('radio rx 0')
+            # tx.write_to_ground_station('radio rx 1')
 
-        # tx.write_to_ground_station('mac pause')
-        # tx.write_to_ground_station('radio set pwr 10')
-        # tx.write_to_ground_station('radio tx 1234562')
+            # rx.set_rxmode()
+            # rx.write_to_ground_station('radio set wdt 0')
+            # rx.write_to_ground_station('mac pause')
+            # rx.write_to_ground_station('radio rx 0')
 
-        print('_____________________________________')
-        q = queue.Queue()
-        tx.set_rx_mode(q)
-        # header = bytes.fromhex('840C0000')
-        # header = struct.unpack('<I', header)
-        #
-        # length = ((header[0] & 0x1f) + 1) * 4
-        # signed = ((header[0] >> 5) & 0x1)
-        # _type = ((header[0] >> 6) & 0xf)
-        # subtype = ((header[0] >> 10) & 0x3f)
-        # dest_addr = ((header[0] >> 16) & 0xf)
-        #
-        # ## abstract class
-        # payload = bytes.fromhex("E01F00008D540100BC57000010FEFFFF")
-        # block = DataBlock.from_payload(subtype, payload)
-        # print(block)
+            # tx.write_to_ground_station('mac pause')
+            # tx.write_to_ground_station('radio set pwr 10')
+            # tx.write_to_ground_station('radio tx 1234562')
 
-        # signal report
-        # get snr over time and log it.
+            print('_____________________________________')
+            q = queue.Queue()
+            tx.set_rx_mode(q)
+            # header = bytes.fromhex('840C0000')
+            # header = struct.unpack('<I', header)
+            #
+            # length = ((header[0] & 0x1f) + 1) * 4
+            # signed = ((header[0] >> 5) & 0x1)
+            # _type = ((header[0] >> 6) & 0xf)
+            # subtype = ((header[0] >> 10) & 0x3f)
+            # dest_addr = ((header[0] >> 16) & 0xf)
+            #
+            # ## abstract class
+            # payload = bytes.fromhex("E01F00008D540100BC57000010FEFFFF")
+            # block = DataBlock.from_payload(subtype, payload)
+            # print(block)
 
-        # initialize the ground station
-        tx.init_ground_station()
+            # signal report
+            # get snr over time and log it.
 
-        print('_____________________________________')
-        q = queue.Queue()
-        tx.set_rx_mode(q)
+            # initialize the ground station
+            tx.init_ground_station()
+
+            print('_____________________________________')
+            q = queue.Queue()
+            tx.set_rx_mode(q)
+        except EnvironmentError:
+            print("Error")
+
+

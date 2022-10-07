@@ -11,7 +11,7 @@ from PyQt5.QtCore import pyqtSlot , QTimer,QDateTime
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 import io 
 import folium
-import packet 
+import packets
 import datetime
 import GroundStation
 
@@ -34,7 +34,7 @@ def init_UI():
     def update_label():
         textbox.clear()
         #somehow poll the system and get the packet 
-        data = packet.test_sending_data()
+        data = packets.test_sending_data()
         info = ''
         for key, value in data.items():
             info += key +' : ' + str(value) 
