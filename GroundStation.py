@@ -516,9 +516,13 @@ if __name__ == '__main__':
     print("%s ports found. " % len(ports))
     print("Possible COM Serial Ports:", results)
 
-    if len(results) > 1:
+    if len(results) > 5:
         # rx = GroundStation('/dev/ttyUSB1')
         tx = GroundStation('/dev/ttyUSB0')
+
+        # the COM port that is being used.
+        # tx = GroundStation('COM8')
+
         # xxxxxxxxxxxxxxxxxxxxxtx.init_ground_station()
 
         # rx.init_ground_station()
@@ -540,30 +544,26 @@ if __name__ == '__main__':
         print('_____________________________________')
         q = queue.Queue()
         tx.set_rx_mode(q)
-    # header = bytes.fromhex('840C0000')
-    # header = struct.unpack('<I', header)
-    #
-    # length = ((header[0] & 0x1f) + 1) * 4
-    # signed = ((header[0] >> 5) & 0x1)
-    # _type = ((header[0] >> 6) & 0xf)
-    # subtype = ((header[0] >> 10) & 0x3f)
-    # dest_addr = ((header[0] >> 16) & 0xf)
-    #
-    # ## abstract class
-    # payload = bytes.fromhex("E01F00008D540100BC57000010FEFFFF")
-    # block = DataBlock.from_payload(subtype, payload)
-    # print(block)
+        # header = bytes.fromhex('840C0000')
+        # header = struct.unpack('<I', header)
+        #
+        # length = ((header[0] & 0x1f) + 1) * 4
+        # signed = ((header[0] >> 5) & 0x1)
+        # _type = ((header[0] >> 6) & 0xf)
+        # subtype = ((header[0] >> 10) & 0x3f)
+        # dest_addr = ((header[0] >> 16) & 0xf)
+        #
+        # ## abstract class
+        # payload = bytes.fromhex("E01F00008D540100BC57000010FEFFFF")
+        # block = DataBlock.from_payload(subtype, payload)
+        # print(block)
 
-    # signal report
-    # get snr over time and log it.
+        # signal report
+        # get snr over time and log it.
 
+        # initialize the ground station
+        tx.init_ground_station()
 
-# the COM port that is being used.
-tx = GroundStation('COM8')
-
-# initialize the ground station
-tx.init_ground_station()
-
-print('_____________________________________')
-q = queue.Queue()
-tx.set_rx_mode(q)
+        print('_____________________________________')
+        q = queue.Queue()
+        tx.set_rx_mode(q)
