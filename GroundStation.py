@@ -201,7 +201,7 @@ class GroundStation:
     def set_freq(self, freq):
         """set the frequency of transmitted signals"""
 
-        if not ((freq >= 433050000 and freq <= 434790000) or (freq >= 863000000 and freq <= 870000000)):
+        if not ((433050000 <= freq <= 434790000) or (863000000 <= freq <= 870000000)):
             print('invalid frequency parameter.')
             return False
 
@@ -488,33 +488,34 @@ def serial_ports() -> tuple[list[str], list[str]]:
         :returns:
             A list of the serial ports available on the system
     """
+    com_ports = []
     if sys.platform.startswith('win'):
-        ports = ['COM%s' % (i + 1) for i in range(256)]
+        com_ports = ['COM%s' % (i + 1) for i in range(256)]
     elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        ports = glob.glob('/dev/tty[A-Za-z]*')
+        com_ports = glob.glob('/dev/tty[A-Za-z]*')
     elif sys.platform.startswith('darwin'):
-        ports = glob.glob('/dev/tty.*')
+        com_ports = glob.glob('/dev/tty.*')
     else:
         raise EnvironmentError('Unsupported platform')
 
     # Checks ports if they are potential COM ports
     result = []
-    for port in ports:
+    for test_port in com_ports:
         try:
-            s = serial.Serial(port)
+            s = serial.Serial(test_port)
             s.close()
-            result.append(port)
+            result.append(test_port)
         except (OSError, serial.SerialException):
             pass
-    return ports, result
+    return com_ports, result
 
 
 # for debugging
 
 if __name__ == '__main__':
     ports, results = serial_ports()
-    print("DEBUG All Ports:", ports)
-    print("%s ports found. " % len(ports))
+    # print("DEBUG All Ports:", ports)
+    # print("%s ports found. " % len(ports))
     print("Possible COM Serial Ports:", results)
 
     if len(results) >= 1:
@@ -548,19 +549,6 @@ if __name__ == '__main__':
             print('_____________________________________')
             q = queue.Queue()
             tx.set_rx_mode(q)
-            # header = bytes.fromhex('840C0000')
-            # header = struct.unpack('<I', header)
-            #
-            # length = ((header[0] & 0x1f) + 1) * 4
-            # signed = ((header[0] >> 5) & 0x1)
-            # _type = ((header[0] >> 6) & 0xf)
-            # subtype = ((header[0] >> 10) & 0x3f)
-            # dest_addr = ((header[0] >> 16) & 0xf)
-            #
-            # ## abstract class
-            # payload = bytes.fromhex("E01F00008D540100BC57000010FEFFFF")
-            # block = DataBlock.from_payload(subtype, payload)
-            # print(block)
 
             # signal report
             # get snr over time and log it.
@@ -573,5 +561,3 @@ if __name__ == '__main__':
             tx.set_rx_mode(q)
         except EnvironmentError:
             print("Error")
-
-
