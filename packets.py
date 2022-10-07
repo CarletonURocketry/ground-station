@@ -57,21 +57,18 @@ kx134_1211_dic = {
 
 # Conversion functions
 def hex_str_to_int(hex_string: str) -> int:
-
     """Returns the integer value of a hexadecimal string."""
 
     return int(hex_string, 16)
 
 
 def bin_to_hex(bin_string: str) -> hex:
-
     """Returns a hexidecimal code for a given binary string."""
 
     return hex(int(bin_string, 2))
 
 
 def hex_to_bin(hex_string: str) -> str:
-
     """Returns a binary string from a hexadecimal string.
 
     It is better to use this method than the built-in 'bin()' method because this method will preserve the number of
@@ -89,7 +86,6 @@ def hex_to_bin(hex_string: str) -> str:
 
 
 def signed_hex_str_to_int(hex_string: str) -> int:
-
     """Returns an integer value for a given signed hexadecimal string. Return value preserves the number of bits."""
 
     bin_input = hex_to_bin(hex_string)
@@ -101,7 +97,6 @@ def signed_hex_str_to_int(hex_string: str) -> int:
 
 
 def signed_bin_str_to_int(bin_string: str) -> int:
-
     """Returns an integer value for a signed binary string."""
 
     return signed_hex_str_to_int(hex(int(bin_string, 2)))
@@ -109,7 +104,6 @@ def signed_bin_str_to_int(bin_string: str) -> int:
 
 # Packet classes
 def convert_raw(raw_data: str, hex_length: int, signed: bool = False) -> int:
-
     """Converts a hexadecimal string to an integer."""
 
     # Value error if string is not the right length
@@ -133,7 +127,6 @@ class AltitudeData:
     # Creation
     @classmethod
     def create_from_raw(cls, raw_data: str) -> AltitudeData:
-
         """Returns an AltitudeData packet from raw data."""
 
         print(f"Packet data being set from {raw_data}")
@@ -168,28 +161,24 @@ class AltitudeData:
     # Setters
     @time.setter
     def time(self, raw_time: str) -> None:
-
         """Time is received in milliseconds."""
 
         self._time = convert_raw(raw_time, hex_length=8)
 
     @pressure.setter
     def pressure(self, raw_pressure: str) -> None:
-
         """Pressure in kilopascals is converted to Pascals."""
 
         self._pressure = convert_raw(raw_pressure, hex_length=8) / 1000
 
     @temperature.setter
     def temperature(self, raw_temperature: str) -> None:
-
         """Temperature in millidegrees Celsius is converted to a degrees Celsius."""
 
         self._temperature = convert_raw(raw_temperature, hex_length=8) / 1000
 
     @altitude.setter
     def altitude(self, raw_altitude: str) -> None:
-
         """Altitude in millimeters is converted to meters."""
 
         self._altitude = convert_raw(raw_altitude, hex_length=8) / 1000
@@ -215,7 +204,6 @@ class AccelerationData:
 
     @classmethod
     def create_from_raw(cls, raw_data: str, resolution: int) -> AccelerationData:
-
         """Returns an AccelerationData packet from raw data."""
 
         print(f"Packet data being set from {raw_data}")
@@ -259,7 +247,6 @@ class AccelerationData:
 
     @fsr.setter
     def fsr(self, raw_fsr: str) -> None:
-
         """Adjusts the FSR based on the resolution."""
 
         adjustment_factor = 16 - self.resolution + 1
@@ -302,7 +289,6 @@ class AngularVelocityData:
 
     @classmethod
     def create_from_raw(cls, raw_data: str, resolution: int) -> AngularVelocityData:
-
         """Returns an AngularVelocityData packet from raw data."""
 
         print(f"Packet data being set from {raw_data}")
@@ -347,7 +333,6 @@ class AngularVelocityData:
 
     @fsr.setter
     def fsr(self, raw_fsr: str) -> None:
-
         """Adjusts the FSR based on the resolution."""
 
         adjustment_factor = 16 - self.resolution + 1
@@ -376,7 +361,6 @@ class AngularVelocityData:
 
 
 class GNSSMetaDataInfo:
-
     """Stores metadata on satellites used in the GNSS."""
 
     def __init__(self):
@@ -429,11 +413,11 @@ class GNSSMetaDataInfo:
     @elevation.setter
     def elevation(self, raw_elevation) -> None:
         self._elevation = int(raw_elevation, 2)
-        
+
     @snr.setter
     def snr(self, raw_snr) -> None:
         self._snr = int(raw_snr, 2)
-        
+
     @id_.setter
     def id_(self, raw_id) -> None:
         self._id = int(raw_id, 2)
@@ -460,7 +444,6 @@ class GNSSMetaDataInfo:
 
 
 class GNSSMetaData:
-
     class Info:
         """stores metadata on satellites used in the GNSS"""
 
@@ -501,10 +484,10 @@ class GNSSMetaData:
         def __str__(self):
 
             return f"elevation: {self.elevation}\n" \
-                    f"SNR: {self.SNR}\n" \
-                    f"ID: {self.ID}\n" \
-                    f"Azimuth: {self.azimuth}\n" \
-                    f"type: {self.type}\n"
+                   f"SNR: {self.SNR}\n" \
+                   f"ID: {self.ID}\n" \
+                   f"Azimuth: {self.azimuth}\n" \
+                   f"type: {self.type}\n"
 
     def __init__(self):
         self._mission_time: int = None
@@ -534,11 +517,11 @@ class GNSSMetaData:
     @property
     def mission_time(self) -> int:
         return self._mission_time
-    
+
     @property
     def gps_satellites_in_use(self) -> list[int]:
         return self._gps_satellites_in_use
-    
+
     @property
     def glonass_satellites_in_use(self) -> list[int]:
         return self._glonass_satellites_in_use
@@ -546,12 +529,12 @@ class GNSSMetaData:
     @property
     def satellite_info(self) -> list[GNSSMetaDataInfo]:
         return self._satellite_info
-    
+
     # Setters
     @mission_time.setter
     def mission_time(self, raw_mission_time: str) -> None:
         self._mission_time = convert_raw(raw_mission_time, hex_length=8)
-        
+
     @gps_satellites_in_use.setter
     def gps_satellites_in_use(self, raw_gps_satellites: bin) -> None:
 
@@ -737,90 +720,148 @@ class GNSSLocationData:
     # String representation
     def __str__(self):
         return f"fix time: {self.fix_time}\n" \
-                f"latitude: {self.latitude}\n" \
-                f"longitude: {self.longitude}\n" \
-                f"utc_time: {self.utc_time}\n" \
-                f"altitude: {self.altitude}\n" \
-                f"rocket speed: {self.rocket_speed}\n" \
-                f"rocket_course: {self.rocket_course}\n" \
-                f"pdop: {self.pdop}\n" \
-                f"hdop: {self.hdop}\n" \
-                f"vdop: {self.vdop}\n" \
-                f"num_sats: {self.num_sats}\n" \
-                f"fix_type: {self.fix_type}\n"
+               f"latitude: {self.latitude}\n" \
+               f"longitude: {self.longitude}\n" \
+               f"utc_time: {self.utc_time}\n" \
+               f"altitude: {self.altitude}\n" \
+               f"rocket speed: {self.rocket_speed}\n" \
+               f"rocket_course: {self.rocket_course}\n" \
+               f"pdop: {self.pdop}\n" \
+               f"hdop: {self.hdop}\n" \
+               f"vdop: {self.vdop}\n" \
+               f"num_sats: {self.num_sats}\n" \
+               f"fix_type: {self.fix_type}\n"
+
+
+class MPU9250MeasurementData:
+    """Measurement data from the MPU9250 IMU."""
+
+    def __init__(self, raw_bin):
+        self.time_stamp: int = int(raw_bin[0:32], 2)
+        self.accel_x: int = int(raw_bin[32:48], 2)
+        self.accel_y: int = int(raw_bin[48:64], 2)
+        self.accel_z: int = int(raw_bin[64:80], 2)
+        self.temperature: int = int(raw_bin[80:96], 2)
+
+        self.gyro_x: int = int(raw_bin[96:112], 2)
+        self.gyro_y: int = int(raw_bin[112:128], 2)
+        self.gyro_z: int = int(raw_bin[128:144], 2)
+
+        self.mag_x: int = int(raw_bin[144:160], 2)
+        self.mag_y: int = int(raw_bin[160:176], 2)
+        self.mag_z: int = int(raw_bin[176:192], 2)
+
+        self.mag_valid: int = int(raw_bin[195], 2)
+        self.mag_resolution: int = int(raw_bin[196], 2)
+
+    # String representation
+    def __str__(self):
+        return f"time: {self.time_stamp}\n" \
+               f"temperature: {self.temperature}\n" \
+               f"accel x: {self.accel_x}\n" \
+               f"accel y: {self.accel_y}\n" \
+               f"accel z: {self.accel_z}\n" \
+               f"gyro x: {self.gyro_x}\n" \
+               f"gyro y: {self.gyro_y}\n" \
+               f"gyro z: {self.gyro_z}\n" \
+               f"mag x: {self.mag_x}\n" \
+               f"mag y: {self.mag_y}\n" \
+               f"mag z: {self.mag_z}\n" \
+               f"mag valid: {self.mag_valid}\n" \
+               f"mag resolution: {self.mag_resolution}\n"
 
 
 class MPU9250Data:
-    """data from the MPU9250 IMU"""
+    """Data from the MPU9250 IMU."""
 
-    class Measurement:
+    def __init__(self):
+        self._time: int = None
+        self._ag_sample_rate: int = None  # Sample rate of the accelerometer and gyroscope
+        self._accelerometer_fsr: int = None  # Accelerometer full scale range
+        self._gyroscope_fsr: int = None  # Gyroscope full scale range
+        self._accelerometer_bw: int = None  # Bandwidth for the low pass filter used by the accelerometer
+        self._gyroscope_bw: int = None  # Bandwidth for the low pass filter used by the gyroscope
 
-        def __init__(self, raw_bin):
-            print(raw_bin)
-            self.time_stamp = int(raw_bin[0:32], 2)
-            self.accel_x = int(raw_bin[32:48], 2)
-            self.accel_y = int(raw_bin[48:64], 2)
-            self.accel_z = int(raw_bin[64:80], 2)
-            self.temperature = int(raw_bin[80:96], 2)
+    @classmethod
+    def create_from_raw(cls, raw_data: str) -> MPU9250Data:
 
-            self.gyro_x = int(raw_bin[96:112], 2)
-            self.gyro_y = int(raw_bin[112:128], 2)
-            self.gyro_z = int(raw_bin[128:144], 2)
+        """Returns an MPU9250Data packet from raw data."""
 
-            self.mag_x = int(raw_bin[144:160], 2)
-            self.mag_y = int(raw_bin[160:176], 2)
-            self.mag_z = int(raw_bin[176:192], 2)
+        print(f"Packet data being set from {raw_data}")
 
-            self.mag_valid = int(raw_bin[195], 2)
-            self.mag_resolution = int(raw_bin[196], 2)
+        packet = MPU9250Data()
+        raw_binary = hex_to_bin(raw_data)
 
-        def __str__(self):
-            return f"time: {self.time_stamp}\n" \
-                   f"temperature: {self.temperature}\n" \
-                   f"accel x: {self.accel_x}\n" \
-                   f"accel y: {self.accel_y}\n" \
-                   f"accel z: {self.accel_z}\n" \
-                   f"gyro x: {self.gyro_x}\n" \
-                   f"gyro y: {self.gyro_y}\n" \
-                   f"gyro z: {self.gyro_z}\n" \
-                   f"mag x: {self.mag_x}\n" \
-                   f"mag y: {self.mag_y}\n" \
-                   f"mag z: {self.mag_z}\n" \
-                   f"mag valid: {self.mag_valid}\n" \
-                   f"mag resolution: {self.mag_resolution}\n"
+        # Set attributes from raw data
+        packet.time = raw_data[:8]
+        packet.ag_sample_rate = raw_data[8:10]
+        packet.accelerometer_fsr = raw_binary[39:41]
+        packet.gyroscope_fsr = None
+        packet.accelerometer_bw = None
+        packet.gyroscope_bw = None
 
-    def __init__(self, raw):
-        self.time_stamp = None
+        return packet
 
-        # sample rate of the accelerometer and gyroscope
-        self.ag_sample_rate = None
+    # Getters
+    @property
+    def time(self) -> int:
+        return self._time
 
-        # accelerometer full scale range
-        self.accelerometer_fsr = None
+    @property
+    def ag_sample_rate(self) -> int:
+        return self._ag_sample_rate
 
-        # gyroscope full scale range
-        self.gyroscope_fsr = None
+    @property
+    def accelerometer_fsr(self) -> int:
+        return self._accelerometer_fsr
 
-        # bandwidth for the low pass filter used by the accelerometer
-        self.accelerometer_bw = None
+    @property
+    def gyroscope_fsr(self) -> int:
+        return self._gyroscope_fsr
 
-        # bandwidth for the low pass filter used by the gyroscope
-        self.gyroscope_bw = None
+    @property
+    def accelerometer_bw(self) -> int:
+        return self._accelerometer_bw
 
-        self.setup(raw)
+    @property
+    def gyroscope_bw(self) -> int:
+        return self._gyroscope_bw
 
-    def setup(self, raw):
-        self.time_stamp = hex_str_to_int(raw[0:8])
+    # Setters
+    @time.setter
+    def time(self, raw_time: str) -> None:
+        self._time = convert_raw(raw_time, hex_length=8)
 
-        self.ag_sample_rate = hex_str_to_int(raw[8:10])
+    @ag_sample_rate.setter
+    def ag_sample_rate(self, raw_ag_sample: str) -> None:
+        self._ag_sample_rate = convert_raw(raw_ag_sample, hex_length=2)
 
-        raw_bin = hex_to_bin(raw)
+    @accelerometer_fsr.setter
+    def accelerometer_fsr(self, raw_acc_fsr: bin) -> None:
+        self._accelerometer_fsr = 2 ** (int(raw_acc_fsr, 2) + 1)
 
-        # get the fsr of the accelerometer
-        raw_a_fsr = int(raw_bin[39:41], 2)
-        self.accelerometer_fsr = 2 ** (raw_a_fsr + 1)
+    # TODO: The following three setters need to be finished after we receive an input from this device
 
-        # TODO: this needs to be finished after we receive an input from this device
+    @gyroscope_fsr.setter
+    def gyroscope_fsr(self, raw_gyro_fsr) -> None:
+        pass  # TODO
+
+    @gyroscope_bw.setter
+    def gyroscope_bw(self, raw_gyro_bw) -> None:
+        pass  # TODO
+
+    @accelerometer_bw.setter
+    def accelerometer_bw(self, raw_acc_bw) -> None:
+        pass  # TODO
+
+    # String representation
+    def __str__(self):
+        return f"Time: {self.time}\n" \
+               f"AG sample rate: {self.ag_sample_rate}\n" \
+               f"Accelerometer FSR: {self.accelerometer_fsr}\n" \
+               f"Gyroscope FSR: {self.gyroscope_fsr}\n" \
+               f"Accelerometer BW: {self.accelerometer_bw}\n" \
+               f"Gyroscope BW: {self.gyroscope_bw}"
 
 
 class KX1341211Data:
