@@ -201,52 +201,100 @@ class AltitudeData:
 
 class AccelerationData:
 
-    def __init__(self, raw, resolution):
-        self.time_stamp = None
-        self.fsr = None
-        self.x_axis = None
-        self.y_axis = None
-        self.z_axis = None
+    def __init__(self, resolution):
+        self.resolution = resolution  # Resolution for calculations
 
-        self.set_time(raw)
-        self.set_fsr(raw, resolution)
-        self.set_x_axis(raw, resolution)
-        self.set_y_axis(raw, resolution)
-        self.set_z_axis(raw, resolution)
+        self._time: int
+        self._fsr: int
+        self._x_axis: int
+        self._y_axis: int
+        self._z_axis: int
 
+    @classmethod
+    def create_from_raw(cls, raw_data: str, resolution) -> AccelerationData:
+
+        """Returns an AccelerationData packet from raw data."""
+
+        print(f"Packet data being set from {raw_data}")
+
+        packet = AccelerationData(resolution)
+
+        # Set attributes from raw data
+        packet.time = raw_data[:8]
+        packet.fsr = raw_data[8:12]  # Must be set before axes, as they depend on this value
+        packet.x_axis = raw_data[12:16]
+        packet.y_axis = raw_data[16:20]
+        packet.z_axis = raw_data[20:24]
+
+        return packet
+
+    # Getters
+    @property
+    def time(self):
+        return self._time
+
+    @property
+    def fsr(self):
+        return self._fsr
+
+    @property
+    def x_axis(self):
+        return self._x_axis
+
+    @property
+    def y_axis(self):
+        return self._y_axis
+
+    @property
+    def z_axis(self):
+        return self._z_axis
+
+    # Setters
+    @staticmethod
+    def __convert_raw(raw_data: str, hex_length: int) -> int:
+
+        """Converts a hexadecimal string to an integer."""
+
+        # Value error if string is not the right length
+        if len(raw_data) != hex_length:
+            raise ValueError(f"Hexadecimal string must be of length {hex_length}.")
+
+        return hex_str_to_int(raw_data)
+
+    @time.setter
+    def time(self, raw_time: str) -> None:
+        self._time = self.__convert_raw(raw_time, hex_length=8)
+
+    @fsr.setter
+    def fsr(self, raw_fsr: str) -> None:
+
+        """Adjusts the FSR based on the resolution."""
+
+        adjustment_factor = 16 - self.resolution + 1
+        unadjusted_fsr = self.__convert_raw(raw_fsr, hex_length=4)
+
+        self._fsr = unadjusted_fsr // 2 ** adjustment_factor
+
+    @x_axis.setter
+    def x_axis(self, raw_x_axis) -> None:
+        # TODO: These are signed values and so must be fixed
+        self._x_axis = self.__convert_raw(raw_x_axis, hex_length=4) * self.fsr / 2 ** 15
+
+    @y_axis.setter
+    def y_axis(self, raw_y_axis) -> None:
+        self._y_axis = self.__convert_raw(raw_y_axis, hex_length=4) * self.fsr / 2 ** 15
+
+    @z_axis.setter
+    def z_axis(self, raw_z_axis) -> None:
+        self._z_axis = self.__convert_raw(raw_z_axis, hex_length=4) * self.fsr / 2 ** 15
+
+    # String representation
     def __str__(self):
         return f"{self.time_stamp}\n" \
                f"{self.fsr}\n" \
                f"{self.x_axis}\n" \
                f"{self.y_axis}\n" \
                f"{self.z_axis}\n"
-
-    def set_time(self, raw):
-        """
-        :param raw: the raw message, a string, that is recieved from the rocket's stack
-        :return:
-        """
-
-        # time in milliseconds
-        self.time_stamp = hex_str_to_int(raw[0:8])
-
-    def set_fsr(self, raw, resolution):
-        fsr_unadjusted = hex_str_to_int(raw[8:12])
-        adjustment_factor = 16 - (resolution + 1)
-        self.fsr = (fsr_unadjusted // (2 ** adjustment_factor))
-
-    def set_x_axis(self, raw, resolution):
-        # todo: these are signed values and so must be fixed
-        measurement = hex_str_to_int(raw[12:16])
-        self.x_axis = measurement * (self.fsr / (2 ** 15))
-
-    def set_y_axis(self, raw, resolution):
-        measurement = hex_str_to_int(raw[16:20])
-        self.y_axis = measurement * (self.fsr / (2 ** 15))
-
-    def set_z_axis(self, raw, resolution):
-        measurement = hex_str_to_int(raw[20:24])
-        self.y_axis = measurement * (self.fsr / (2 ** 15))
 
 
 class AngularVelocityData:
