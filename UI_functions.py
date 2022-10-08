@@ -1,180 +1,126 @@
+# Imports
 import queue
 import packets
 
+# Constants
+SUBTYPE = {
+    3: "altitude_data",
+    4: "acceleration_data",
+    5: "angular_velocity_data",
+    6: "GNSS_location_data",
+    7: "GNSS_metadata",
+    8: "power_information",
+    9: "temperatures",
+    "A": "MPU9250_IMU_data",
+    "B": "KX134-1211_accelerometer_data"
+}
 
-def _parse_packet_header(header):
+PACKETS = {
+    SUBTYPE[3]: packets.AltitudeData,
+    SUBTYPE[4]: packets.AccelerationData,
+    SUBTYPE[5]: packets.AngularVelocityData,
+    SUBTYPE[6]: packets.GNSSLocationData,
+    SUBTYPE[7]: packets.GNSSMetaData,
+    SUBTYPE["A"]: packets.MPU9250Data,
+    SUBTYPE["B"]: packets.KX1341211Data
+}
 
-    # extract call sign in hex
-    call_sign = header[0:12]
 
-    # convert header from hex to binary
+# Functions
+def _parse_packet_header(header) -> tuple:
+
+    """
+    Returns the packet header string's informational components in a tuple.
+
+    length: int
+    version: int
+    src_addr: int
+    packet_num: int
+    """
+
+    # Extract call sign in hex
+    call_sign: str = header[0:12]
+
+    # Convert header from hex to binary
     header = bin(int(header, 16))
 
-    # extract values and then convert them to ints
-    length = (int(header[47:53], 2) + 1 ) * 4
-    version = int(header[53:58], 2)
-    src_addr = int(header[63:67], 2)
-    packet_num = int(header[67:79], 2)
+    # Extract values and then convert them to ints
+    length: int = (int(header[47:53], 2) + 1) * 4
+    version: int = int(header[53:58], 2)
+    src_addr: int = int(header[63:67], 2)
+    packet_num: int = int(header[67:79], 2)
 
-    print( call_sign, length, version, src_addr, packet_num)
+    return call_sign, length, version, src_addr, packet_num
 
 
-def _parse_block_header(header):
+def _parse_block_header(header) -> tuple:
 
-    # convert into binary
-    header = bin(int(header, 16))
+    """
+    Parses a block header string into its information components and returns them in a tuple.
 
-    # length of block in bytes (excluding header (that's why we subtract 4))
-    block_len = int(header[0:5], 2) - 4
+    block_len: int
+    crypto_signature: bool
+    message_type: int
+    message_subtype: str
+    destination_addr: int
+    """
 
-    # does the message have a cryptographic signature?
-    sig = int(header[5], 2)
-    if sig == 1:
-        sig = True
+    header = bin(int(header, 16))  # Convert into binary
+
+    block_len: int = int(header[0:5], 2) - 4  # Length of block in bytes, excluding header, hence subtract 4
+    crypto_signature: bool = True if int(header[5], 2) == 1 else False  # Check if message has a cryptographic signature
+
+    # Type of message (Ex: The purpose of the block, such as transmitting info to ground station)
+    message_type: int = int(header[6:10], 2)
+
+    message_subtype: str = SUBTYPE.get(int(header[10:16], 2))  # Type of information that is stored in the block
+    destination_addr: int = int(header[16:20], 2)
+
+    return block_len, crypto_signature, message_type, message_subtype, destination_addr
+
+
+def parse_rx(data: queue.Queue | str) -> tuple | None:
+
+    # Data is a string
+    if type(data) == str:
+        header_length = 12
+
+    # Data is a queue
     else:
-        sig = False
+        header_length = 24
 
-    # type of message (ie. the purpose of the block, ie. to transmit info to ground station)
-    type = int(header[6:10], 2)
+        if data.empty():
+            return None
+        else:
+            data = data.get()
 
-    # the type of information that is stored in the block
-    subtype = int(header[10:16], 2)
-
-    dest_addr = int(header[16:20], 2)
-
-    if subtype == 3:
-        subtype = 'altitude_data'
-    elif subtype == 4:
-        subtype = 'acceleration'
-    elif subtype == 5:
-        subtype = 'angular_velocity_data'
-    elif subtype == 6:
-        subtype = 'GNSS_location_data'
-    elif subtype == 7:
-        subtype = 'GNSS_metadata'
-    elif subtype == 8:
-        subtype = 'power_information'
-    elif subtype == 9:
-        subtype = 'temperatures'
-    elif subtype == 'A':
-        subtype = 'MPU9250_IMU_data_data'
-    elif subtype == 'B':
-        subtype = 'KX134-1211_accelerometer_data'
-    else:
-        subtype = -1
-
-    return block_len, sig, type, subtype, dest_addr
-
-
-def parse_rx(q:queue.Queue):
-
-    if q.empty():
-        return
-    else:
-        data = q.get()
-
-    # extract the packet header
+    # Extract the packet header
     call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
 
-    # if this packet nothing more than just the packet header
-    if length <= 24:
-        return [call_sign, length, version, srs_addr, packet_num]
+    if length <= header_length:  # If this packet nothing more than just the  header
+        return call_sign, length, version, srs_addr, packet_num
 
-    # remove the packet header
-    blocks = data[24:]
-    # parse through all blocks
+    blocks = data[24:]  # Remove the packet header
+
+    # Parse through all blocks
     while blocks != '':
+
+        # Parse block header
         block_header = blocks[:8]
+        block_len, crypto_signature, message_type, message_subtype, dest_addr = _parse_block_header(block_header)
 
-        block_len, sig, _type, _subtype, dest_addr = _parse_block_header(block_header)
-
-        # convert length in bytes to length in hex symbols
-        block_len = block_len * 2
-
+        block_len = block_len * 2  # Convert length in bytes to length in hex symbols
         payload = blocks[8: 8 + block_len]
 
-        if _subtype == 'altitude_data':
-            data = packets.AltitudeData(payload)
+        # Create data if correct packet format was found
+        packet = PACKETS.get(message_subtype)
+        packet_data = packet.create_from_raw(payload) if packet else None
 
-        elif _type == 'acceleration_data':
-            data = packets.AccelerationData(payload)
-
-        elif _type == 'angular_velocity_data':
-            data = packets.AngularVelocityData(payload)
-
-        elif _type == 'GNSS_location_data':
-            data = packets.GNSSLocationData(payload)
-
-        elif _type == 'GNSS_metadata_data':
-            data = packets.GNSSMetaData(payload)
-
-        elif _type == 'MPU9250_IMU_data_data':
-            data = packets.MPU9250Data(payload)
-
-        elif _type == 'KX134-1211_accelerometer_data':
-            data = packets.KX1341211Data(payload)
-
-        else:
-            data = -1
-
-        # remove the data we processed from the whole set, and move onto the next data block
-        blocks = blocks[8 + block_len:]
-
-def _parse_rx(data):
-
-    # extract the packet header
-    call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
-
-    # if this packet nothing more than just the packet header
-    print(length)
-    if length <= 12:  # length less than 12 bytes
-        return [call_sign, length, version, srs_addr, packet_num]
-
-    # remove the packet header (it's in hex, and since there are two hex symbols per byte, we remove 24 hex symbols)
-    blocks = data[24:]
-    # parse through all blocks
-
-    datas = []
-
-    while blocks != '':
-        block_header = blocks[:8]
-
-        block_len, sig, _type, _subtype, dest_addr = _parse_block_header(block_header)
-
-        # convert length in bytes to length in hex symbols
-        block_len = block_len * 2
-
-        payload = blocks[8: 8 + block_len]
-
-        if _subtype == 'altitude_data':
-            data = packets.AltitudeData(payload)
-
-        elif _type == 'acceleration_data':
-            data = packets.AccelerationData(payload)
-
-        elif _type == 'angular_velocity_data':
-            data = packets.AngularVelocityData(payload)
-
-        elif _type == 'GNSS_location_data':
-            data = packets.GNSSLocationData(payload)
-
-        elif _type == 'GNSS_metadata_data':
-            data = packets.GNSSMetaData(payload)
-
-        elif _type == 'MPU9250_IMU_data_data':
-            data = packets.MPU9250Data(payload)
-
-        elif _type == 'KX134-1211_accelerometer_data':
-            data = packets.KX1341211Data(payload)
-
-        else:
-            data = -1
-
-        print(data)
-        # remove the data we processed from the whole set, and move onto the next data block
+        # Remove the data we processed from the whole set, and move onto the next data block
         blocks = blocks[8 + block_len:]
 
 
+# Random previous commented code with no explanation
 # q = queue.Queue()
 # q.put('123456781234567812345678F0F0F0F0FFFFFFFF00000000FFFFFFFFAABB\r\n')
 # res = parse_rx(q)
