@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# Authors: Matteo Golin
+
 # Conversion tables
 hex_bin_dic = {
     '0': '0000',
