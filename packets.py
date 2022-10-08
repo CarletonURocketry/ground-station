@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-# Imports
-from random import randrange
-
 # Conversion tables
 hex_bin_dic = {
     '0': '0000',
