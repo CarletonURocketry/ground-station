@@ -1,3 +1,4 @@
+# Authors: Matteo Golin
 # Imports
 import queue
 import packets
