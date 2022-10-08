@@ -784,7 +784,6 @@ class MPU9250Data:
 
     @classmethod
     def create_from_raw(cls, raw_data: str) -> MPU9250Data:
-
         """Returns an MPU9250Data packet from raw data."""
 
         print(f"Packet data being set from {raw_data}")
@@ -865,7 +864,6 @@ class MPU9250Data:
 
 
 class KX1341211MeasurementData:
-
     """Contains measurement data for the KX1341211 packet."""
 
     def __init__(self):
@@ -957,24 +955,129 @@ class KX1341211MeasurementData:
 
 class KX1341211Data:
 
-    def __init__(self, raw):
+    def __init__(self):
+        self._time: int = None
+        self._data_rate: int = None  # Data rate of the accelerometer in Hz
+        self._full_scale_range: int = None  # Set the full scale range in Gs
+        self._corner_frequency: int = None  # The corner frequency of the accelerometer's low pass filter in Hz
 
-        self.time_stamp = None
+        self._resolution: int = None
+        self._padding: int = None
+        self._measurements: list[KX1341211MeasurementData] = []  # The actual measurements taken by the accelerometer
 
-        # data rate of the accelerometer in Hz
-        self.data_rate = None
+    @classmethod
+    def create_from_raw(cls, raw_data: str) -> KX1341211Data:
 
-        # set the full scale range (in G's)
-        self.full_scale_range = None
+        """Returns an KX1341211Data packet from raw data."""
 
-        # the corner frequency of the accelerometer's low pass filter (in Hz)
-        self.corner_freq = None
+        print(f"Packet data being set from {raw_data}")
 
-        # the actual measurements taken by the accelerometer
-        self.measurements = []
+        packet = KX1341211Data()
+        raw_binary = hex_to_bin(raw_data)
 
-        self.setup(raw)
+        # Set attributes from raw data
+        packet.time = raw_binary[:32]
+        packet.data_rate = raw_binary[32:36]
+        packet.full_scale_range = raw_binary[36:38]
+        packet.corner_frequency = raw_binary[38]
 
+        packet.resolution = raw_binary[39]
+        packet.padding = raw_binary[46:48]
+        packet.measurements = raw_binary[48:]
+
+        return packet
+
+    # Getters
+    @property
+    def time(self) -> int:
+        return self._time
+
+    @property
+    def data_rate(self) -> int:
+        return self._data_rate
+
+    @property
+    def full_scale_range(self) -> int:
+        return self._full_scale_range
+
+    @property
+    def corner_frequency(self) -> int:
+        return self._corner_frequency
+
+    @property
+    def measurements(self) -> int:
+        return self._measurements
+
+    @property
+    def resolution(self) -> int:
+        return self._resolution
+
+    @property
+    def padding(self) -> int:
+        return self._padding
+
+    # Setters
+    @time.setter
+    def time(self, raw_time: bin) -> None:
+        self._time = int(raw_time, 2)
+
+    @data_rate.setter
+    def data_rate(self, raw_data_rate: bin) -> None:
+        self._data_rate = kx134_1211_dic[hex(int(raw_data_rate, 2))]
+
+    @full_scale_range.setter
+    def full_scale_range(self, raw_range: bin) -> None:
+
+        range_type = int(raw_range, 2)  # Can be 0 - 3
+
+        if range_type <= 3:
+            full_scale_range = 2 ** (range_type + 3)
+
+        # Invalid range
+        else:
+            full_scale_range = -1
+
+        self._full_scale_range = full_scale_range
+
+    @corner_frequency.setter
+    def corner_frequency(self, raw_corner_freq: bin) -> None:
+
+        """The corner frequency of the accelerometer's low pass filter in Hz."""
+
+        if raw_corner_freq == "0":
+            self._corner_frequency = self._data_rate / 9
+        else:
+            self._corner_frequency = self._data_rate / 2
+
+    @resolution.setter
+    def resolution(self, raw_resolution: bin) -> None:
+
+        if raw_resolution == '0':
+            self._resolution = 8
+        else:
+            self._resolution = 16
+
+    @padding.setter
+    def padding(self, raw_padding: bin) -> None:
+        self._padding = int(raw_padding, 2) * 8
+
+    @measurements.setter
+    def measurements(self, raw_measurements: bin) -> None:
+
+        self._measurements = []  # Start fresh
+        chunk_size = self._resolution * 8
+
+        # Split data into readable chunks
+        acceleration_data = []
+        # From 0 to the end, with a step size of the chunk size
+        for _ in range(0, len(raw_measurements) - self.padding, chunk_size):
+            acceleration_data.append(raw_measurements[_:_ + chunk_size])
+
+        # Create a Measurement packet for each data chunk
+        for data_chunk in acceleration_data:
+            self._measurements.append(KX1341211MeasurementData.create_from_raw(data_chunk))
+
+    # String representation
     def __str__(self):
 
         data_points_str = ''
@@ -987,60 +1090,3 @@ class KX1341211Data:
                f"full scale range: {self.full_scale_range}\n" \
                f"corner frequency: {self.corner_freq}\n" \
                f"measurements:\n{data_points_str}" + "-" * 20
-
-    def setup(self, raw):
-
-        raw_bin = hex_to_bin(raw)
-
-        self.time_stamp = int(raw_bin[0:32], 2)
-
-        # data rate of the accelerometer in Hz
-        data_rate = hex(int(raw_bin[32:36], 2))
-        self.data_rate = kx134_1211_dic[data_rate]
-
-        # set the full scale range (in G's)
-        full_scale_range = int(raw_bin[36:38], 2)
-
-        if full_scale_range == 0:
-            self.full_scale_range = 8
-        elif full_scale_range == 1:
-            self.full_scale_range = 16
-        elif full_scale_range == 2:
-            self.full_scale_range = 32
-        elif full_scale_range == 3:
-            self.full_scale_range = 64
-        else:
-            self.full_scale_range = -1
-
-        # the corner frequency of the accelerometer's low pass filter (in Hz)
-        corner_freq = raw_bin[38]
-
-        if corner_freq == '0':
-            self.corner_freq = self.data_rate / 9
-        elif corner_freq == '1':
-            self.corner_freq = self.data_rate / 2
-
-        # resolution of the accelerometer reading (in bits)
-        resolution = raw_bin[39]
-
-        if resolution == '0':
-            resolution = 8
-        elif resolution == '1':
-            resolution = 16
-
-        print('resolution is ', resolution)
-
-        # number of bits of padding added to the end of the data packet
-        padding = int(raw_bin[46:48], 2) * 8
-        print('padding is ', padding)
-
-        accel_data = raw_bin[48:]
-
-        chunk_size = resolution * 3
-
-        # break the accel data into chunks that contain acceleration in the x y and z directions
-        accel_data = [accel_data[i:i + chunk_size] for i in range(0, (len(accel_data) - padding), chunk_size)]
-
-        print(accel_data)
-        for data in accel_data:
-            self.measurements.append(self.Measurement(data))
