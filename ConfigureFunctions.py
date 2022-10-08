@@ -1,6 +1,7 @@
 #
 # Functions that are used to configure the ground station
 #
+import queue
 
 
 def wait_for_ok(self):
@@ -23,23 +24,6 @@ def wait_for_ok(self):
 
         print('error: wait_for_ok: ' + rv)
 
-        return False
-
-
-def set_freq(self, freq):
-    """set the frequency of transmitted signals"""
-
-    if not ((freq >= 433050000 and freq <= 434790000) or (freq >= 863000000 and freq <= 870000000)):
-        print('invalid frequency parameter.')
-        return False
-
-    success = self.write_to_ground_station("radio set freq " + str(freq))
-
-    if success:
-        print("frequency successfully set")
-        return True
-    else:
-        print("error: frequency not set")
         return False
 
 
@@ -81,9 +65,9 @@ def set_sf(self, sf):
     """
 
     if sf in [7, 8, 9, 10, 11, 12]:
-        sucess = self.write_to_ground_station("radio set sf sf" + str(sf))
-        if sucess:
-            print("value spreading factor sucessfully set")
+        success = self.write_to_ground_station("radio set sf sf" + str(sf))
+        if success:
+            print("value spreading factor successfully set")
             return
         else:
             print("ERROR: unable to set spreading factor")
@@ -97,9 +81,9 @@ def set_cr(self, cr):
     """set coding rate which can only be "4/5", "4/6", "4/7", "4/8"""
 
     if cr in ["4/5", "4/6", "4/7", "4/8"]:
-        sucess = self.write_to_ground_station("radio set cr " + str(cr))
-        if sucess:
-            print("value cr sucessfully set")
+        success = self.write_to_ground_station("radio set cr " + str(cr))
+        if success:
+            print("value cr successfully set")
             return
         else:
             print("cr error:radio unable to set")
@@ -112,23 +96,23 @@ def set_rxbw(self, bw):
     """set the bandwidth which can only  be 125, 250 or 500 hz"""
 
     if bw in [125, 250, 500]:
-        sucess = self.write_to_ground_station("radio set bw " + str(bw))
-        if sucess:
-            print("value rxbw sucessfully set")
+        success = self.write_to_ground_station("radio set bw " + str(bw))
+        if success:
+            print("value rxbw successfully set")
             return
         else:
             print("rxbw error:radio unable to set")
             return
 
-    print("invalid recieving bandwidth  ")
+    print("invalid receiving bandwidth  ")
     return
 
 
 def set_iqi(self, iqi):
     if iqi in ["on", "off"]:
-        sucess = self.write_to_ground_station("radio set iqi " + str(iqi))
-        if sucess:
-            print("value sucessfully set")
+        success = self.write_to_ground_station("radio set iqi " + str(iqi))
+        if success:
+            print("value successfully set")
             return
         else:
             print("iqi error:radio unable to set")
@@ -138,13 +122,13 @@ def set_iqi(self, iqi):
 
 
 def set_sync(self, sync):
-    # TODO: convert sync into hexademical
+    # TODO: convert sync into hexadecimal
     # TODO: make sure sync is between 0- 255 for lora modulation
     # TODO: make sure sync is between 0 - 2^8 - 1 for fsk modulation
 
-    sucess = self.write_to_ground_station("radio set sync " + str(sync))
-    if sucess:
-        print("value sync word sucessfully set")
+    success = self.write_to_ground_station("radio set sync " + str(sync))
+    if success:
+        print("value sync word successfully set")
         return
     else:
         print("sync param error:radio unable to set ")
@@ -155,9 +139,9 @@ def set_prlen(self, pr):
     """set the preamble length between 0 and  65535"""
 
     if pr in range(0, 65535):
-        sucess = self.write_to_ground_station("radio set prlen " + str(pr))
-        if sucess:
-            print("preamble length sucessfully set")
+        success = self.write_to_ground_station("radio set prlen " + str(pr))
+        if success:
+            print("preamble length successfully set")
             return
         else:
             print("error: unable to set preamble length ")
@@ -170,9 +154,9 @@ def set_crc(self, crc):
     """enable or disable the cyclic redundancy check"""
 
     if crc in ["on", "off"]:
-        sucess = self.write_to_ground_station("radio set crc " + str(crc))
-        if sucess:
-            print("value crc sucessfully set")
+        success = self.write_to_ground_station("radio set crc " + str(crc))
+        if success:
+            print("value crc successfully set")
             return
         else:
             print("crc error:radio unable to set")
@@ -208,11 +192,11 @@ def set_rx_mode(self, message_q: queue.Queue):
             print('nothing received')
 
         else:
-            # trim unecessary elements of the message
+            # trim unnecessary elements of the message
             message = message[10:-5]
             message_q.put(message)
             print('message received:', message)
-            UI._parse_rx(message)
+            # UI._parse_rx(message)
 
             # put radio back into rx mode
             self.set_rx_mode(message_q)

@@ -2,13 +2,8 @@
 # commands for reading information from the ground station
 # Author: Fahim
 # editors: Arsalan
-#
 
-
-#
 # Define Section
-#
-
 
 # the pins that we can read analog values from
 VALID_ANALOG_PINS_RANGE1 = [i for i in range(1,4)]
@@ -18,10 +13,6 @@ VALID_ANALOG_PINS = VALID_ANALOG_PINS_RANGE1 + VALID_ANALOG_PINS_RANGE2
 # the pins that we can read digital values from
 VALID_DIGITAL_PINS = [i for i in range(14)]
 
-
-#
-# End of Define Section
-#
 class GroundStationReader():
 
     def __init__(self, serial, writer):
@@ -90,7 +81,7 @@ class GroundStationReader():
         else:
             return -1
 
-    def read_bt(elf):
+    def read_bt(self):
         bt = self.read_from_radio("bt")
 
         # the four possible strings that could be returned
@@ -163,7 +154,7 @@ class GroundStationReader():
         if isinstance(pin_name, int):
             if pin_name in VALID_DIGITAL_PINS:
                 pin_name = str(pin_name)
-                return self.self.read_from_radio("pindig " + pin_name)
+                return self.read_from_radio("pindig " + pin_name)
 
         return -1
 
@@ -175,7 +166,7 @@ class GroundStationReader():
         if isinstance(pin_name, int):
             if pin_name in VALID_ANALOG_PINS:
                 pin_name = str(pin_name)
-                return self.self.read_from_radio("pinana GPIO" + pin_name)
+                return self.read_from_radio("pinana GPIO" + pin_name)
 
         return -1
 
