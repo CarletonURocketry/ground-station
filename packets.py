@@ -116,10 +116,10 @@ def convert_raw(raw_data: str, hex_length: int, signed: bool = False) -> int:
 class AltitudeData:
 
     def __init__(self):
-        self._time: int = None
-        self._pressure: int = None
-        self._temperature: int = None
-        self._altitude: int = None
+        self._time: int = 0
+        self._pressure: int = 0
+        self._temperature: int = 0
+        self._altitude: int = 0
 
     # Creation
     @classmethod
@@ -193,11 +193,11 @@ class AccelerationData:
     def __init__(self, resolution: int):
         self.resolution: int = resolution  # Resolution for calculations
 
-        self._time: int = None
-        self._fsr: int = None
-        self._x_axis: int = None
-        self._y_axis: int = None
-        self._z_axis: int = None
+        self._time: int = 0
+        self._fsr: int = 0
+        self._x_axis: int = 0
+        self._y_axis: int = 0
+        self._z_axis: int = 0
 
     @classmethod
     def create_from_raw(cls, raw_data: str, resolution: int) -> AccelerationData:
@@ -266,7 +266,7 @@ class AccelerationData:
 
     # String representation
     def __str__(self):
-        return f"{self.time_stamp}\n" \
+        return f"{self.time}\n" \
                f"{self.fsr}\n" \
                f"{self.x_axis}\n" \
                f"{self.y_axis}\n" \
@@ -278,11 +278,11 @@ class AngularVelocityData:
     def __init__(self, resolution):
         self.resolution = resolution
 
-        self._time: int = None
-        self._fsr: int = None
-        self._x_velocity: int = None
-        self._y_velocity: int = None
-        self._z_velocity: int = None
+        self._time: int = 0
+        self._fsr: int = 0
+        self._x_velocity: int = 0
+        self._y_velocity: int = 0
+        self._z_velocity: int = 0
 
     @classmethod
     def create_from_raw(cls, raw_data: str, resolution: int) -> AngularVelocityData:
@@ -361,11 +361,11 @@ class GNSSMetaDataInfo:
     """Stores metadata on satellites used in the GNSS."""
 
     def __init__(self):
-        self._elevation: int = None  # Elevation of GNSS satellite in degrees
-        self._snr: int = None  # Signal to noise ratio in dB Hz
-        self._id: int = None  # The pseudo-random noise sequence for GPS satellites or the ID for GLONASS satellites
-        self._azimuth: int = None  # Satellite's azimuth in degrees
-        self._satellite_type: str = None  # The type of satellite (GPS or GLONASS)
+        self._elevation: int = 0  # Elevation of GNSS satellite in degrees
+        self._snr: int = 0  # Signal to noise ratio in dB Hz
+        self._id: int = 0  # The pseudo-random noise sequence for GPS satellites or the ID for GLONASS satellites
+        self._azimuth: int = 0  # Satellite's azimuth in degrees
+        self._satellite_type: str = ""  # The type of satellite (GPS or GLONASS)
 
     @classmethod
     def create_from_raw(cls, raw_data: str) -> GNSSMetaDataInfo:
@@ -433,61 +433,17 @@ class GNSSMetaDataInfo:
 
     # String representation
     def __str__(self):
-        return f"elevation: {self.elevation}\n" \
-               f"SNR: {self.SNR}\n" \
-               f"ID: {self.ID}\n" \
-               f"Azimuth: {self.azimuth}\n" \
-               f"type: {self.type}\n"
+        return f"elevation: {self._elevation}\n" \
+               f"SNR: {self._snr}\n" \
+               f"ID: {self._id}\n" \
+               f"Azimuth: {self._azimuth}\n" \
+               f"type: {self._satellite_type}\n"
 
 
 class GNSSMetaData:
-    class Info:
-        """stores metadata on satellites used in the GNSS"""
-
-        def __init__(self, raw):
-
-            # elevation of GNSS satellite in degrees
-            self.elevation = None
-
-            # signal to noise ratio in dB Hz
-            self.SNR = None
-
-            # the pseudo-random noise sequence for GPS satellites or the ID for GLONASS satellites
-            self.ID = None
-
-            # satellite's azimuth in degrees
-            self.azimuth = None
-
-            # the type of satellite (GPS or GLONASS)
-            self.type = None
-
-            # set up all parameters
-            self.setup(raw)
-
-        def setup(self, raw):
-
-            self.elevation = int(raw[0:8], 2)
-            self.SNR = int(raw[8:16], 2)
-
-            self.ID = int(raw[16:21], 2)
-            self.azimuth = int(raw[21:30], 2)
-
-            # check to see if the type bit is 1 or 0
-            if raw[31] == '1':
-                self.type = 'GLONASS'
-            else:
-                self.type = 'GPS'
-
-        def __str__(self):
-
-            return f"elevation: {self.elevation}\n" \
-                   f"SNR: {self.SNR}\n" \
-                   f"ID: {self.ID}\n" \
-                   f"Azimuth: {self.azimuth}\n" \
-                   f"type: {self.type}\n"
 
     def __init__(self):
-        self._mission_time: int = None
+        self._mission_time: int = 0
         self._gps_satellites_in_use: list[int] = []
         self._glonass_satellites_in_use: list[int] = []
         self._satellite_info: dict[int, GNSSMetaDataInfo] = {}
@@ -524,7 +480,7 @@ class GNSSMetaData:
         return self._glonass_satellites_in_use
 
     @property
-    def satellite_info(self) -> list[GNSSMetaDataInfo]:
+    def satellite_info(self) -> dict[int, GNSSMetaDataInfo]:
         return self._satellite_info
 
     # Setters
@@ -563,18 +519,18 @@ class GNSSMetaData:
 class GNSSLocationData:
 
     def __init__(self):
-        self._fix_time: int = None  # Mission time when fix was received
-        self._latitude: int = None  # Latitude in units of 100 micro arcminute, or 10^-4 arc minutes per LSB
-        self._longitude: int = None  # Longitude in units of 100 micro arcminute, or 10^-4 arc minutes per LSB
-        self._utc_time: int = None  # The time (in UTX) when the fix was received in seconds since the Unix apoch
-        self._altitude: int = None  # Millimeters above sea level
-        self._rocket_speed: int = None  # Speed of the rocket over the ground in units of 1/100th of a knot
-        self._rocket_course: int = None  # Course of rocket in units of 1/100th of a degree
-        self._pdop: int = None  # Position dilution of precision * 100
-        self._hdop: int = None  # Horizontal dilution of precision * 100
-        self._vdop: int = None  # Vertical dilution of precision * 100
-        self._num_satellites: int = None  # Number of GNSS satellites used to get this fix
-        self._fix_type: int = None  # The type of fix, can be either 'unknown', 'not available', '2D fix', or '3D fix'
+        self._fix_time: int = 0  # Mission time when fix was received
+        self._latitude: int = 0  # Latitude in units of 100 micro arcminute, or 10^-4 arc minutes per LSB
+        self._longitude: int = 0  # Longitude in units of 100 micro arcminute, or 10^-4 arc minutes per LSB
+        self._utc_time: int = 0  # The time (in UTX) when the fix was received in seconds since the Unix apoch
+        self._altitude: int = 0  # Millimeters above sea level
+        self._rocket_speed: int = 0  # Speed of the rocket over the ground in units of 1/100th of a knot
+        self._rocket_course: int = 0  # Course of rocket in units of 1/100th of a degree
+        self._pdop: int = 0  # Position dilution of precision * 100
+        self._hdop: int = 0  # Horizontal dilution of precision * 100
+        self._vdop: int = 0  # Vertical dilution of precision * 100
+        self._num_satellites: int = 0  # Number of GNSS satellites used to get this fix
+        self._fix_type: int = 0  # The type of fix, can be either 'unknown', 'not available', '2D fix', or '3D fix'
 
     @classmethod
     def create_from_raw(cls, raw_data: str) -> GNSSLocationData:
@@ -726,7 +682,7 @@ class GNSSLocationData:
                f"pdop: {self.pdop}\n" \
                f"hdop: {self.hdop}\n" \
                f"vdop: {self.vdop}\n" \
-               f"num_sats: {self.num_sats}\n" \
+               f"num_sats: {self.num_satellites}\n" \
                f"fix_type: {self.fix_type}\n"
 
 
@@ -769,15 +725,16 @@ class MPU9250MeasurementData:
 
 
 class MPU9250Data:
+
     """Data from the MPU9250 IMU."""
 
     def __init__(self):
-        self._time: int = None
-        self._ag_sample_rate: int = None  # Sample rate of the accelerometer and gyroscope
-        self._accelerometer_fsr: int = None  # Accelerometer full scale range
-        self._gyroscope_fsr: int = None  # Gyroscope full scale range
-        self._accelerometer_bw: int = None  # Bandwidth for the low pass filter used by the accelerometer
-        self._gyroscope_bw: int = None  # Bandwidth for the low pass filter used by the gyroscope
+        self._time: int = 0
+        self._ag_sample_rate: int = 0  # Sample rate of the accelerometer and gyroscope
+        self._accelerometer_fsr: int = 0  # Accelerometer full scale range
+        self._gyroscope_fsr: int = 0  # Gyroscope full scale range
+        self._accelerometer_bw: int = 0  # Bandwidth for the low pass filter used by the accelerometer
+        self._gyroscope_bw: int = 0  # Bandwidth for the low pass filter used by the gyroscope
 
     @classmethod
     def create_from_raw(cls, raw_data: str) -> MPU9250Data:
@@ -864,9 +821,9 @@ class KX1341211MeasurementData:
     """Contains measurement data for the KX1341211 packet."""
 
     def __init__(self):
-        self._x_acceleration: int = None
-        self._y_acceleration: int = None
-        self._z_acceleration: int = None
+        self._x_acceleration: int = 0
+        self._y_acceleration: int = 0
+        self._z_acceleration: int = 0
 
     @classmethod
     def create_from_raw(cls, raw_data: str) -> KX1341211MeasurementData:
@@ -945,21 +902,21 @@ class KX1341211MeasurementData:
 
     # String representation
     def __str__(self):
-        return f"x: {self.x_accel}\n" \
-               f"y: {self.y_accel}\n" \
-               f"z: {self.z_accel}\n"
+        return f"x: {self.x_acceleration}\n" \
+               f"y: {self.y_acceleration}\n" \
+               f"z: {self.z_acceleration}\n"
 
 
 class KX1341211Data:
 
     def __init__(self):
-        self._time: int = None
-        self._data_rate: int = None  # Data rate of the accelerometer in Hz
-        self._full_scale_range: int = None  # Set the full scale range in Gs
-        self._corner_frequency: int = None  # The corner frequency of the accelerometer's low pass filter in Hz
+        self._time: int = 0
+        self._data_rate: int = 0  # Data rate of the accelerometer in Hz
+        self._full_scale_range: int = 0  # Set the full scale range in Gs
+        self._corner_frequency: int = 0  # The corner frequency of the accelerometer's low pass filter in Hz
 
-        self._resolution: int = None
-        self._padding: int = None
+        self._resolution: int = 0
+        self._padding: int = 0
         self._measurements: list[KX1341211MeasurementData] = []  # The actual measurements taken by the accelerometer
 
     @classmethod
@@ -1002,7 +959,7 @@ class KX1341211Data:
         return self._corner_frequency
 
     @property
-    def measurements(self) -> int:
+    def measurements(self) -> list[KX1341211MeasurementData]:
         return self._measurements
 
     @property
@@ -1082,8 +1039,8 @@ class KX1341211Data:
             data_points_str += str(m)
             data_points_str += '____\n'
 
-        return f"time stamp: {self.time_stamp}\n" \
+        return f"time stamp: {self.time}\n" \
                f"data rate: {self.data_rate}\n" \
                f"full scale range: {self.full_scale_range}\n" \
-               f"corner frequency: {self.corner_freq}\n" \
+               f"corner frequency: {self.corner_frequency}\n" \
                f"measurements:\n{data_points_str}" + "-" * 20
