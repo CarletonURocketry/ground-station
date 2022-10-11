@@ -6,12 +6,13 @@
 # Define Section
 
 # the pins that we can read analog values from
-VALID_ANALOG_PINS_RANGE1 = [i for i in range(1,4)]
-VALID_ANALOG_PINS_RANGE2 = [i for i in range(5,14)]
+VALID_ANALOG_PINS_RANGE1 = [i for i in range(1, 4)]
+VALID_ANALOG_PINS_RANGE2 = [i for i in range(5, 14)]
 VALID_ANALOG_PINS = VALID_ANALOG_PINS_RANGE1 + VALID_ANALOG_PINS_RANGE2
 
 # the pins that we can read digital values from
 VALID_DIGITAL_PINS = [i for i in range(14)]
+
 
 class GroundStationReader():
 
@@ -31,7 +32,7 @@ class GroundStationReader():
            respond, or if it returns a string instead of a number, or it returns a frequency
            value that is not possible for the ground station, then returns -1"""
 
-        freq = int(self.self.read_from_radio("freq"))
+        freq = int(self.read_from_radio("freq"))
 
         # the lower (433 MHZ) freq range
         upper_1 = 434800000
@@ -71,7 +72,7 @@ class GroundStationReader():
             return -1
 
     def read_cr(self):
-        cr = self.self.read_from_radio("cr")
+        cr = self.read_from_radio("cr")
 
         # the four possible strings
         possibilities = ['4/5', '4/6', '4/7', '4/8']
@@ -104,7 +105,7 @@ class GroundStationReader():
         return self.read_from_radio("iqi")
 
     def read_mod(self):
-        return self.self.read_from_radio("mod")
+        return self.read_from_radio("mod")
 
     def read_prlen(self):
         return self.read_from_radio("prlen")
@@ -137,7 +138,7 @@ class GroundStationReader():
     def read_vdd(self):
         return self.read_from_radio("vdd")
 
-    def read_hweui(self): 
+    def read_hweui(self):
         return self.read_from_radio("hweui")
 
     def read_nvm(self, address: str):
