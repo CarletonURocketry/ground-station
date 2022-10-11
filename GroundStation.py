@@ -52,22 +52,8 @@ class GroundStation:
         self.write_to_ground_station("sys set pindig GPIO1 1")
         self.write_to_ground_station("sys set pindig GPIO2 0")
 
-        self.write_to_ground_station("sys set pinmode GPIO0 digin")
-        self.write_to_ground_station("sys set pinmode GPIO1 digin")
-        self.write_to_ground_station("sys set pinmode GPIO2 digin")
-        self.write_to_ground_station("sys set pinmode GPIO3 digin")
-        self.write_to_ground_station("sys set pinmode GPIO4 digin")
-        self.write_to_ground_station("sys set pinmode GPIO5 digin")
-        self.write_to_ground_station("sys set pinmode GPIO6 digin")
-        self.write_to_ground_station("sys set pinmode GPIO5 digin")
-        self.write_to_ground_station("sys set pinmode GPIO6 digin")
-        self.write_to_ground_station("sys set pinmode GPIO7 digin")
-        self.write_to_ground_station("sys set pinmode GPIO8 digin")
-        self.write_to_ground_station("sys set pinmode GPIO9 digin")
-        self.write_to_ground_station("sys set pinmode GPIO10 digin")
-        self.write_to_ground_station("sys set pinmode GPIO11 digin")
-        self.write_to_ground_station("sys set pinmode GPIO12 digin")
-        self.write_to_ground_station("sys set pinmode GPIO13 digin")
+        for i in range(0, 14):
+            self.write_to_ground_station(f"sys set pinmode GPIO{i} digin")
 
         print('successfully set GPIO')
 
@@ -206,7 +192,6 @@ class GroundStation:
             return False
 
         success = self.write_to_ground_station("radio set freq " + str(freq))
-
         if success:
             print("frequency successfully set")
             return True
@@ -218,7 +203,6 @@ class GroundStation:
 
         if mod in ['lora', 'fsk']:
             success = self.write_to_ground_station('radio set mod ' + mod)
-
             if success:
                 print('successfully set modulation')
             else:
@@ -232,7 +216,6 @@ class GroundStation:
         if pwr in range(-3, 16):
 
             success = self.write_to_ground_station("radio set pwr " + str(pwr))
-
             if success:
                 print("value power successfully set")
                 return
@@ -251,8 +234,8 @@ class GroundStation:
         """
 
         if sf in [7, 8, 9, 10, 11, 12]:
-            sucess = self.write_to_ground_station("radio set sf sf" + str(sf))
-            if sucess:
+            success = self.write_to_ground_station("radio set sf sf" + str(sf))
+            if success:
                 print("value spreading factor successfully set")
                 return
             else:
@@ -266,8 +249,8 @@ class GroundStation:
         """set coding rate which can only be "4/5", "4/6", "4/7", "4/8"""
 
         if cr in ["4/5", "4/6", "4/7", "4/8"]:
-            sucess = self.write_to_ground_station("radio set cr " + str(cr))
-            if sucess:
+            success = self.write_to_ground_station("radio set cr " + str(cr))
+            if success:
                 print("value cr successfully set")
                 return
             else:
@@ -277,11 +260,11 @@ class GroundStation:
         return
 
     def set_rxbw(self, bw):
-        """set the bandwidth which can only  be 125, 250 or 500 hz"""
+        """set the bandwidth which can only be 125, 250 or 500 hz"""
 
         if bw in [125, 250, 500]:
-            sucess = self.write_to_ground_station("radio set bw " + str(bw))
-            if sucess:
+            success = self.write_to_ground_station("radio set bw " + str(bw))
+            if success:
                 print("value rxbw successfully set")
                 return
             else:
@@ -293,8 +276,8 @@ class GroundStation:
 
     def set_iqi(self, iqi):
         if iqi in ["on", "off"]:
-            sucess = self.write_to_ground_station("radio set iqi " + str(iqi))
-            if sucess:
+            success = self.write_to_ground_station("radio set iqi " + str(iqi))
+            if success:
                 print("value successfully set")
                 return
             else:
@@ -309,8 +292,8 @@ class GroundStation:
         # TODO: make sure sync is between 0- 255 for lora modulation
         # TODO: make sure sync is between 0 - 2^8 - 1 for fsk modulation
 
-        sucess = self.write_to_ground_station("radio set sync " + str(sync))
-        if sucess:
+        success = self.write_to_ground_station("radio set sync " + str(sync))
+        if success:
             print("value sync word successfully set")
             return
         else:
@@ -347,14 +330,14 @@ class GroundStation:
 
     def set_bw(self, bw):
         # TODO finish this function
-        self.write_to_ground_station('radio set bw {}'.format(str(bw)))
+        self.write_to_ground_station(f'radio set bw {bw}')
 
     def parse_rx(self, data):
 
         try:
             packet = bytes.fromhex(data)
         except:
-            print('error: data is {}'.format(data))
+            print(f'error: data is {data}')
             return
 
         call_sign = packet[0:6]
@@ -380,31 +363,27 @@ class GroundStation:
                 self.write_to_ground_station('radio get rssi')
                 rssi = self._read_ser()
 
-                print(
-                    '-------------------------------------------------------------------------------------------------------')
-                print('{} has asked for a signal report\n'.format(call_sign))
-                print('the SNR is {} and the RSSI is {}'.format(snr, rssi))
-                print(
-                    '-------------------------------------------------------------------------------------------------------')
+                print("-----"*20)
+                print(f'{call_sign} has asked for a signal report\n')
+                print(f'the SNR is {snr} and the RSSI is {rssi}')
+                print("-----"*20)
 
-                logging_info = 'signal report at {}. SNR is {}, RSSI is {}\n'.format(time.time(), snr, rssi)
+                logging_info = f'signal report at {time.time()}. SNR is {snr}, RSSI is {rssi}\n'
                 self.log.write(logging_info)
 
             else:
                 payload = packet[4:4 + length]
                 try:
                     block = data_block.DataBlock.from_payload(subtype, payload)
-                    print(
-                        '-------------------------------------------------------------------------------------------------------')
-                    print('{} sent you a packet:\n'.format(str(call_sign)))
+                    print("-----"*20)
+                    print(f'{call_sign} sent you a packet:\n')
                     print(block)
-                    print(
-                        '-------------------------------------------------------------------------------------------------------')
-                    logging_info = '{}\n'.format(block)
+                    print("-----"*20)
+                    logging_info = 'f{block}\n'
                     self.log.write(logging_info)
 
                 except:
-                    print('could not parse incoming packet of type {}, subtype: {}\n'.format(_type, subtype))
+                    print(f'could not parse incoming packet of type {_type}, subtype: {subtype}\n')
 
             # move to next block
             packet = packet[length + 4:]
@@ -448,7 +427,9 @@ class GroundStation:
                 self.set_rx_mode(message_q)
 
     def _tx(self, data):
-        """transmit data, a method used for debugging"""
+        """transmit data, a method used for debugging
+
+        ROCKET DOES NOT RESPOND TO TRANSMISSIONS AT THIS TIME"""
 
         # command that must be called before each transmission and receive
         self.write_to_ground_station("mac pause")
@@ -523,7 +504,7 @@ if __name__ == '__main__':
 
         try:
             # rx = GroundStation('/dev/ttyUSB1')
-            tx = GroundStation(port)
+            rx = GroundStation(port)
 
             # the COM port that is being used.
             # tx = GroundStation('COM8')
@@ -531,8 +512,8 @@ if __name__ == '__main__':
             # xxxxxxxxxxxxxxxxxxxxxtx.init_ground_station()
 
             # rx.init_ground_station()
-            tx.init_ground_station()
-            tx.write_to_ground_station('radio set bw 500')
+            rx.init_ground_station()
+            rx.write_to_ground_station('radio set bw 500')
 
             # rx.write_to_ground_station('radio rx 0')
             # tx.write_to_ground_station('radio rx 1')
@@ -548,16 +529,7 @@ if __name__ == '__main__':
 
             print('_____________________________________')
             q = queue.Queue()
-            tx.set_rx_mode(q)
+            rx.set_rx_mode(q)
 
-            # signal report
-            # get snr over time and log it.
-
-            # initialize the ground station
-            tx.init_ground_station()
-
-            print('_____________________________________')
-            q = queue.Queue()
-            tx.set_rx_mode(q)
         except EnvironmentError:
             print("Error")

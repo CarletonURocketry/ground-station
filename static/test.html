@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <title>Websocket Test</title>
+    <script type="application/javascript">
+        var ws;
+
+        function init() {
+            var servermsg = document.getElementById("servermsg");
+            ws = new WebSocket("ws://localhost:33845/websocket");
+            ws.onopen = function(){
+                servermsg.innerHTML = servermsg.innerHTML + "<br>Server connected";
+            };
+            ws.onmessage = function(e){
+                servermsg.innerHTML = servermsg.innerHTML + "<br><<< Received data: " + e.data;
+            };
+            ws.onclose = function(){
+                servermsg.innerHTML = servermsg.innerHTML + "<br>Server disconnected";
+            };
+        }
+        function postmsg(){
+            var text = document.getElementById("message").value;
+            ws.send(text);
+            servermsg.innerHTML = servermsg.innerHTML + "<br>>>> Data sent: " + text;
+        }
+
+
+    </script>
+</head>
+<body onload="init();">
+    <form action="" onSubmit="postmsg();return false;">
+        <input type="text" name="message" value="" id="message">
+        <input type="submit" name="submit" value="Send" id="submit">
+    </form>
+    <div id="servermsg"><h1>Message log:</h1></div>
+</body>
+
+</html>

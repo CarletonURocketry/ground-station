@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-# Authors: Matteo Golin
+# Authors: Arsalan, Matteo Golin
 
 # Conversion tables
 hex_bin_dic = {
@@ -62,7 +62,7 @@ def hex_str_to_int(hex_string: str) -> int:
 
 
 def bin_to_hex(bin_string: str) -> hex:
-    """Returns a hexidecimal code for a given binary string."""
+    """Returns a hexadecimal code for a given binary string."""
 
     return hex(int(bin_string, 2))
 

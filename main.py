@@ -7,6 +7,7 @@ from modules import websocket, serial
 import multiprocessing
 import json
 
+
 input_queue = multiprocessing.Queue()
 output_queue = multiprocessing.Queue()
 
@@ -26,6 +27,7 @@ def main():
     #serial.main()
     # Initialize Tornado websocket for UI communication
     websocket.start()
+
 
 
 def printCURocket(callsign, version, status):
