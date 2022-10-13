@@ -1,61 +1,57 @@
-import os
 import time
-from _thread import *
-import threading
 
-from modules import websocket, serial
+from modules.misc.messages import printCURocket
+
+from modules.serial.serial_test import SerialTestClass
+from modules.telemetry.telemetry import Telemetry
+from modules.websocket.websocket import WebSocketHandler
+
 import multiprocessing
-import json
+
+serial_data_output = multiprocessing.Queue()
+telemetry_json_output = multiprocessing.Queue()
+websocket_commands = multiprocessing.Queue()
 
 
-input_queue = multiprocessing.Queue()
-output_queue = multiprocessing.Queue()
+class GroundStation:
 
+    def __init__(self):
+        print(self)
 
-def main():
-    cls = lambda: os.system('cls' if os.name == 'nt' else 'clear')
-    printCURocket("Not a missile", "lethal", "POWERED ASCENT")
+    def main(self):
+        printCURocket("Not a missile", "lethal", "POWERED ASCENT")
 
-    # i = 0
-    # while True:
-    # i = i + 1
-    # cls()
-    # printCURocket("Not a missile", f"lethal {i}", "POWERED ASCENT")
-    # time.sleep(1)
+        # Initialize Serial process to communicate with board
+        # Incoming information comes directly from RN2483 LoRa radio module over serial UART
+        # Outputs information in Data Block format to serial_data_output
+        serial_driver = multiprocessing.Process(target=SerialTestClass, args=("COM1", serial_data_output))
+        serial_driver.daemon = True
+        serial_driver.start()
 
-    # Initialize serial connection to board
-    #serial.main()
-    # Initialize Tornado websocket for UI communication
-    websocket.start()
+        # Initialize Telemetry to parse serial data blocks to readable JSON, keeps history, and logs everything to disk.
+        # Incoming information comes from serial_data_output in data block format
+        # Outputs information to telemetry_json_output in friendly json for UI
+        telemetry = multiprocessing.Process(target=Telemetry, args=(serial_data_output, telemetry_json_output))
+        telemetry.daemon = True
+        telemetry.start()
 
+        # Initialize Tornado websocket for UI communication
+        # This is PURELY a pass through of data for connectivity. No format conversion is done here.
+        # Incoming information comes from telemetry_json_output from missile
+        # Outputs information to connected websocket clients
+        websocket = multiprocessing.Process(target=WebSocketHandler, args=(websocket_commands, telemetry_json_output))
+        websocket.daemon = True
+        websocket.start()
 
-
-def printCURocket(callsign, version, status):
-    print(fr"""
-           ^
-          / \
-         /___\
-        |=   =|
-        |     |
-        | C U |
-        | I N |
-        |Space|
-        |     |
-        |     |
-        |     |
-       /|##!##|\
-      / |##!##| \
-     /  |##!##|  \
-    |  / ^ | ^ \  |
-    | /  ( | )  \ |
-    |/   ( | )   \|
-        ((   ))
-       ((  :  ))            CU InSpace Telemetry Driver
-       ((  :  ))            Callsign  {callsign}
-        ((   ))             Version   {version}
-          ( )               Status    {status}
-              """)
+        # Randomly spitting out queue data
+        i = 0
+        while True:
+            i = i + 1
+            time.sleep(5)
+            # print(serial_output.get())
+            #while not serial_data_output.empty():
+                #print(f"MAIN THREAD READING SERIAL OUTPUT QUEUE: {serial_data_output.get()}")
 
 
 if __name__ == '__main__':
-    main()
+    GroundStation().main()

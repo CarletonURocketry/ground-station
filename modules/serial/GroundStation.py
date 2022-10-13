@@ -6,6 +6,7 @@
 # Zacchaeus Liang
 
 import glob
+import multiprocessing
 import sys
 import serial
 import queue
@@ -15,13 +16,17 @@ import struct
 import data_block
 
 
-class GroundStation:
+class GroundStation(multiprocessing.Process):
 
-    def __init__(self, com_port='COM4'):
+
+    def __init__(self, serial_input, serial_output, com_port='COM1'):
+        multiprocessing.Process.__init__(self)
+        self.serial_input = serial_input
+        self.serial_output = serial_output
 
         curr_dir = os.path.dirname(os.path.abspath(__file__))
-        log_path = os.path.join(curr_dir, 'data_log.txt')
-        self.log = open(log_path, 'w')
+        #log_path = os.path.join(curr_dir, '../../data_log.txt')
+        #self.log = open(log_path, 'w')
 
         try:
             # initiate the USB serial connection
@@ -80,11 +85,11 @@ class GroundStation:
            power: the power of the signal (output)
            spreading factor:
            bandwidth:
-           length of preamble 
+           length of preamble
            should cyclic redundancy check (CRC) be enabled?
            should image quality indicators (IQI) be enabled?
            setting the sync word
-           
+
         """
         # restart the radio module
         self.reset()
@@ -110,11 +115,11 @@ class GroundStation:
         # is transmitted. The lower the coding rate the lower the data rate.
         self.set_cr("4/7")
 
-        # set reception bandwidth. This should match the transmission bandwidth of the 
+        # set reception bandwidth. This should match the transmission bandwidth of the
         # node that this ground station is trying to receive.
         # self.set_rxbw(500)
 
-        # set the length of the preamble. Preamble means introduction. It's a 
+        # set the length of the preamble. Preamble means introduction. It's a
         # transmission that is used to synchronize the receiver.
         self.set_prlen(6)
 
@@ -136,13 +141,13 @@ class GroundStation:
         author: Tarik
         @param command_string: full command to be sent to the ground station
         @param COM_PORT: the COM port to be used for the UART transmission
-        
+
         Ex.
         >>write_to_ground_station("radio set pwr 7", COM1)
         >>"ok"
-        
+
         //above example sets the radio transmission power to 7 using COM1
-        
+
         """
 
         data = str(command_string)
@@ -161,6 +166,10 @@ class GroundStation:
         if command_string != 'sys reset' and command_string != 'radio get snr' and command_string != 'radio get rssi':
             # TODO: clean this up with read functions
             return self.wait_for_ok()
+
+    def load_map(self):
+        """load in a map that can be used offline
+            author: """
 
     def wait_for_ok(self):
         """
@@ -362,10 +371,10 @@ class GroundStation:
                 self.write_to_ground_station('radio get rssi')
                 rssi = self._read_ser()
 
-                print("-----"*20)
+                print("-----" * 20)
                 print(f'{call_sign} has asked for a signal report\n')
                 print(f'the SNR is {snr} and the RSSI is {rssi}')
-                print("-----"*20)
+                print("-----" * 20)
 
                 logging_info = f'signal report at {time.time()}. SNR is {snr}, RSSI is {rssi}\n'
                 self.log.write(logging_info)
@@ -374,10 +383,10 @@ class GroundStation:
                 payload = packet[4:4 + length]
                 try:
                     block = data_block.DataBlock.from_payload(subtype, payload)
-                    print("-----"*20)
+                    print("-----" * 20)
                     print(f'{call_sign} sent you a packet:\n')
                     print(block)
-                    print("-----"*20)
+                    print("-----" * 20)
                     logging_info = 'f{block}\n'
                     self.log.write(logging_info)
 
@@ -451,8 +460,8 @@ class GroundStation:
 
                 i += 1
 
-                # if we have waited 0.3 seconds, then stop waiting. something 
-                # has gone wrong. 
+                # if we have waited 0.3 seconds, then stop waiting. something
+                # has gone wrong.
                 if i == 3:
                     print('unable to transmit message')
                     return
