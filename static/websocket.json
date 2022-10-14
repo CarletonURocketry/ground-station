@@ -1,0 +1,32 @@
+{
+  "version": "0.0.1",
+  "org": "CU InSpace",
+  "status": {
+    "board": {
+      "connected": "yes"
+    },
+    "rocket": {
+      "call_sign": "Not a missile",
+      "status_code": 1,
+      "status_text": "ARMED"
+    }
+  },
+  "telemetry_data": {
+    "altitude_data": {
+       "altitude": {
+         "m": "400",
+         "ft": "1312"
+       },
+       "temperature": {
+         "celsius": "12",
+         "fahrenheit": "54"
+       }
+     },
+     "acceleration_data": {
+        "acceleration": {
+          "ms2": "40",
+          "ft2": "131"
+        }
+     }
+  }
+}

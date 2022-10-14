@@ -1,4 +1,4 @@
-def printCURocket(callsign, version, status):
+def printCURocket(call_sign, version, status):
     print(fr"""
            ^
           / \
@@ -19,7 +19,7 @@ def printCURocket(callsign, version, status):
     |/   ( | )   \|
         ((   ))
        ((  :  ))            CU InSpace Telemetry Driver
-       ((  :  ))            Callsign  {callsign}
-        ((   ))             Version   {version}
-          ( )               Status    {status}
+       ((  :  ))            Call sign  {call_sign}
+        ((   ))             Version    {version}
+          ( )               Status     {status}
               """)

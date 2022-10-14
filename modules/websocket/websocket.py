@@ -62,7 +62,7 @@ class WebSocketHandler(multiprocessing.Process):
         io_loop = tornado.ioloop.IOLoop.current()
 
         periodic_callback = tornado.ioloop.PeriodicCallback(
-            lambda: TornadoWSServer.send_message(str(self.sample())), 50
+            lambda: TornadoWSServer.send_message(str(self.sample())), 500
         )
 
         periodic_callback.start()
@@ -77,9 +77,4 @@ class WebSocketHandler(multiprocessing.Process):
             json_data = self.telemetry_json_output.get()
             print(f"WSHandler READING TELEMETRY OUTPUT QUEUE: {json_data}")
 
-        sample_data = {"version": "0.0.1",
-                       "Rocket Status": "Powered Ascent",
-                       "Altitude": str(TornadoWSServer.altitude),
-                       "Data": json_data}
-
-        return json.dumps(sample_data)
+        return json.dumps(json_data)

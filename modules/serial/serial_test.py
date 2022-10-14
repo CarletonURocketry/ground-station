@@ -15,9 +15,6 @@ class SerialTestClass(Process):
 
         self.run()
 
-    def hello(self):
-        print("HELLO FROM SERIAL TEST")
-
     def run(self):
         #test_serial = serial.Serial(
             #port='COM1',
@@ -28,7 +25,7 @@ class SerialTestClass(Process):
             #timeout=0.1)
 
         while True:
-            random_data = f"I AM RANDOM DATA BEING SENT FROM SERIAL TEST {int(random.uniform(0, 1000))}"
+            random_data = int(random.uniform(0, 1000))
             print(f"SERIAL TEST: {random_data}")
             self.serial_output.put(random_data)
             #print("Read from serial", test_serial.readline())

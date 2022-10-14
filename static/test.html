@@ -8,12 +8,20 @@
 
         function init() {
             var servermsg = document.getElementById("servermsg");
+            var altitude = document.getElementById("altitude");
+            var temperature = document.getElementById("temperature");
+
             ws = new WebSocket("ws://localhost:33845/websocket");
             ws.onopen = function(){
                 servermsg.innerHTML = servermsg.innerHTML + "<br>Server connected";
             };
             ws.onmessage = function(e){
+                updatedata = JSON.parse(e.data);
                 servermsg.innerHTML = servermsg.innerHTML + "<br><<< Received data: " + e.data;
+                var ALT = updatedata.telemetry_data.altitude_data
+                altitude.innerHTML = "Altitude " + ALT.altitude.ft + " ft";
+                temperature.innerHTML = "Temp " + ALT.temperature.celsius + " *C";
+
             };
             ws.onclose = function(){
                 servermsg.innerHTML = servermsg.innerHTML + "<br>Server disconnected";
@@ -33,6 +41,8 @@
         <input type="text" name="message" value="" id="message">
         <input type="submit" name="submit" value="Send" id="submit">
     </form>
+    <div id="temperature">Temp 0 *C </div>
+    <div id="altitude">Altitude 000 ft</div>
     <div id="servermsg"><h1>Message log:</h1></div>
 </body>
 
