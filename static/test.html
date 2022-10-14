@@ -30,6 +30,9 @@
             };
             ws.onclose = function(){
                 msglog.innerHTML = msglog.innerHTML + "<br>Server disconnected";
+                setTimeout(function() {
+                    init();
+                }, 2000);
             };
         }
 

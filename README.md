@@ -1,7 +1,7 @@
 # CU-InSpace Ground Station
 
 A Python-based ground station for collecting telemetry information from the CU-InSpace rocket.
-This data is collected using UART and will be transmitted to the user interface, a webpage built using html/css/js webpage using a Tornado websocket.
+This data is collected using UART and is transmitted to the user interface using WebSockets.
 
 This program needs 
 - pySerial

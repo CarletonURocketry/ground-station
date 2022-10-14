@@ -18,7 +18,7 @@ def printCURocket(call_sign, version, status):
     | /  ( | )  \ |
     |/   ( | )   \|
         ((   ))
-       ((  :  ))            CU InSpace Telemetry Driver
+       ((  :  ))            CU InSpace Avionics Ground Station
        ((  :  ))            Call sign  {call_sign}
         ((   ))             Version    {version}
           ( )               Status     {status}

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import struct
+
 # Authors: Arsalan, Matteo Golin
 
 # Conversion tables
@@ -56,9 +58,10 @@ kx134_1211_dic = {
 
 # Conversion functions
 def hex_str_to_int(hex_string: str) -> int:
-    """Returns the integer value of a hexadecimal string."""
+    """Returns the unsigned integer value of a hexadecimal string."""
 
-    return int(hex_string, 16)
+    #return int(hex_string, 16)
+    return struct.unpack("<I", bytes.fromhex(hex_string))[0]
 
 
 def bin_to_hex(bin_string: str) -> hex:
@@ -87,12 +90,13 @@ def hex_to_bin(hex_string: str) -> str:
 def signed_hex_str_to_int(hex_string: str) -> int:
     """Returns an integer value for a given signed hexadecimal string. Return value preserves the number of bits."""
 
-    bin_input = hex_to_bin(hex_string)
+    return struct.unpack("<i", bytes.fromhex(hex_string))[0]
+    #bin_input = hex_to_bin(hex_string)
 
-    if bin_input[0] == '1':
-        return int(bin_input[1:], 2) - (2 ** (len(bin_input) - 1))
-    else:
-        return int(bin_input[1:], 2)
+    #if bin_input[0] == '1':
+        #return int(bin_input[1:], 2) - (2 ** (len(bin_input) - 1))
+    #else:
+        #return int(bin_input[1:], 2)
 
 
 def signed_bin_str_to_int(bin_string: str) -> int:
@@ -168,26 +172,23 @@ class AltitudeData:
     def pressure(self, raw_pressure: str) -> None:
         """Pressure in kilopascals is converted to Pascals."""
 
-        self._pressure = convert_raw(raw_pressure, hex_length=8) / 1000
+        self._pressure = convert_raw(raw_pressure, hex_length=8, signed=True) / 1000
 
     @temperature.setter
     def temperature(self, raw_temperature: str) -> None:
-        """Temperature in millidegrees Celsius is converted to a degrees Celsius."""
+        """Temperature in milli degrees Celsius is converted to a degrees Celsius."""
 
-        self._temperature = convert_raw(raw_temperature, hex_length=8) / 1000
+        self._temperature = convert_raw(raw_temperature, hex_length=8, signed=True) / 1000
 
     @altitude.setter
     def altitude(self, raw_altitude: str) -> None:
         """Altitude in millimeters is converted to meters."""
 
-        self._altitude = convert_raw(raw_altitude, hex_length=8) / 1000
+        self._altitude = convert_raw(raw_altitude, hex_length=8, signed=True) / 1000
 
     # String representation
     def __str__(self):
-        return f"time:{self.time}\n" \
-               f"pressure:{self.pressure}\n" \
-               f"temperature:{self.temperature}\n" \
-               f"altitude:{self.altitude}\n"
+        return f"time:{self.time}, pressure:{self.pressure}, temperature:{self.temperature}, altitude:{self.altitude}\n"
 
 
 class AccelerationData:

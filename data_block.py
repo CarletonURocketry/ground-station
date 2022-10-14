@@ -289,7 +289,7 @@ class AltitudeDataBlock(DataBlock):
 
     def to_payload(self):
         return struct.pack("<Iiii", self.mission_time, int(self.pressure),
-                           int(self.temperature * 1000).int(self.altitude * 1000))
+                           int(self.temperature * 1000), int(self.altitude * 1000))
 
     def __str__(self):
         return (f"{self.type_desc()} -> time: {self.mission_time}, pressure: {self.pressure} Pa, "

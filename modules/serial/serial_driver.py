@@ -6,6 +6,7 @@
 # Zacchaeus Liang
 
 import glob
+import multiprocessing
 import sys
 import serial
 import queue
@@ -15,13 +16,16 @@ import struct
 import data_block
 
 
-class GroundStation:
+class GroundStation(multiprocessing.Process):
 
-    def __init__(self, com_port='COM4'):
+
+    def __init__(self, serial_data_output: multiprocessing.Queue, com_port='COM1'):
+        multiprocessing.Process.__init__(self)
+        self.serial_data_output = serial_data_output
 
         curr_dir = os.path.dirname(os.path.abspath(__file__))
-        log_path = os.path.join(curr_dir, 'data_log.txt')
-        self.log = open(log_path, 'w')
+        #log_path = os.path.join(curr_dir, '../../data_log.txt')
+        #self.log = open(log_path, 'w')
 
         try:
             # initiate the USB serial connection
@@ -38,6 +42,11 @@ class GroundStation:
                                      rtscts=False)
         except serial.SerialException:
             print("Error communicating with serial device.")
+
+        print('_____________________________________')
+        self.init_ground_station()
+        q = queue.Queue()
+        self.set_rx_mode(q)
 
     def _read_ser(self):
         # read from serial line
@@ -80,11 +89,11 @@ class GroundStation:
            power: the power of the signal (output)
            spreading factor:
            bandwidth:
-           length of preamble 
+           length of preamble
            should cyclic redundancy check (CRC) be enabled?
            should image quality indicators (IQI) be enabled?
            setting the sync word
-           
+
         """
         # restart the radio module
         self.reset()
@@ -106,15 +115,15 @@ class GroundStation:
         # the reception and error-prone the system is.
         self.set_sf(9)
 
-        # set the coding rate (ratio of actual data to error-correcting data that
+        # set the coding rate (ratio of actual data to error-correcting data) that
         # is transmitted. The lower the coding rate the lower the data rate.
         self.set_cr("4/7")
 
-        # set reception bandwidth. This should match the transmission bandwidth of the 
+        # set reception bandwidth. This should match the transmission bandwidth of the
         # node that this ground station is trying to receive.
-        # self.set_rxbw(500)
+        self.set_rxbw(500)
 
-        # set the length of the preamble. Preamble means introduction. It's a 
+        # set the length of the preamble. Preamble means introduction. It's a
         # transmission that is used to synchronize the receiver.
         self.set_prlen(6)
 
@@ -136,13 +145,13 @@ class GroundStation:
         author: Tarik
         @param command_string: full command to be sent to the ground station
         @param COM_PORT: the COM port to be used for the UART transmission
-        
+
         Ex.
         >>write_to_ground_station("radio set pwr 7", COM1)
         >>"ok"
-        
+
         //above example sets the radio transmission power to 7 using COM1
-        
+
         """
 
         data = str(command_string)
@@ -270,7 +279,7 @@ class GroundStation:
                 print("rxbw error:radio unable to set")
                 return
 
-        print("invalid receiving bandwidth  ")
+        print("invalid receiving bandwidth")
         return
 
     def set_iqi(self, iqi):
@@ -283,11 +292,11 @@ class GroundStation:
                 print("iqi error:radio unable to set")
                 return
 
-        print("invalid iqi setting ")
+        print("invalid iqi setting")
 
     def set_sync(self, sync):
 
-        # TODO: convert sync into hexademical
+        # TODO: convert sync into hexadecimal
         # TODO: make sure sync is between 0- 255 for lora modulation
         # TODO: make sure sync is between 0 - 2^8 - 1 for fsk modulation
 
@@ -331,64 +340,6 @@ class GroundStation:
         # TODO finish this function
         self.write_to_ground_station(f'radio set bw {bw}')
 
-    def parse_rx(self, data):
-
-        try:
-            packet = bytes.fromhex(data)
-        except:
-            print(f'error: data is {data}')
-            return
-
-        call_sign = packet[0:6]
-
-        # remove packet header from rest of data
-        packet = packet[12:]
-
-        while len(packet) != 0:
-
-            block_header = struct.unpack('<I', packet[0:4])
-
-            length = (block_header[0] & 0x1f) * 4
-            signed = ((block_header[0] >> 5) & 0x1)
-            _type = ((block_header[0] >> 6) & 0xf)
-            subtype = ((block_header[0] >> 10) & 0x3f)
-            dest_addr = ((block_header[0] >> 16) & 0xf)
-
-            if _type == 0 and subtype == 0:
-                # this is a signal report
-                self.write_to_ground_station('radio get snr')
-                snr = self._read_ser()
-
-                self.write_to_ground_station('radio get rssi')
-                rssi = self._read_ser()
-
-                print("-----"*20)
-                print(f'{call_sign} has asked for a signal report\n')
-                print(f'the SNR is {snr} and the RSSI is {rssi}')
-                print("-----"*20)
-
-                logging_info = f'signal report at {time.time()}. SNR is {snr}, RSSI is {rssi}\n'
-                self.log.write(logging_info)
-
-            else:
-                payload = packet[4:4 + length]
-                try:
-                    block = data_block.DataBlock.from_payload(subtype, payload)
-                    print("-----"*20)
-                    print(f'{call_sign} sent you a packet:\n')
-                    print(block)
-                    print("-----"*20)
-                    logging_info = 'f{block}\n'
-                    self.log.write(logging_info)
-
-                except:
-                    print(f'could not parse incoming packet of type {_type}, subtype: {subtype}\n')
-
-            # move to next block
-            packet = packet[length + 4:]
-
-        self.log.flush()
-        os.fsync(self.log.fileno())
 
     def set_rx_mode(self, message_q: queue.Queue):
         """set the ground station so that it constantly
@@ -420,7 +371,7 @@ class GroundStation:
                 # trim unnecessary elements of the message
                 message = message[10:-5]
 
-                self.parse_rx(message)
+                self.serial_data_output.put(message)
 
                 # put radio back into rx mode
                 self.set_rx_mode(message_q)
@@ -451,8 +402,8 @@ class GroundStation:
 
                 i += 1
 
-                # if we have waited 0.3 seconds, then stop waiting. something 
-                # has gone wrong. 
+                # if we have waited 0.3 seconds, then stop waiting. something
+                # has gone wrong.
                 if i == 3:
                     print('unable to transmit message')
                     return
@@ -495,7 +446,7 @@ def serial_ports() -> tuple[list[str], list[str]]:
 if __name__ == '__main__':
     ports, results = serial_ports()
     # print("DEBUG All Ports:", ports)
-    # print("%s ports found. " % len(ports))
+    # print(f"{len(ports)} ports found. ")
     print("Possible COM Serial Ports:", results)
 
     if len(results) >= 1:
@@ -503,29 +454,8 @@ if __name__ == '__main__':
 
         try:
             # rx = GroundStation('/dev/ttyUSB1')
-            rx = GroundStation(port)
-
-            # the COM port that is being used.
-            # tx = GroundStation('COM8')
-
-            # xxxxxxxxxxxxxxxxxxxxxtx.init_ground_station()
-
-            # rx.init_ground_station()
-            rx.init_ground_station()
-            rx.write_to_ground_station('radio set bw 500')
-
-            # rx.write_to_ground_station('radio rx 0')
-            # tx.write_to_ground_station('radio rx 1')
-
-            # rx.set_rxmode()
-            # rx.write_to_ground_station('radio set wdt 0')
-            # rx.write_to_ground_station('mac pause')
-            # rx.write_to_ground_station('radio rx 0')
-
-            # tx.write_to_ground_station('mac pause')
-            # tx.write_to_ground_station('radio set pwr 10')
-            # tx.write_to_ground_station('radio tx 1234562')
-
+            msg_output = queue.Queue
+            rx = GroundStation(msg_output, "COM1")
             print('_____________________________________')
             q = queue.Queue()
             rx.set_rx_mode(q)

@@ -1,4 +1,5 @@
 import random
+from abc import ABC
 
 import tornado.httpserver
 import tornado.ioloop
@@ -14,8 +15,7 @@ from modules import serial
 import json
 
 
-class TornadoWSServer(tornado.websocket.WebSocketHandler):
-    altitude = 0
+class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
     clients = set()
 
     def open(self):
@@ -33,9 +33,9 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler):
 
     @classmethod
     def send_message(cls, message: str):
-        if message is not "null":
+        if message != "null":
             for client in cls.clients:
-                print(f"S>>> {message}")
+                # print(f"S>>> {message}")
                 client.write_message(message)
 
 
@@ -52,7 +52,7 @@ class WebSocketHandler(multiprocessing.Process):
         self.startWSS()
 
     def startWSS(self):
-        print("Tornado Socket Created")
+
         wss = tornado.web.Application(
             [(r"/websocket", TornadoWSServer)],
             websocket_ping_interval=10,
@@ -64,7 +64,7 @@ class WebSocketHandler(multiprocessing.Process):
         io_loop = tornado.ioloop.IOLoop.current()
 
         periodic_callback = tornado.ioloop.PeriodicCallback(
-            lambda: TornadoWSServer.send_message(str(self.sample())), 100
+            lambda: TornadoWSServer.send_message(str(self.sample())), 50
         )
 
         periodic_callback.start()
@@ -72,9 +72,9 @@ class WebSocketHandler(multiprocessing.Process):
         io_loop.start()
 
     def sample(self):
-        TornadoWSServer.altitude += random_number()
 
         json_data = None
+        #print(f"LEN OF TELE? {self.telemetry_json_output.qsize()}")
         while not self.telemetry_json_output.empty():
             json_data = self.telemetry_json_output.get()
             # print(f"WSHandler READING TELEMETRY OUTPUT QUEUE: {json_data}")
