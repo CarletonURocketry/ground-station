@@ -10,6 +10,7 @@
             var msglog = document.getElementById("msglog");
             var altitude = document.getElementById("altitude");
             var temperature = document.getElementById("temperature");
+            var rocket_status = document.getElementById("rocket_status");
 
             ws = new WebSocket("ws://localhost:33845/websocket");
             ws.onopen = function(){
@@ -26,6 +27,7 @@
                 var ALT = updatedata.telemetry_data.altitude_data
                 altitude.innerHTML = "Altitude " + ALT.altitude.ft + " ft";
                 temperature.innerHTML = "Temp " + ALT.temperature.celsius + " *C";
+                rocket_status.innerHTML = "Rocket Status " + updatedata.status.rocket.status_text
 
             };
             ws.onclose = function(){
@@ -50,9 +52,10 @@
         <input type="text" name="message" value="" id="message">
         <input type="submit" name="submit" value="Send" id="submit">
     </form>
+    <div id="rocket_status">Rocket Status IDLE </div>
     <div id="temperature">Temp 0 *C </div>
     <div id="altitude">Altitude 000 ft</div>
-    <div id="msglog"><h1>Message log:</h1></div>
+    <div id="msglog"><br><<< No data received</div>
 </body>
 
 </html>

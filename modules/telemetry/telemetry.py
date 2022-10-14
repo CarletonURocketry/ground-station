@@ -12,6 +12,9 @@ from modules.misc.converter import celsius_to_fahrenheit, metres_to_feet
 
 # Constants
 SUBTYPE = {
+    0: "debug_message",
+    1: "status",
+    2: "startup_message",
     3: "altitude_data",
     4: "acceleration_data",
     5: "angular_velocity_data",
@@ -89,7 +92,8 @@ class Telemetry(multiprocessing.Process):
                 "rocket": {
                     "call_sign": "Not a missile",
                     "status_code": 2,
-                    "status_text": "POWERED ASCENT"
+                    "status_text": "POWERED ASCENT",
+                    "last_mission_time": 8120
                 }
             },
             "telemetry_data": {
