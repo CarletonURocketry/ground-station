@@ -29,5 +29,5 @@ class SerialTestClass(Process):
             print(f"SERIAL TEST: {random_data}")
             self.serial_output.put(random_data)
             #print("Read from serial", test_serial.readline())
-            time.sleep(0.2)
+            time.sleep(1)
             print("Read from serial b''")

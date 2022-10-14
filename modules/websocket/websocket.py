@@ -33,9 +33,11 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler):
 
     @classmethod
     def send_message(cls, message: str):
-        for client in cls.clients:
-            print(f"S>>> {message}")
-            client.write_message(message)
+        if message is not "null":
+            for client in cls.clients:
+                print(f"S>>> {message}")
+                client.write_message(message)
+
 
 
 def random_number():
@@ -62,7 +64,7 @@ class WebSocketHandler(multiprocessing.Process):
         io_loop = tornado.ioloop.IOLoop.current()
 
         periodic_callback = tornado.ioloop.PeriodicCallback(
-            lambda: TornadoWSServer.send_message(str(self.sample())), 500
+            lambda: TornadoWSServer.send_message(str(self.sample())), 100
         )
 
         periodic_callback.start()
@@ -72,9 +74,8 @@ class WebSocketHandler(multiprocessing.Process):
     def sample(self):
         TornadoWSServer.altitude += random_number()
 
-        json_data = 0
+        json_data = None
         while not self.telemetry_json_output.empty():
             json_data = self.telemetry_json_output.get()
-            print(f"WSHandler READING TELEMETRY OUTPUT QUEUE: {json_data}")
-
+            # print(f"WSHandler READING TELEMETRY OUTPUT QUEUE: {json_data}")
         return json.dumps(json_data)

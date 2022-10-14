@@ -7,30 +7,36 @@
         var ws;
 
         function init() {
-            var servermsg = document.getElementById("servermsg");
+            var msglog = document.getElementById("msglog");
             var altitude = document.getElementById("altitude");
             var temperature = document.getElementById("temperature");
 
             ws = new WebSocket("ws://localhost:33845/websocket");
             ws.onopen = function(){
-                servermsg.innerHTML = servermsg.innerHTML + "<br>Server connected";
+                msglog.innerHTML = msglog.innerHTML + "<br>Server connected";
             };
             ws.onmessage = function(e){
                 updatedata = JSON.parse(e.data);
-                servermsg.innerHTML = servermsg.innerHTML + "<br><<< Received data: " + e.data;
+
+                // Log all websocket data streams
+                // msglog.innerHTML = msglog.innerHTML + "<br><<< Received data: " + e.data
+                msglog.innerHTML = "<br><<< Received data: " + e.data;
+
+
                 var ALT = updatedata.telemetry_data.altitude_data
                 altitude.innerHTML = "Altitude " + ALT.altitude.ft + " ft";
                 temperature.innerHTML = "Temp " + ALT.temperature.celsius + " *C";
 
             };
             ws.onclose = function(){
-                servermsg.innerHTML = servermsg.innerHTML + "<br>Server disconnected";
+                msglog.innerHTML = msglog.innerHTML + "<br>Server disconnected";
             };
         }
+
         function postmsg(){
             var text = document.getElementById("message").value;
             ws.send(text);
-            servermsg.innerHTML = servermsg.innerHTML + "<br>>>> Data sent: " + text;
+            msglog.innerHTML = msglog.innerHTML + "<br>>>> Data sent: " + text;
         }
 
 
@@ -43,7 +49,7 @@
     </form>
     <div id="temperature">Temp 0 *C </div>
     <div id="altitude">Altitude 000 ft</div>
-    <div id="servermsg"><h1>Message log:</h1></div>
+    <div id="msglog"><h1>Message log:</h1></div>
 </body>
 
 </html>

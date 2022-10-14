@@ -1,6 +1,7 @@
 import multiprocessing
 import math
 
+
 class Telemetry(multiprocessing.Process):
     def __init__(self, serial_data_output: multiprocessing.Queue, telemetry_json_output: multiprocessing.Queue):
         super().__init__()

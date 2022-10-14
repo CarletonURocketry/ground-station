@@ -6,6 +6,5 @@ This data is collected using UART and will be transmitted to the user interface,
 This program needs 
 - pySerial
 - Tornado
-- multiprocessing
 
 This code follows MIT License. Please read the LICENSE file for more information.

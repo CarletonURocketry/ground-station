@@ -23,13 +23,13 @@ class GroundStation:
 
         # Initialize Serial process to communicate with board
         # Incoming information comes directly from RN2483 LoRa radio module over serial UART
-        # Outputs information in Data Block format to serial_data_output
+        # Outputs information in payload format to serial_data_output
         serial_driver = multiprocessing.Process(target=SerialTestClass, args=("COM1", serial_data_output))
         serial_driver.daemon = True
         serial_driver.start()
 
-        # Initialize Telemetry to parse serial data blocks to readable JSON, keeps history, and logs everything to disk.
-        # Incoming information comes from serial_data_output in data block format
+        # Initialize Telemetry to parse payload to readable JSON, keeps history, and logs everything to disk.
+        # Incoming information comes from serial_data_output in payload format
         # Outputs information to telemetry_json_output in friendly json for UI
         telemetry = multiprocessing.Process(target=Telemetry, args=(serial_data_output, telemetry_json_output))
         telemetry.daemon = True
@@ -37,13 +37,14 @@ class GroundStation:
 
         # Initialize Tornado websocket for UI communication
         # This is PURELY a pass through of data for connectivity. No format conversion is done here.
-        # Incoming information comes from telemetry_json_output from missile
+        # Incoming information comes from telemetry_json_output from telemetry
         # Outputs information to connected websocket clients
         websocket = multiprocessing.Process(target=WebSocketHandler, args=(websocket_commands, telemetry_json_output))
         websocket.daemon = True
         websocket.start()
 
         # Randomly spitting out queue data
+        # TODO Make this into a console input device to change parameters
         i = 0
         while True:
             i = i + 1
