@@ -3,7 +3,6 @@ import struct
 import time
 from abc import ABC
 
-import data_block
 from modules.misc.messages import printCURocket
 from modules.serial.serial_test import SerialTestClass
 from modules.telemetry.telemetry import Telemetry

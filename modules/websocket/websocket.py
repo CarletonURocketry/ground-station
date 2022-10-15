@@ -1,18 +1,13 @@
+import json
+import multiprocessing
 import random
 from abc import ABC
 
+import tornado.gen
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
-import tornado.gen
-from tornado.options import define, options
-
-import os
-import time
-import multiprocessing
-from modules import serial
-import json
 
 
 class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):

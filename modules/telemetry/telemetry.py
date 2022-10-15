@@ -1,13 +1,9 @@
 import multiprocessing
-import math
-import os
 import random
 import struct
 import time
-import queue
-import packets
 
-import data_block
+from modules.telemetry import packets
 from modules.misc.converter import celsius_to_fahrenheit, metres_to_feet
 
 # Constants
@@ -40,6 +36,7 @@ altitude = 0
 temp = 22
 going_up = True
 
+
 class Telemetry(multiprocessing.Process):
     def __init__(self, serial_input: multiprocessing.Queue, serial_data_output: multiprocessing.Queue,
                  telemetry_json_output: multiprocessing.Queue):
@@ -54,7 +51,7 @@ class Telemetry(multiprocessing.Process):
         self.serial_data_output = serial_data_output
         self.telemetry_json_output = telemetry_json_output
         self.telemetry_data = {"key": "lol"}
-
+        self.log = "Payloads\n"
         self.run()
 
     def run(self):
@@ -136,70 +133,8 @@ class Telemetry(multiprocessing.Process):
 
         self.telemetry_json_output.put(sample_json)
 
-    def parse_rx_OLD(self, data):
-        # print(f"PARSE_RX: {data}")
-        try:
-            packet = bytes.fromhex(data)
-            # print(packet)
-        except ValueError:
-            print(f'error: data is {data}')
-            return
-
-        call_sign = packet[0:6]
-
-        # remove packet header from rest of data
-        packet = packet[12:]
-
-        while len(packet) != 0:
-
-            block_header = struct.unpack('<I', packet[0:4])
-
-            length = (block_header[0] & 0x1f) * 4
-            signed = ((block_header[0] >> 5) & 0x1)
-            _type = ((block_header[0] >> 6) & 0xf)
-            subtype = ((block_header[0] >> 10) & 0x3f)
-            dest_addr = ((block_header[0] >> 16) & 0xf)
-
-            if _type == 0 and subtype == 0:
-                # this is a signal report
-                # RESULT IS BROKEN FOR NOW
-
-                self.serial_input.put('radio get snr')
-                # snr = self._read_ser()
-
-                self.serial_input.put('radio get rssi')
-                # rssi = self._read_ser()
-
-                print("-----" * 20)
-                print(f'{call_sign} has asked for a signal report\n')
-                # print(f'the SNR is {snr} and the RSSI is {rssi}')
-                print("-----" * 20)
-
-                # logging_info = f'signal report at {time.time()}. SNR is {snr}, RSSI is {rssi}\n'
-                # self.log.write(logging_info)
-
-            else:
-                payload = packet[4:4 + length]
-                try:
-                    block = data_block.DataBlock.from_payload(subtype, payload)
-                    print("-----" * 20)
-                    print(f'{call_sign} sent you a packet:')
-                    print(block)
-                    print("-----" * 20)
-                    logging_info = 'f{block}\n'
-                    # self.log.write(logging_info)
-
-                except:
-                    print(f'could not parse incoming packet of type {_type}, subtype: {subtype}\n')
-
-            # move to next block
-            packet = packet[length + 4:]
-
-        # self.log.flush()
-        # os.fsync(self.log.fileno())
-
     def parse_rx(self, data: str) -> tuple | None:
-        # Originally from UI_functions
+        self.log += data
 
         # Extract the packet header
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
@@ -208,7 +143,17 @@ class Telemetry(multiprocessing.Process):
             return call_sign, length, version, srs_addr, packet_num
 
         blocks = data[24:]  # Remove the packet header
+
+        print("-----" * 20)
+        print(f'{bytes.fromhex(call_sign)} sent you a packet:')
+
         # Parse through all blocks
+        # TODO Catch type&subtype 0 and do a signal report.
+        #  self.serial_input.put('radio get snr')
+        #  # snr = self._read_ser()
+        #  self.serial_input.put('radio get rssi')
+        #  # rssi = self._read_ser()
+
         while blocks != '':
             # Parse block header
             block_header = blocks[:8]
@@ -219,20 +164,15 @@ class Telemetry(multiprocessing.Process):
 
             # Create data if correct packet format was found
             packet = PACKETS.get(SUBTYPE.get(message_subtype))
-
-            print("---"*25)
-            print("BLOCK HEADER", block_header)
-            print("BLOCK LEN", block_len)
-            print("BLOCK DATA", payload)
-
             packet_data = packet.create_from_raw(payload) if packet else None
-            print(f"BLOCK FOR {SUBTYPE.get(message_subtype)} RETURNED {packet_data}")
+            print(f"BLOCK DATA: {payload}")
+            print(f"BLOCK FOR {SUBTYPE.get(message_subtype)} RETURNED {dict(packet_data) }")
 
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[8 + block_len:]
+        print("-----" * 20)
 
 
-# UI_Functions
 def _parse_packet_header(header) -> tuple:
     """
     Returns the packet header string's informational components in a tuple.

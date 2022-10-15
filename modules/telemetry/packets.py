@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 """Contains packet data classes for different payloads that can be received from the rocket."""
-# Authors: Arsalan, Matteo Golin
+# Authors: Arsalan, Thomas Selwyn, Matteo Golin
 
 # Imports
 import struct
@@ -63,7 +63,7 @@ kx134_1211_dic = {
 def hex_str_to_int(hex_string: str) -> int:
     """Returns the unsigned integer value of a hexadecimal string."""
 
-    #return int(hex_string, 16)
+    # return int(hex_string, 16)
     return struct.unpack("<I", bytes.fromhex(hex_string))[0]
 
 
@@ -94,12 +94,6 @@ def signed_hex_str_to_int(hex_string: str) -> int:
     """Returns an integer value for a given signed hexadecimal string. Return value preserves the number of bits."""
 
     return struct.unpack("<i", bytes.fromhex(hex_string))[0]
-    #bin_input = hex_to_bin(hex_string)
-
-    #if bin_input[0] == '1':
-        #return int(bin_input[1:], 2) - (2 ** (len(bin_input) - 1))
-    #else:
-        #return int(bin_input[1:], 2)
 
 
 def signed_bin_str_to_int(bin_string: str) -> int:
@@ -133,10 +127,7 @@ class AltitudeData:
     # Creation
     @classmethod
     def create_from_raw(cls, raw_data: str, resolution: int = 8) -> AltitudeData:
-
         """Returns an AltitudeData packet from raw data."""
-
-        print(f"Packet data being set from {raw_data}")
 
         packet = AltitudeData()
 
@@ -168,23 +159,20 @@ class AltitudeData:
     # Setters
     @time.setter
     def time(self, raw_time: str) -> None:
-
         """Mission time in milliseconds."""
 
         self._time = convert_raw(raw_time, hex_length=8)
 
     @pressure.setter
     def pressure(self, raw_pressure: str) -> None:
+        """Pressure in Pascals. Signed 32-bit integer in 2's compliment."""
 
-        """Pressure in kilopascals is converted to Pascals. Signed 32-bit integer in 2's compliment."""
-
-        self._pressure = convert_raw(raw_pressure, hex_length=8, signed=True) / 1000
+        self._pressure = convert_raw(raw_pressure, hex_length=8, signed=True)
 
     @temperature.setter
     def temperature(self, raw_temperature: str) -> None:
-
         """
-        Temperature in millidegrees Celsius/LSB is converted to degrees Celsius. Signed 32-bit integer in 2's
+        Temperature in milli degrees Celsius/LSB is converted to degrees Celsius. Signed 32-bit integer in 2's
         compliment.
         """
 
@@ -192,7 +180,6 @@ class AltitudeData:
 
     @altitude.setter
     def altitude(self, raw_altitude: str) -> None:
-
         """Altitude in millimeters/LSB is converted to meters. Signed 32-bit integer in 2's compliment."""
 
         self._altitude = convert_raw(raw_altitude, hex_length=8, signed=True) / 1000
@@ -201,21 +188,20 @@ class AltitudeData:
     def __str__(self):
         return f"time:{self.time}, pressure:{self.pressure}, temperature:{self.temperature}, altitude:{self.altitude}\n"
 
-    def __dict__(self):
+    def __iter__(self):
+        yield "mission_time", self.time
+        yield "pressure", {"pascals": self.pressure, "kilopascals": self.pressure / 1000}
+        yield "altitude", {"metres": self.altitude, "feet": converter.metres_to_feet(self.altitude)}
+        yield "temperature", {"celsius": self.temperature,
+                              "fahrenheit": converter.celsius_to_fahrenheit(self.temperature)}
+
+    def toDict(self):
         return {
-            "mission_time": {
-                "ms": self._time,
-            },
-            "pressure": {
-                "kpa": self._pressure,
-            },
-            "temperature": {
-                "c": self._temperature,
-                "f": converter.celsius_to_fahrenheit(self._temperature),
-            },
-            "altitude": {
-                "m": self._altitude,
-            },
+            "mission_time": self.time,
+            "pressure": {"pascals": self.pressure, "kilopascals": self.pressure / 1000},
+            "altitude": {"metres": self.altitude, "feet": converter.metres_to_feet(self.altitude)},
+            "temperature": {"celsius": self.temperature, 
+                            "fahrenheit": converter.celsius_to_fahrenheit(self.temperature)}
         }
 
 
@@ -232,7 +218,6 @@ class AccelerationData:
 
     @classmethod
     def create_from_raw(cls, raw_data: str, resolution: int = 4) -> AccelerationData:
-
         """Returns an AccelerationData packet from raw data."""
 
         print(f"Packet data being set from {raw_data}")
@@ -272,14 +257,12 @@ class AccelerationData:
     # Setters
     @time.setter
     def time(self, raw_time: str) -> None:
-
         """Mission time in milliseconds."""
 
         self._time = convert_raw(raw_time, hex_length=8)
 
     @fsr.setter
     def fsr(self, raw_fsr: str) -> None:
-
         """Adjusts the full scale range based on the resolution."""
 
         adjustment_factor = 16 - self.resolution + 1
@@ -291,21 +274,18 @@ class AccelerationData:
     # If the resolution of the accelerometer is less than 16 bits the values must be sign extended
     @x_axis.setter
     def x_axis(self, raw_x_axis) -> None:
-
         """X acceleration in meters per second squared. Signed integer in 2's compliment."""
 
         self._x_axis = convert_raw(raw_x_axis, hex_length=4, signed=True) * self.fsr / 2 ** 15
 
     @y_axis.setter
     def y_axis(self, raw_y_axis) -> None:
-
         """Y acceleration in meters per second squared. Signed integer in 2's compliment."""
 
         self._y_axis = convert_raw(raw_y_axis, hex_length=4, signed=True) * self.fsr / 2 ** 15
 
     @z_axis.setter
     def z_axis(self, raw_z_axis) -> None:
-
         """Z acceleration in meters per second squared. Signed integer in 2's compliment."""
 
         self._z_axis = convert_raw(raw_z_axis, hex_length=4, signed=True) * self.fsr / 2 ** 15
@@ -318,7 +298,7 @@ class AccelerationData:
                f"{self.y_axis}\n" \
                f"{self.z_axis}\n"
 
-    def __dict__(self):
+    def toDict(self):
         return {
             "mission_time": {
                 "ms": self._time,
@@ -350,8 +330,6 @@ class AngularVelocityData:
     @classmethod
     def create_from_raw(cls, raw_data: str, resolution: int) -> AngularVelocityData:
         """Returns an AngularVelocityData packet from raw data."""
-
-        print(f"Packet data being set from {raw_data}")
 
         packet = AngularVelocityData(resolution)
 
@@ -388,14 +366,12 @@ class AngularVelocityData:
     # Setters
     @time.setter
     def time(self, raw_time: str) -> None:
-
         """Mission time in milliseconds."""
 
         self._time = convert_raw(raw_time, hex_length=8)
 
     @fsr.setter
     def fsr(self, raw_fsr: str) -> None:
-
         """Adjusts the full scale range based on the resolution."""
 
         adjustment_factor = 16 - self.resolution + 1
@@ -405,21 +381,18 @@ class AngularVelocityData:
 
     @x_velocity.setter
     def x_velocity(self, raw_x_velocity: str) -> None:
-
         """X-axis velocity in meters per second. Signed integer in 2's compliment."""
 
         self._x_velocity = convert_raw(raw_x_velocity, hex_length=4) * self.fsr / 2 ** 15
 
     @y_velocity.setter
     def y_velocity(self, raw_y_velocity: str) -> None:
-
         """Y-axis velocity in meters per second. Signed integer in 2's compliment."""
 
         self._y_velocity = convert_raw(raw_y_velocity, hex_length=4) * self.fsr / 2 ** 15
 
     @z_velocity.setter
     def z_velocity(self, raw_z_velocity: str) -> None:
-
         """Z-axis velocity in meters per second. Signed integer in 2's compliment."""
 
         self._z_velocity = convert_raw(raw_z_velocity, hex_length=4) * self.fsr / 2 ** 15
@@ -431,7 +404,7 @@ class AngularVelocityData:
                f"y_velocity: {self.y_velocity}\n" \
                f"z_velocity: {self.z_velocity}\n"
 
-    def __dict__(self):
+    def toDict(self):
         return {
             "time": {
                 "ms": self._time,
@@ -450,7 +423,6 @@ class AngularVelocityData:
 
 
 class GNSSMetaDataInfo:
-
     """Stores metadata on satellites used in the GNSS."""
 
     def __init__(self):
@@ -546,7 +518,7 @@ class GNSSMetaDataInfo:
                f"Azimuth: {self._azimuth}\n" \
                f"type: {self._satellite_type}\n"
 
-    def __dict__(self):
+    def toDict(self):
         return {
             "elevation": {
                 "deg": self._elevation,
@@ -653,7 +625,7 @@ class GNSSMetaData:
             self.satellite_info[meta_data.id_] = meta_data  # Store metadata in dictionary using the ID as a key
 
     # Representations
-    def __dict__(self):
+    def toDict(self):
         return {
             "mission_time": {
                 "ms": self._mission_time,
@@ -868,7 +840,7 @@ class GNSSLocationData:
                f"num_sats: {self.num_satellites}\n" \
                f"fix_type: {self.fix_type}\n"
 
-    def __dict__(self):
+    def toDict(self):
         return {
             "mission_time": {
                 "ms": self._fix_time,
@@ -936,12 +908,11 @@ class MPU9250MeasurementData:
                f"mag valid: {self.mag_valid}\n" \
                f"mag resolution: {self.mag_resolution}\n"
 
-    def __dict__(self):
+    def toDict(self):
         return {}
 
 
 class MPU9250Data:
-
     """Data from the MPU9250 IMU."""
 
     def __init__(self):
@@ -999,21 +970,18 @@ class MPU9250Data:
     # Setters
     @time.setter
     def time(self, raw_time: str) -> None:
-
         """Mission time in milliseconds."""
 
         self._time = convert_raw(raw_time, hex_length=8)
 
     @ag_sample_rate.setter
     def ag_sample_rate(self, raw_ag_sample: str) -> None:
-
         """Sample rate of accelerometer and gyroscope."""
 
         self._ag_sample_rate = convert_raw(raw_ag_sample, hex_length=2)
 
     @accelerometer_fsr.setter
     def accelerometer_fsr(self, raw_acc_fsr: bin) -> None:
-
         """Full scale range for the accelerometer."""
 
         self._accelerometer_fsr = 2 ** (int(raw_acc_fsr, 2) + 1)
@@ -1022,21 +990,18 @@ class MPU9250Data:
 
     @gyroscope_fsr.setter
     def gyroscope_fsr(self, raw_gyro_fsr) -> None:
-
         """Full scale range for the gyroscope."""
 
         pass  # TODO
 
     @gyroscope_bw.setter
     def gyroscope_bw(self, raw_gyro_bw) -> None:
-
         """Gyroscope low pass filter bandwidth."""
 
         pass  # TODO
 
     @accelerometer_bw.setter
     def accelerometer_bw(self, raw_acc_bw) -> None:
-
         """Accelerometer low pass filter bandwidth."""
 
         pass  # TODO
@@ -1052,7 +1017,6 @@ class MPU9250Data:
 
 
 class KX1341211MeasurementData:
-
     """Contains measurement data for the KX1341211 packet."""
 
     def __init__(self):

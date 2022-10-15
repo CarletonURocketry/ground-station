@@ -12,8 +12,6 @@ import serial
 import queue
 import time
 import os
-import struct
-import data_block
 
 
 class GroundStation(multiprocessing.Process):
