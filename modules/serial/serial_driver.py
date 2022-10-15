@@ -309,11 +309,11 @@ class GroundStation(multiprocessing.Process):
             return
 
     def set_prlen(self, pr):
-        """set the preamble length between 0 and  65535"""
+        """set the preamble length between 0 and 65535"""
 
         if pr in range(0, 65535):
-            sucess = self.write_to_ground_station("radio set prlen " + str(pr))
-            if sucess:
+            success = self.write_to_ground_station("radio set prlen " + str(pr))
+            if success:
                 print("preamble length successfully set")
                 return
             else:
@@ -371,6 +371,7 @@ class GroundStation(multiprocessing.Process):
                 # trim unnecessary elements of the message
                 message = message[10:-5]
 
+                # put serial message in data queue for telemetry
                 self.serial_data_output.put(message)
 
                 # put radio back into rx mode
