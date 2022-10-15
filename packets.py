@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-import struct
-
+"""Contains packet data classes for different payloads that can be received from the rocket."""
 # Authors: Arsalan, Matteo Golin
+
+# Imports
+import struct
+import modules.misc.converter as converter
 
 # Conversion tables
 hex_bin_dic = {
@@ -129,7 +132,8 @@ class AltitudeData:
 
     # Creation
     @classmethod
-    def create_from_raw(cls, raw_data: str) -> AltitudeData:
+    def create_from_raw(cls, raw_data: str, resolution: int = 8) -> AltitudeData:
+
         """Returns an AltitudeData packet from raw data."""
 
         print(f"Packet data being set from {raw_data}")
@@ -164,31 +168,55 @@ class AltitudeData:
     # Setters
     @time.setter
     def time(self, raw_time: str) -> None:
-        """Time is received in milliseconds."""
+
+        """Mission time in milliseconds."""
 
         self._time = convert_raw(raw_time, hex_length=8)
 
     @pressure.setter
     def pressure(self, raw_pressure: str) -> None:
-        """Pressure in kilopascals is converted to Pascals."""
+
+        """Pressure in kilopascals is converted to Pascals. Signed 32-bit integer in 2's compliment."""
 
         self._pressure = convert_raw(raw_pressure, hex_length=8, signed=True) / 1000
 
     @temperature.setter
     def temperature(self, raw_temperature: str) -> None:
-        """Temperature in milli degrees Celsius is converted to a degrees Celsius."""
+
+        """
+        Temperature in millidegrees Celsius/LSB is converted to degrees Celsius. Signed 32-bit integer in 2's
+        compliment.
+        """
 
         self._temperature = convert_raw(raw_temperature, hex_length=8, signed=True) / 1000
 
     @altitude.setter
     def altitude(self, raw_altitude: str) -> None:
-        """Altitude in millimeters is converted to meters."""
+
+        """Altitude in millimeters/LSB is converted to meters. Signed 32-bit integer in 2's compliment."""
 
         self._altitude = convert_raw(raw_altitude, hex_length=8, signed=True) / 1000
 
-    # String representation
+    # Representations
     def __str__(self):
         return f"time:{self.time}, pressure:{self.pressure}, temperature:{self.temperature}, altitude:{self.altitude}\n"
+
+    def __dict__(self):
+        return {
+            "mission_time": {
+                "ms": self._time,
+            },
+            "pressure": {
+                "kpa": self._pressure,
+            },
+            "temperature": {
+                "c": self._temperature,
+                "f": converter.celsius_to_fahrenheit(self._temperature),
+            },
+            "altitude": {
+                "m": self._altitude,
+            },
+        }
 
 
 class AccelerationData:
@@ -203,7 +231,8 @@ class AccelerationData:
         self._z_axis: int = 0
 
     @classmethod
-    def create_from_raw(cls, raw_data: str, resolution: int) -> AccelerationData:
+    def create_from_raw(cls, raw_data: str, resolution: int = 4) -> AccelerationData:
+
         """Returns an AccelerationData packet from raw data."""
 
         print(f"Packet data being set from {raw_data}")
@@ -221,59 +250,90 @@ class AccelerationData:
 
     # Getters
     @property
-    def time(self):
+    def time(self) -> int:
         return self._time
 
     @property
-    def fsr(self):
+    def fsr(self) -> int:
         return self._fsr
 
     @property
-    def x_axis(self):
+    def x_axis(self) -> int:
         return self._x_axis
 
     @property
-    def y_axis(self):
+    def y_axis(self) -> int:
         return self._y_axis
 
     @property
-    def z_axis(self):
+    def z_axis(self) -> int:
         return self._z_axis
 
     # Setters
     @time.setter
     def time(self, raw_time: str) -> None:
+
+        """Mission time in milliseconds."""
+
         self._time = convert_raw(raw_time, hex_length=8)
 
     @fsr.setter
     def fsr(self, raw_fsr: str) -> None:
-        """Adjusts the FSR based on the resolution."""
+
+        """Adjusts the full scale range based on the resolution."""
 
         adjustment_factor = 16 - self.resolution + 1
         unadjusted_fsr = convert_raw(raw_fsr, hex_length=4)
 
         self._fsr = unadjusted_fsr // 2 ** adjustment_factor
 
+    # TODO: These are signed values and so must be fixed
+    # If the resolution of the accelerometer is less than 16 bits the values must be sign extended
     @x_axis.setter
     def x_axis(self, raw_x_axis) -> None:
-        # TODO: These are signed values and so must be fixed
-        self._x_axis = convert_raw(raw_x_axis, hex_length=4) * self.fsr / 2 ** 15
+
+        """X acceleration in meters per second squared. Signed integer in 2's compliment."""
+
+        self._x_axis = convert_raw(raw_x_axis, hex_length=4, signed=True) * self.fsr / 2 ** 15
 
     @y_axis.setter
     def y_axis(self, raw_y_axis) -> None:
-        self._y_axis = convert_raw(raw_y_axis, hex_length=4) * self.fsr / 2 ** 15
+
+        """Y acceleration in meters per second squared. Signed integer in 2's compliment."""
+
+        self._y_axis = convert_raw(raw_y_axis, hex_length=4, signed=True) * self.fsr / 2 ** 15
 
     @z_axis.setter
     def z_axis(self, raw_z_axis) -> None:
-        self._z_axis = convert_raw(raw_z_axis, hex_length=4) * self.fsr / 2 ** 15
 
-    # String representation
+        """Z acceleration in meters per second squared. Signed integer in 2's compliment."""
+
+        self._z_axis = convert_raw(raw_z_axis, hex_length=4, signed=True) * self.fsr / 2 ** 15
+
+    # Representations
     def __str__(self):
         return f"{self.time}\n" \
                f"{self.fsr}\n" \
                f"{self.x_axis}\n" \
                f"{self.y_axis}\n" \
                f"{self.z_axis}\n"
+
+    def __dict__(self):
+        return {
+            "mission_time": {
+                "ms": self._time,
+            },
+            "fsr": self._fsr,
+            "x_axis": {
+                "mps": self._x_axis,
+            },
+            "y_axis": {
+                "mps": self._y_axis,
+            },
+            "z_axis": {
+                "mps": self._z_axis,
+            },
+        }
 
 
 class AngularVelocityData:
@@ -306,34 +366,37 @@ class AngularVelocityData:
 
     # Getters
     @property
-    def time(self):
+    def time(self) -> int:
         return self._time
 
     @property
-    def fsr(self):
+    def fsr(self) -> int:
         return self._fsr
 
     @property
-    def x_velocity(self):
+    def x_velocity(self) -> int:
         return self._x_velocity
 
     @property
-    def y_velocity(self):
+    def y_velocity(self) -> int:
         return self._y_velocity
 
     @property
-    def z_velocity(self):
+    def z_velocity(self) -> int:
         return self._z_velocity
 
     # Setters
-
     @time.setter
     def time(self, raw_time: str) -> None:
+
+        """Mission time in milliseconds."""
+
         self._time = convert_raw(raw_time, hex_length=8)
 
     @fsr.setter
     def fsr(self, raw_fsr: str) -> None:
-        """Adjusts the FSR based on the resolution."""
+
+        """Adjusts the full scale range based on the resolution."""
 
         adjustment_factor = 16 - self.resolution + 1
         unadjusted_fsr = convert_raw(raw_fsr, hex_length=4)
@@ -342,25 +405,52 @@ class AngularVelocityData:
 
     @x_velocity.setter
     def x_velocity(self, raw_x_velocity: str) -> None:
+
+        """X-axis velocity in meters per second. Signed integer in 2's compliment."""
+
         self._x_velocity = convert_raw(raw_x_velocity, hex_length=4) * self.fsr / 2 ** 15
 
     @y_velocity.setter
     def y_velocity(self, raw_y_velocity: str) -> None:
+
+        """Y-axis velocity in meters per second. Signed integer in 2's compliment."""
+
         self._y_velocity = convert_raw(raw_y_velocity, hex_length=4) * self.fsr / 2 ** 15
 
     @z_velocity.setter
     def z_velocity(self, raw_z_velocity: str) -> None:
+
+        """Z-axis velocity in meters per second. Signed integer in 2's compliment."""
+
         self._z_velocity = convert_raw(raw_z_velocity, hex_length=4) * self.fsr / 2 ** 15
 
-    # String representation
+    # Representations
     def __str__(self):
         return f"fsr: {self.fsr}\n" \
                f"x_velocity: {self.x_velocity}\n" \
                f"y_velocity: {self.y_velocity}\n" \
                f"z_velocity: {self.z_velocity}\n"
 
+    def __dict__(self):
+        return {
+            "time": {
+                "ms": self._time,
+            },
+            "fsr": self._fsr,
+            "x_velocity": {
+                "mps": self._x_velocity,
+            },
+            "y_velocity": {
+                "mps": self._y_velocity,
+            },
+            "z_velocity": {
+                "mps": self._z_velocity,
+            },
+        }
+
 
 class GNSSMetaDataInfo:
+
     """Stores metadata on satellites used in the GNSS."""
 
     def __init__(self):
@@ -412,35 +502,64 @@ class GNSSMetaDataInfo:
     # Setters
     @elevation.setter
     def elevation(self, raw_elevation) -> None:
+
+        """Elevation of GNSS satellite in degrees."""
+
         self._elevation = int(raw_elevation, 2)
 
     @snr.setter
     def snr(self, raw_snr) -> None:
+
+        """Signal to noise ratio in dB Hz."""
+
         self._snr = int(raw_snr, 2)
 
     @id_.setter
     def id_(self, raw_id) -> None:
+
+        """The pseudo-random noise sequence for GPS satellites or the satellite ID for GLONASS satellites."""
+
         self._id = int(raw_id, 2)
 
     @azimuth.setter
     def azimuth(self, raw_azimuth) -> None:
+
+        """The satellite azimuth in degrees."""
+
         self._azimuth = int(raw_azimuth, 2)
 
     @satellite_type.setter
     def satellite_type(self, raw_type: str) -> None:
+
+        """Type of satellite (GPS: 0, GLONASS: 1)."""
 
         if raw_type == "1":
             self._satellite_type = "GLONASS"
         else:
             self._satellite_type = "GPS"
 
-    # String representation
+    # Representations
     def __str__(self):
         return f"elevation: {self._elevation}\n" \
                f"SNR: {self._snr}\n" \
                f"ID: {self._id}\n" \
                f"Azimuth: {self._azimuth}\n" \
                f"type: {self._satellite_type}\n"
+
+    def __dict__(self):
+        return {
+            "elevation": {
+                "deg": self._elevation,
+            },
+            "snr": {
+                "dbhz": self._snr,
+            },
+            "id": self._id,
+            "azimuth": {
+                "deg": self._azimuth,
+            },
+            "satellite_type": self._satellite_type
+        }
 
 
 class GNSSMetaData:
@@ -452,7 +571,7 @@ class GNSSMetaData:
         self._satellite_info: dict[int, GNSSMetaDataInfo] = {}
 
     @classmethod
-    def create_from_raw(cls, raw_data: str) -> GNSSMetaData:
+    def create_from_raw(cls, raw_data: str, resolution: int = 8) -> GNSSMetaData:
 
         """Returns an GNSSMetaData packet from raw data."""
 
@@ -489,10 +608,18 @@ class GNSSMetaData:
     # Setters
     @mission_time.setter
     def mission_time(self, raw_mission_time: str) -> None:
+
+        """Mission time in milliseconds."""
+
         self._mission_time = convert_raw(raw_mission_time, hex_length=8)
 
     @gps_satellites_in_use.setter
     def gps_satellites_in_use(self, raw_gps_satellites: bin) -> None:
+
+        """
+        Indicates which GPS satellites are used in the current fix. Each bit position represents a GPS pseudo-random
+        noise sequence.
+        """
 
         self._gps_satellites_in_use = []
         for _ in range(32):
@@ -502,6 +629,11 @@ class GNSSMetaData:
     @glonass_satellites_in_use.setter
     def glonass_satellites_in_use(self, raw_glonass_satellites: bin) -> None:
 
+        """
+        Indicates which GLONASS satellites are used in the current fix.
+        Each bit position represents a slot number, starting at bit 0 representing slot 65.
+        """
+
         self._glonass_satellites_in_use = []
         for _ in range(32):
             if raw_glonass_satellites[_] == "1":  # Append IDs of GLONASS satellites in use
@@ -510,6 +642,8 @@ class GNSSMetaData:
     @satellite_info.setter
     def satellite_info(self, raw_satellite_info: bin) -> None:
 
+        """Associates each satellite ID with its metadata."""
+
         self.satellite_info = {}  # Start with a fresh dictionary
         num_satellites = len(raw_satellite_info) // 32  # Determine the number of satellites
 
@@ -517,6 +651,17 @@ class GNSSMetaData:
             # Create a metadata packet using a 32 bit snippet from the raw_satellite info
             meta_data = GNSSMetaDataInfo.create_from_raw(raw_satellite_info[_ * 32: _ * 32 + 32])
             self.satellite_info[meta_data.id_] = meta_data  # Store metadata in dictionary using the ID as a key
+
+    # Representations
+    def __dict__(self):
+        return {
+            "mission_time": {
+                "ms": self._mission_time,
+            },
+            "gps_sats_in_use": self._gps_satellites_in_use,
+            "glonass_sats_in_use": self._glonass_satellites_in_use,
+            "satellite_info": self._satellite_info,
+        }
 
 
 class GNSSLocationData:
@@ -536,7 +681,7 @@ class GNSSLocationData:
         self._fix_type: int = 0  # The type of fix, can be either 'unknown', 'not available', '2D fix', or '3D fix'
 
     @classmethod
-    def create_from_raw(cls, raw_data: str) -> GNSSLocationData:
+    def create_from_raw(cls, raw_data: str, resolution: int = 8) -> GNSSLocationData:
 
         """Returns an GNSSLocationData packet from raw data."""
 
@@ -612,50 +757,85 @@ class GNSSLocationData:
     # Setters
     @fix_time.setter
     def fix_time(self, raw_fix_time: str) -> None:
+
+        """Mission time in milliseconds."""
+
         self._fix_time = convert_raw(raw_fix_time, hex_length=8)
 
     @latitude.setter
     def latitude(self, raw_latitude: str) -> None:
+
+        """Latitude in units of 100 micro-arcminutes per LSB. Signed 32-bit integer in 2's compliment."""
+
         self._latitude = convert_raw(raw_latitude, hex_length=8, signed=True)
 
     @longitude.setter
     def longitude(self, raw_longitude: str) -> None:
+
+        """Longitude in 100 micro-arcminutes per LSB. Signed 32-bit integer in 2's compliment."""
+
         self._longitude = convert_raw(raw_longitude, hex_length=8, signed=True)
 
     @utc_time.setter
     def utc_time(self, raw_utc_time) -> None:
+
+        """UTC time when fix was received in seconds since Unix epoch."""
+
         self._utc_time = convert_raw(raw_utc_time, hex_length=8)
 
     @altitude.setter
     def altitude(self, raw_altitude: str) -> None:
+
+        """Altitude in millimeters above sea level. Signed 32-bit integer in 2's compliment."""
+
         self._altitude = convert_raw(raw_altitude, hex_length=8)
 
     @rocket_speed.setter
     def rocket_speed(self, raw_rocket_speed: str) -> None:
+
+        """Speed over ground in hundredths of a knot. Signed 16-bit integer in 2's compliment."""
+
         self._rocket_speed = convert_raw(raw_rocket_speed, hex_length=4, signed=True)
 
     @rocket_course.setter
     def rocket_course(self, raw_rocket_course: str) -> None:
+
+        """Course over ground in hundredths of a degree. Signed 16-bit integer in 2's compliment."""
+
         self._rocket_course = convert_raw(raw_rocket_course, hex_length=4, signed=True)
 
     @pdop.setter
     def pdop(self, raw_pdop: str) -> None:
+
+        """Position dilution of precision multiplied by 100."""
+
         self._pdop = convert_raw(raw_pdop, hex_length=4)
 
     @hdop.setter
     def hdop(self, raw_hdop: str) -> None:
+
+        """Horizontal dilution of precision multiplied by 100."""
+
         self._hdop = convert_raw(raw_hdop, hex_length=4)
 
     @vdop.setter
     def vdop(self, raw_vdop: str) -> None:
+
+        """Vertical dilution of precision multiplied by 100."""
+
         self._vdop = convert_raw(raw_vdop, hex_length=4)
 
     @num_satellites.setter
     def num_satellites(self, raw_num_satellites) -> None:
+
+        """Number of GNSS satellites used."""
+
         self._num_satellites = convert_raw(raw_num_satellites, hex_length=2)
 
     @fix_type.setter
     def fix_type(self, raw_fix_type: str) -> None:
+
+        """Type of the fix."""
 
         # Convert type to integer
         fix_type_int = int(hex_to_bin(raw_fix_type)[2:4], 2)
@@ -673,7 +853,7 @@ class GNSSLocationData:
 
         self._fix_type = fix_type
 
-    # String representation
+    # Representations
     def __str__(self):
         return f"fix time: {self.fix_time}\n" \
                f"latitude: {self.latitude}\n" \
@@ -687,6 +867,36 @@ class GNSSLocationData:
                f"vdop: {self.vdop}\n" \
                f"num_sats: {self.num_satellites}\n" \
                f"fix_type: {self.fix_type}\n"
+
+    def __dict__(self):
+        return {
+            "mission_time": {
+                "ms": self._fix_time,
+            },
+            "coords": {
+                "latitude": {
+                    "cent_micro_arcmins": self._latitude,
+                },
+                "longitude": {
+                    "cent_micro_armins": self._longitude,
+                },
+            },
+            "utc_time": self._utc_time,
+            "altitude": {
+                "mm": self._altitude,
+            },
+            "speed": {
+                "cent_knot": self._rocket_speed,
+            },
+            "course": {
+                "cent_knot": self._rocket_course,
+            },
+            "pdop": self._pdop,
+            "hdop": self._hdop,
+            "vdop": self._vdop,
+            "num_sats": self._num_satellites,
+            "fix_type": self._fix_type,
+        }
 
 
 class MPU9250MeasurementData:
@@ -710,7 +920,7 @@ class MPU9250MeasurementData:
         self.mag_valid: int = int(raw_bin[195], 2)
         self.mag_resolution: int = int(raw_bin[196], 2)
 
-    # String representation
+    # Representations
     def __str__(self):
         return f"time: {self.time_stamp}\n" \
                f"temperature: {self.temperature}\n" \
@@ -726,6 +936,9 @@ class MPU9250MeasurementData:
                f"mag valid: {self.mag_valid}\n" \
                f"mag resolution: {self.mag_resolution}\n"
 
+    def __dict__(self):
+        return {}
+
 
 class MPU9250Data:
 
@@ -740,7 +953,7 @@ class MPU9250Data:
         self._gyroscope_bw: int = 0  # Bandwidth for the low pass filter used by the gyroscope
 
     @classmethod
-    def create_from_raw(cls, raw_data: str) -> MPU9250Data:
+    def create_from_raw(cls, raw_data: str, resolution: int = 8) -> MPU9250Data:
         """Returns an MPU9250Data packet from raw data."""
 
         print(f"Packet data being set from {raw_data}")
@@ -786,28 +999,46 @@ class MPU9250Data:
     # Setters
     @time.setter
     def time(self, raw_time: str) -> None:
+
+        """Mission time in milliseconds."""
+
         self._time = convert_raw(raw_time, hex_length=8)
 
     @ag_sample_rate.setter
     def ag_sample_rate(self, raw_ag_sample: str) -> None:
+
+        """Sample rate of accelerometer and gyroscope."""
+
         self._ag_sample_rate = convert_raw(raw_ag_sample, hex_length=2)
 
     @accelerometer_fsr.setter
     def accelerometer_fsr(self, raw_acc_fsr: bin) -> None:
+
+        """Full scale range for the accelerometer."""
+
         self._accelerometer_fsr = 2 ** (int(raw_acc_fsr, 2) + 1)
 
     # TODO: The following three setters need to be finished after we receive an input from this device
 
     @gyroscope_fsr.setter
     def gyroscope_fsr(self, raw_gyro_fsr) -> None:
+
+        """Full scale range for the gyroscope."""
+
         pass  # TODO
 
     @gyroscope_bw.setter
     def gyroscope_bw(self, raw_gyro_bw) -> None:
+
+        """Gyroscope low pass filter bandwidth."""
+
         pass  # TODO
 
     @accelerometer_bw.setter
     def accelerometer_bw(self, raw_acc_bw) -> None:
+
+        """Accelerometer low pass filter bandwidth."""
+
         pass  # TODO
 
     # String representation
@@ -821,6 +1052,7 @@ class MPU9250Data:
 
 
 class KX1341211MeasurementData:
+
     """Contains measurement data for the KX1341211 packet."""
 
     def __init__(self):
@@ -829,7 +1061,7 @@ class KX1341211MeasurementData:
         self._z_acceleration: int = 0
 
     @classmethod
-    def create_from_raw(cls, raw_data: str) -> KX1341211MeasurementData:
+    def create_from_raw(cls, raw_data: str, resolution: int = 8) -> KX1341211MeasurementData:
 
         """Returns an KX1341211MeasurementData packet from raw data."""
 
@@ -923,7 +1155,7 @@ class KX1341211Data:
         self._measurements: list[KX1341211MeasurementData] = []  # The actual measurements taken by the accelerometer
 
     @classmethod
-    def create_from_raw(cls, raw_data: str) -> KX1341211Data:
+    def create_from_raw(cls, raw_data: str, resolution: int = 8) -> KX1341211Data:
 
         """Returns an KX1341211Data packet from raw data."""
 
@@ -976,14 +1208,22 @@ class KX1341211Data:
     # Setters
     @time.setter
     def time(self, raw_time: bin) -> None:
+
+        """Mission time in milliseconds."""
+
         self._time = int(raw_time, 2)
 
     @data_rate.setter
     def data_rate(self, raw_data_rate: bin) -> None:
+
+        """Output data rate of the accelerometer."""
+
         self._data_rate = kx134_1211_dic[hex(int(raw_data_rate, 2))]
 
     @full_scale_range.setter
     def full_scale_range(self, raw_range: bin) -> None:
+
+        """Full scale range of the accelerometer."""
 
         range_type = int(raw_range, 2)  # Can be 0 - 3
 
@@ -1009,6 +1249,8 @@ class KX1341211Data:
     @resolution.setter
     def resolution(self, raw_resolution: bin) -> None:
 
+        """Output resolution for the accelerometer."""
+
         if raw_resolution == '0':
             self._resolution = 8
         else:
@@ -1016,6 +1258,9 @@ class KX1341211Data:
 
     @padding.setter
     def padding(self, raw_padding: bin) -> None:
+
+        """Number of padding bytes present after the end of the acceleration data."""
+
         self._padding = int(raw_padding, 2) * 8
 
     @measurements.setter
