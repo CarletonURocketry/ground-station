@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <title>Websocket Test</title>
+    <script type="application/javascript">
+        var ws;
+
+        function init() {
+            var msglog = document.getElementById("msglog");
+            var altitude = document.getElementById("altitude");
+            var temperature = document.getElementById("temperature");
+            var rocket_status = document.getElementById("rocket_status");
+            var server_status = document.getElementById("serverstatus");
+
+            ws = new WebSocket("ws://localhost:33845/websocket");
+            ws.onopen = function(){
+                server_status.innerHTML = "<<< Server Connected";
+            };
+            ws.onmessage = function(e){
+                updatedata = JSON.parse(e.data);
+                rocket_status.innerHTML = "Rocket Status " + updatedata.status.rocket.status_name
+                // Log all websocket data streams
+                // msglog.innerHTML = msglog.innerHTML + "<br><<< Received data: " + e.data
+                msglog.innerHTML = "<br>>>> Received data: " + e.data;
+
+
+                var ALT = updatedata.telemetry_data.altitude_data
+                altitude.innerHTML = "Altitude " + ALT.altitude.feet + " ft";
+                temperature.innerHTML = "Temp " + ALT.temperature.celsius + " *C";
+
+
+            };
+            ws.onclose = function(){
+                server_status.innerHTML = "<<< Server Disconnected";
+                setTimeout(function() {
+                    init();
+                }, 2000);
+            };
+        }
+
+        function postmsg(){
+            var text = document.getElementById("message").value;
+            ws.send(text);
+            msglog.innerHTML = msglog.innerHTML + "<br>>>> Data sent: " + text;
+        }
+
+
+    </script>
+</head>
+<body onload="init();">
+    <form action="" onSubmit="postmsg();return false;">
+        <input type="text" name="message" value="" id="message">
+        <input type="submit" name="submit" value="Send" id="submit">
+    </form>
+    <div id="rocket_status">Rocket Status IDLE </div>
+    <div id="temperature">Temp 0 *C </div>
+    <div id="altitude">Altitude 000 ft</div>
+    <div id="msglog"><br>>>> No data received</div>
+    <div id="serverstatus"><<< Server Disconnected</div>
+</body>
+
+</html>
