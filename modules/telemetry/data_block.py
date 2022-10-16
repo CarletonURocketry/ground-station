@@ -2,6 +2,8 @@ import struct
 from abc import ABC, abstractmethod
 from enum import Enum, IntEnum, auto
 
+from modules.misc import converter
+
 
 class DataBlockException(Exception):
     pass
@@ -24,6 +26,7 @@ class DataBlockSubtype(IntEnum):
     TEMPERATURE = 0x09
     MPU9250_IMU = 0x0a
     KX134_1211_ACCEL = 0x0b
+
 
 
 class DataBlock(ABC):
@@ -294,6 +297,13 @@ class AltitudeDataBlock(DataBlock):
     def __str__(self):
         return (f"{self.type_desc()} -> time: {self.mission_time}, pressure: {self.pressure} Pa, "
                 f"temperature: {self.temperature} C, altitude: {self.altitude} m")
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "pressure", {"pascals": self.pressure, "kilopascals": self.pressure / 1000}
+        yield "altitude", {"metres": self.altitude, "feet": converter.metres_to_feet(self.altitude)}
+        yield "temperature", {"celsius": self.temperature,
+                              "fahrenheit": converter.celsius_to_fahrenheit(self.temperature)}
 
 
 #
