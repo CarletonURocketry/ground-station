@@ -19,8 +19,8 @@
                 "pascals": "87181"
             },
             "altitude": {
-                "m": "400",
-                "ft": "1312"
+                "metres": "400",
+                "feet": "1312"
             },
             "temperature": {
                 "celsius": "12",

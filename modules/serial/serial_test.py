@@ -40,13 +40,17 @@ class SerialTestClass(Process):
         block_altitude =                "E01F00008D540100BC44010020FF0600"
         block_altitude_zero =           "E01F00008D540100BC44010000000000"
         block_altitude_zero_fire =           "E01F00008D540100BC57FF0000000000"
-
+        #time.sleep(5)
         print(f"BEST {packet_call_sign}{six_byte_spacer}{block_header}{block_altitude}")
 
         self.serial_output.put(f"{packet_call_sign}{six_byte_spacer}{block_header}{block_altitude_rocket_on_fire}")
+        #time.sleep(1)
         self.serial_output.put(f"{packet_callsign}{six_byte_spacer}{block_header}{block_altitude_zero}")
+        time.sleep(5)
         self.serial_output.put(f"{packet_callsignX}{block_header}{block_altitude_zero_fire}")
+        time.sleep(2)
         self.serial_output.put(f"{packet_call_sign}{six_byte_spacer}{block_header}{block_altitude}")
+
         #self.serial_output.put(f"{packet_call_sign}{six_byte_spacer}")
         while True:
             random_data = int(random.uniform(0, 1000))

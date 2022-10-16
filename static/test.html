@@ -11,27 +11,28 @@
             var altitude = document.getElementById("altitude");
             var temperature = document.getElementById("temperature");
             var rocket_status = document.getElementById("rocket_status");
+            var server_status = document.getElementById("serverstatus");
 
             ws = new WebSocket("ws://localhost:33845/websocket");
             ws.onopen = function(){
-                msglog.innerHTML = msglog.innerHTML + "<br>Server connected";
+                server_status.innerHTML = "<<< Server Connected";
             };
             ws.onmessage = function(e){
                 updatedata = JSON.parse(e.data);
-
+                rocket_status.innerHTML = "Rocket Status " + updatedata.status.rocket.status_name
                 // Log all websocket data streams
                 // msglog.innerHTML = msglog.innerHTML + "<br><<< Received data: " + e.data
-                msglog.innerHTML = "<br><<< Received data: " + e.data;
+                msglog.innerHTML = "<br>>>> Received data: " + e.data;
 
 
                 var ALT = updatedata.telemetry_data.altitude_data
-                altitude.innerHTML = "Altitude " + ALT.altitude.ft + " ft";
+                altitude.innerHTML = "Altitude " + ALT.altitude.feet + " ft";
                 temperature.innerHTML = "Temp " + ALT.temperature.celsius + " *C";
-                rocket_status.innerHTML = "Rocket Status " + updatedata.status.rocket.status_text
+
 
             };
             ws.onclose = function(){
-                msglog.innerHTML = msglog.innerHTML + "<br>Server disconnected";
+                server_status.innerHTML = "<<< Server Disconnected";
                 setTimeout(function() {
                     init();
                 }, 2000);
@@ -55,7 +56,8 @@
     <div id="rocket_status">Rocket Status IDLE </div>
     <div id="temperature">Temp 0 *C </div>
     <div id="altitude">Altitude 000 ft</div>
-    <div id="msglog"><br><<< No data received</div>
+    <div id="msglog"><br>>>> No data received</div>
+    <div id="serverstatus"><<< Server Disconnected</div>
 </body>
 
 </html>

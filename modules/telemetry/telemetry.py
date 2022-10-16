@@ -50,7 +50,20 @@ class Telemetry(multiprocessing.Process):
         self.serial_input = serial_input
         self.serial_data_output = serial_data_output
         self.telemetry_json_output = telemetry_json_output
-        self.telemetry_data = {"key": "lol"}
+
+        # Telemetry Data holds a dictionary of the latest copy of each received data block stored under the SUBTYPE key.
+        self.telemetry_data = {}
+        self.status_data = {
+            "board": {
+                "connected": "yes"
+            },
+            "rocket": {
+                "call_sign": "Not a missile",
+                "status_code": 2,
+                "status_name": "POWERED ASCENT",
+                "last_mission_time": 8120
+            }}
+
         self.log = "Payloads\n"
         self.run()
 
@@ -62,6 +75,7 @@ class Telemetry(multiprocessing.Process):
             # print(f"Telemetry sending sample websocket json")
             self.send_sample_websocket_json()
             time.sleep(.100)
+            #self.telemetry_json_output.put(self.generate_websocket_response())
 
     def send_sample_websocket_json(self):
         random_alternation = int(random.uniform(0, 1000))
@@ -89,7 +103,7 @@ class Telemetry(multiprocessing.Process):
                 "rocket": {
                     "call_sign": "Not a missile",
                     "status_code": 2,
-                    "status_text": "POWERED ASCENT",
+                    "status_name": "POWERED ASCENT",
                     "last_mission_time": 8120
                 }
             },
@@ -100,8 +114,8 @@ class Telemetry(multiprocessing.Process):
                         "pascals": "87181"
                     },
                     "altitude": {
-                        "m": f"{metres}",
-                        "ft": f"{metres_to_feet(metres)}"
+                        "metres": f"{metres}",
+                        "feet": f"{metres_to_feet(metres)}"
                     },
                     "temperature": {
                         "celsius": f"{round(self.temp, 3)}",
@@ -132,6 +146,24 @@ class Telemetry(multiprocessing.Process):
         }
 
         self.telemetry_json_output.put(sample_json)
+
+    def generate_websocket_response(self, telemetry_keys="all"):
+        return {"version": "0.2.3", "org": "CU InSpace", "status": self.generate_status_data(),
+                "telemetry_data": self.generate_telemetry_data(telemetry_keys)}
+
+    def generate_status_data(self):
+        return {"board": self.status_data["board"], "rocket": self.status_data["rocket"]}
+
+    def generate_telemetry_data(self, keys_to_send="all"):
+        if keys_to_send == "all":
+            keys_to_send = self.telemetry_data.keys()
+
+        telemetry_data_block = {}
+        for key in keys_to_send:
+            if key in self.telemetry_data.keys():
+                telemetry_data_block[key] = self.telemetry_data[key]
+
+        return telemetry_data_block
 
     def parse_rx(self, data: str) -> tuple | None:
         self.log += data
@@ -166,7 +198,12 @@ class Telemetry(multiprocessing.Process):
             packet = PACKETS.get(SUBTYPE.get(message_subtype))
             packet_data = packet.create_from_raw(payload) if packet else None
             print(f"BLOCK DATA: {payload}")
-            print(f"BLOCK FOR {SUBTYPE.get(message_subtype)} RETURNED {dict(packet_data) }")
+            print(f"BLOCK FOR {SUBTYPE.get(message_subtype)} RETURNED {dict(packet_data)}")
+
+            #print("BLOCKHEADER:", _parse_block_header("840C0000"))
+            #print("BLOCKHEADER:", _parse_block_header("8400B000"))
+            #print("BLOCKHEADER:", _parse_block_header("840AD000"))
+            self.telemetry_data[SUBTYPE.get(message_subtype)] = dict(packet_data)
 
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[8 + block_len:]
@@ -208,17 +245,20 @@ def _parse_block_header(header) -> tuple:
     message_subtype: str
     destination_addr: int
     """
-    # header = bin(int(header, 16))  # Convert into binary
+    #header = OG_Header
+    #header = bin(int(header, 16))  # Convert into binary
 
-    # block_len: int = int(header[0:5], 2) - 4  # Length of block in bytes, excluding header, hence subtract 4
-    # crypto_signature: bool = True if int(header[5], 2) == 1 else False  # Check if message has a cryptographic signature
+
+    #block_len: int = (int(header[0:5], 2) + 1) * 4  # Length of block in bytes
+    #crypto_signature: bool = True if int(header[5], 2) == 1 else False  # Check if message has a cryptographic signature
 
     # Type of message (Ex: The purpose of the block, such as transmitting info to ground station)
-    # message_type: int = int(header[6:10], 2)
+    #message_type: int = int(header[6:10], 2)
+    #print("RAW HEADER[6:10]",header[6:10])
 
-    # message_subtype: str = SUBTYPE.get(int(header[10:16], 2))  # Type of information that is stored in the block
-    # destination_addr: int = int(header[16:20], 2)
-    # print("PARSE BLOCK HEADER",block_len, crypto_signature, message_type, message_subtype, destination_addr)
+    #message_subtype: str = SUBTYPE.get(int(header[10:16], 2))  # Type of information that is stored in the block
+    #destination_addr: int = int(header[16:20], 2)
+    #print("PARSEHEADER", block_len, crypto_signature, message_type, message_subtype, destination_addr)
 
     header = struct.unpack('<I', bytes.fromhex(header))
 

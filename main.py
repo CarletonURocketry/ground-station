@@ -1,5 +1,4 @@
 import multiprocessing
-import struct
 import time
 from abc import ABC
 
