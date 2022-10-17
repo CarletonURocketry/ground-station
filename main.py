@@ -10,7 +10,7 @@ from modules.websocket.websocket import WebSocketHandler
 serial_input = multiprocessing.Queue()
 serial_data_output = multiprocessing.Queue()
 telemetry_json_output = multiprocessing.Queue()
-websocket_commands = multiprocessing.Queue()
+ws_commands = multiprocessing.Queue()
 
 
 class GroundStation(ABC):
@@ -31,7 +31,7 @@ class GroundStation(ABC):
         # Incoming information comes from serial_data_output in payload format
         # Outputs information to telemetry_json_output in friendly json for UI
         telemetry = multiprocessing.Process(target=Telemetry,
-                                            args=(serial_input, serial_data_output, telemetry_json_output))
+                                            args=(serial_input, serial_data_output, telemetry_json_output, ws_commands))
         telemetry.daemon = True
         telemetry.start()
         print("Telemetry started")
@@ -40,7 +40,7 @@ class GroundStation(ABC):
         # This is PURELY a pass through of data for connectivity. No format conversion is done here.
         # Incoming information comes from telemetry_json_output from telemetry
         # Outputs information to connected websocket clients
-        websocket = multiprocessing.Process(target=WebSocketHandler, args=(websocket_commands, telemetry_json_output))
+        websocket = multiprocessing.Process(target=WebSocketHandler, args=(ws_commands, telemetry_json_output))
         websocket.daemon = True
         websocket.start()
         print("WebSocket started")

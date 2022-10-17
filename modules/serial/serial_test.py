@@ -36,16 +36,6 @@ class SerialTestClass(Process):
             #stopbits=serial.STOPBITS_ONE,
             #bytesize=serial.EIGHTBITS,
             #timeout=0.1)
-        payload = "446576696c73000000000000840C0000E01F00008D540100BC57000010FEFFFF"
-        header = bytes.fromhex('840C0000')
-
-        call_sign = b"Devils".hex()
-        # print("Call sign -> ", call_sign)
-        #self.serial_output.put(payload)
-
-        packet_callsign = "446576696c73"
-        packet_callsignX = "446576696c73202020202020"
-
 
         while True:
             random_data = int(random.uniform(0, 1000))
@@ -56,7 +46,8 @@ class SerialTestClass(Process):
             #print("Read from serial b''")
 
             self.tester()
-            time.sleep(1)
+            #time.sleep(1)
+            time.sleep(random.uniform(0, 2000)/1000)
 
     def tester(self):
         random_alternation = int(random.uniform(0, 1000))
@@ -81,4 +72,4 @@ class SerialTestClass(Process):
         offset = datetime.now() - self.startup_time
 
         #self.serial_output.put(f"{packet_call_sign}{six_byte_spacer}{block_header}{'E01F00008D540100BC57FF0010FEFFFF'}")
-        self.serial_output.put(f"{packet_header}{block_header}{struct.pack('<Iiii', int(offset.total_seconds() * 1000), 87181, int(self.temp*1000), int(self.altitude*1000)).hex().upper()}")
+        self.serial_output.put(f"{packet_header}{block_header}{struct.pack('<Iiii', int(offset.total_seconds() * 1000), int(87181 + self.temp*50), int(self.temp*1000), int(self.altitude*1000)).hex().upper()}")

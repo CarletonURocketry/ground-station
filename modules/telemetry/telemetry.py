@@ -6,41 +6,46 @@ from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 
 
 class Telemetry(multiprocessing.Process):
-    def __init__(self, serial_input: multiprocessing.Queue, serial_data_output: multiprocessing.Queue,
-                 telemetry_json_output: multiprocessing.Queue):
+    def __init__(self, serial_input: multiprocessing.Queue, radio_payloads: multiprocessing.Queue,
+                 telemetry_json_output: multiprocessing.Queue, websocket_commands: multiprocessing.Queue):
         super().__init__()
 
         self.serial_input = serial_input
-        self.serial_data_output = serial_data_output
+        self.radio_payloads = radio_payloads
         self.telemetry_json_output = telemetry_json_output
+        self.websocket_commands = websocket_commands
 
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
+        self.telemetry_last_mission_time_sent = -1
         self.telemetry_data = {}
         self.status_data = {
             "board": {
-                "connected": "yes"
+                "connected": True
             },
             "rocket": {
                 "call_sign": "Not a missile",
                 "status_code": 2,
                 "status_name": "POWERED ASCENT",
-                "last_mission_time": 8120
+                "last_mission_time": -1
             }}
 
         self.log = "Payloads\n"
+
         self.run()
 
     def run(self):
         while True:
-            while not self.serial_data_output.empty():
-                self.parse_rx(self.serial_data_output.get())
+            while not self.radio_payloads.empty():
+                self.parse_radio_payload(self.radio_payloads.get())
+            while not self.websocket_commands.empty():
+                self.parse_ws_command(self.websocket_commands.get())
 
-            # print(f"Telemetry sending sample websocket json")
             time.sleep(.100)
-            self.telemetry_json_output.put(self.generate_websocket_response())
+
+            # _parse_block_header("840C0000")
 
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.2.4", "org": "CU InSpace", "status": self.generate_status_data(),
+        return {"version": "0.2.5", "org": "CU InSpace", "status": self.generate_status_data(),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys)}
 
     def generate_status_data(self):
@@ -57,7 +62,7 @@ class Telemetry(multiprocessing.Process):
 
         return telemetry_data_block
 
-    def parse_rx(self, data: str) -> tuple | None:
+    def parse_radio_payload(self, data: str) -> tuple | None:
         self.log += data
 
         # Extract the packet header
@@ -69,7 +74,7 @@ class Telemetry(multiprocessing.Process):
         blocks = data[24:]  # Remove the packet header
 
         print("-----" * 20)
-        print(f'{str(bytes.fromhex(call_sign))} sent you a packet:')
+        print(f'Rocket - {bytes.fromhex(call_sign).decode("utf-8")} - sent you a packet:')
         # Parse through all blocks
         # TODO Catch type&subtype 0 and do a signal report.
         #  self.serial_input.put('radio get snr')
@@ -86,14 +91,28 @@ class Telemetry(multiprocessing.Process):
             payload = bytes.fromhex(blocks[8: 8 + block_len])
 
             block_contents = DataBlock.parse(DataBlockSubtype(block_subtype), payload)
+            self.status_data["rocket"]["last_mission_time"] = block_contents.mission_time
             self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_contents)
-            print(block_contents)
 
-            #print("BLOCKHEADER:", _parse_block_header("840C0000"))
+            print(block_contents)
 
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[8 + block_len:]
         print("-----" * 20)
+
+        self.telemetry_last_mission_time_sent = self.status_data["rocket"]["last_mission_time"]
+        self.telemetry_json_output.put(self.generate_websocket_response())
+
+    def parse_ws_command(self, ws_cmd: str):
+        if ws_cmd == "update":
+            print("WSCommand: Sending update frame")
+            self.telemetry_json_output.put(self.generate_websocket_response())
+
+        elif ws_cmd == "connected":
+            board_connected = self.status_data["board"]["connected"]
+            self.status_data["board"]["connected"] = not board_connected
+            self.telemetry_json_output.put(self.generate_websocket_response())
+
 
 
 def _parse_packet_header(header) -> tuple:
@@ -121,7 +140,6 @@ def _parse_packet_header(header) -> tuple:
     return call_sign, length, version, src_addr, packet_num
 
 
-
 def _parse_block_header(header) -> tuple:
     """
     Parses a block header string into its information components and returns them in a tuple.
@@ -132,6 +150,7 @@ def _parse_block_header(header) -> tuple:
     message_subtype: int
     destination_addr: int
     """
+    OG_header = header
     header = struct.unpack('<I', bytes.fromhex(header))
 
     block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
@@ -139,26 +158,26 @@ def _parse_block_header(header) -> tuple:
     message_type = ((header[0] >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
     message_subtype = ((header[0] >> 10) & 0x3f)
     destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
-
+    # print(block_len, crypto_signature, message_type, message_subtype, destination_addr, bytes.fromhex(OG_header))
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
 
 
 def make_block_header():
     header = "840C0000"
 
-    #block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
-    #crypto_signature = ((header[0] >> 5) & 0x1)
-    #message_type = ((header[0] >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
-    #message_subtype = ((header[0] >> 10) & 0x3f)
-    #destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
+    # block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
+    # crypto_signature = ((header[0] >> 5) & 0x1)
+    # message_type = ((header[0] >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
+    # message_subtype = ((header[0] >> 10) & 0x3f)
+    # destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
 
-    #lol = "13634180"
-    #header = struct.pack('<I', lol)
-    #print("HEADDDDDDDDD",header)
+    # lol = "13634180"
+    # header = struct.pack('<I', lol)
+    # print("HEADDDDDDDDD",header)
     # lol = 13634180
-    #header = struct.pack('<I', lol)
-    #print("HEADDDDDDDDD", int.from_bytes(header, "little"))
+    # header = struct.pack('<I', lol)
+    # print("HEADDDDDDDDD", int.from_bytes(header, "little"))
 
-    #test = struct.pack('<I?III', 20, False, 2, 3, 0)
-    #print("LLLLLLLL",test.hex())
+    # test = struct.pack('<I?III', 20, False, 2, 3, 0)
+    # print("LLLLLLLL",test.hex())
     return header

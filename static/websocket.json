@@ -1,20 +1,20 @@
 {
-    "version": "0.1.1",
+    "version": "0.2.5",
     "org": "CU InSpace",
     "status": {
         "board": {
-            "connected": "yes"
+            "connected": true
         },
         "rocket": {
             "call_sign": "Not a missile",
             "status_code": 2,
-            "status_text": "POWERED ASCENT",
+            "status_name": "POWERED ASCENT",
             "last_mission_time": 8120
         }
     },
     "telemetry_data": {
-        "altitude_data": {
-            "mission_time": "8120",
+        "altitude": {
+            "mission_time": 8120,
             "pressure": {
                 "pascals": "87181"
             },
