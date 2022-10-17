@@ -3,7 +3,7 @@ import random
 import struct
 import time
 from multiprocessing import Process, Queue
-import serial
+from datetime import datetime
 
 altitude = 0
 temp = 22
@@ -22,6 +22,9 @@ class SerialTestClass(Process):
         self.altitude = altitude
         self.temp = temp
         self.going_up = going_up
+
+
+        self.startup_time = datetime.now()
 
         self.run()
 
@@ -49,9 +52,11 @@ class SerialTestClass(Process):
             #print(f"SERIAL TEST: {random_data}")
             #self.serial_output.put(random_data)
             #print("Read from serial", test_serial.readline())
-            time.sleep(1)
+
             #print("Read from serial b''")
+
             self.tester()
+            time.sleep(1)
 
     def tester(self):
         random_alternation = int(random.uniform(0, 1000))
@@ -73,5 +78,7 @@ class SerialTestClass(Process):
         packet_header = f"{packet_call_sign}{six_byte_spacer}"
         block_header = "840C0000"  # Should be struct generated header data!!!
 
+        offset = datetime.now() - self.startup_time
+
         #self.serial_output.put(f"{packet_call_sign}{six_byte_spacer}{block_header}{'E01F00008D540100BC57FF0010FEFFFF'}")
-        self.serial_output.put(f"{packet_header}{block_header}{struct.pack('<Iiii', 8160, 87181, int(self.temp*1000), int(self.altitude*1000)).hex().upper()}")
+        self.serial_output.put(f"{packet_header}{block_header}{struct.pack('<Iiii', int(offset.total_seconds() * 1000), 87181, int(self.temp*1000), int(self.altitude*1000)).hex().upper()}")
