@@ -1,6 +1,8 @@
 import struct
 from abc import ABC, abstractmethod
-from enum import Enum, IntEnum, auto
+from enum import IntEnum
+
+from modules.misc import converter
 
 
 class DataBlockException(Exception):
@@ -14,7 +16,7 @@ class DataBlockUnknownException(DataBlockException):
 class DataBlockSubtype(IntEnum):
     DEBUG_MESSAGE = 0x00
     STATUS = 0x01
-    STARTUP = 0x02
+    STARTUP_MESSAGE = 0x02
     ALTITUDE = 0x03
     ACCELERATION = 0x04
     ANGULAR_VELOCITY = 0x05
@@ -47,34 +49,29 @@ class DataBlock(ABC):
         """ String description of block type """
 
     @classmethod
-    @abstractmethod
-    def _parse(cls, payload):
-        """ Unmarshal block from a bytes object (not meant to be called directly) """
-
-    @classmethod
-    def from_payload(cls, block_subtype, payload):
+    def parse(cls, block_subtype, payload):
         """ Unmarshal a bytes object to appropriate block class """
-        # 0x00
-        if block_subtype == DataBlockSubtype.DEBUG_MESSAGE:
-            return DebugMessageDataBlock._parse(payload)
-        # 0x01
-        if block_subtype == DataBlockSubtype.STATUS:
-            return StatusDataBlock._parse(payload)
-
-        if block_subtype == DataBlockSubtype.ALTITUDE:
-            return AltitudeDataBlock._parse(payload)
-        if block_subtype == DataBlockSubtype.ACCELERATION:
-            return AccelerationDataBlock._parse(payload)
-        if block_subtype == DataBlockSubtype.GNSS:
-            return GNSSLocationBlock._parse(payload)
-        if block_subtype == DataBlockSubtype.GNSS_META:
-            return GNSSMetadataBlock._parse(payload)
-        if block_subtype == DataBlockSubtype.MPU9250_IMU:
-            return MPU9250IMUDataBlock._parse(payload)
-        if block_subtype == DataBlockSubtype.KX134_1211_ACCEL:
-            return KX134AccelerometerDataBlock._parse(payload)
-        if block_subtype == DataBlockSubtype.ANGULAR_VELOCITY:
-            return AngularVelocityDataBlock._parse(payload)
+        match block_subtype:
+            case DataBlockSubtype.DEBUG_MESSAGE:
+                return DebugMessageDataBlock.from_payload(payload)
+            case DataBlockSubtype.STATUS:
+                return StatusDataBlock.from_payload(payload)
+            case DataBlockSubtype.STARTUP_MESSAGE:
+                return StartupMessageDataBlock.from_payload(payload)
+            case DataBlockSubtype.ALTITUDE:
+                return AltitudeDataBlock.from_payload(payload)
+            case DataBlockSubtype.ACCELERATION:
+                return AccelerationDataBlock.from_payload(payload)
+            case DataBlockSubtype.GNSS:
+                return GNSSLocationBlock.from_payload(payload)
+            case DataBlockSubtype.GNSS_META:
+                return GNSSMetadataBlock.from_payload(payload)
+            case DataBlockSubtype.MPU9250_IMU:
+                return MPU9250IMUDataBlock.from_payload(payload)
+            case DataBlockSubtype.KX134_1211_ACCEL:
+                return KX134AccelerometerDataBlock.from_payload(payload)
+            case DataBlockSubtype.ANGULAR_VELOCITY:
+                return AngularVelocityDataBlock.from_payload(payload)
 
         raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype}")
 
@@ -83,13 +80,13 @@ class DataBlock(ABC):
 #   Debug Message
 #
 class DebugMessageDataBlock(DataBlock):
-    def __init__(self, mission_time, msg):
+    def __init__(self, mission_time, debug_msg):
         self.mission_time = mission_time
-        self.msg = msg
+        self.debug_msg = debug_msg
 
     @property
     def length(self):
-        return ((len(self.msg.encode('utf-8')) + 3) & ~0x3) + 4
+        return ((len(self.debug_msg.encode('utf-8')) + 3) & ~0x3) + 4
 
     @property
     def subtype(self):
@@ -100,7 +97,38 @@ class DebugMessageDataBlock(DataBlock):
         return "Debug Message"
 
     @classmethod
-    def _parse(cls, payload):
+    def from_payload(cls, payload):
+        mission_time = struct.unpack("<I", payload[0:4])[0]
+        return DebugMessageDataBlock(mission_time, payload[4:].decode('utf-8'))
+
+    def to_payload(self):
+        b = self.debug_msg.encode('utf-8')
+        b = b + (b'\x00' * (((len(b) + 3) & ~0x3) - len(b)))
+        return struct.pack("<I", self.mission_time) + b
+
+    def __str__(self):
+        return f"{self.type_desc()} -> mission_time: {self.mission_time}, message: \"{self.debug_msg}\""
+
+
+class StartupMessageDataBlock(DataBlock):
+    def __init__(self, mission_time, startup_msg):
+        self.mission_time = mission_time
+        self.msg = startup_msg
+
+    @property
+    def length(self):
+        return ((len(self.msg.encode('utf-8')) + 3) & ~0x3) + 4
+
+    @property
+    def subtype(self):
+        return DataBlockSubtype.STARTUP_MESSAGE
+
+    @staticmethod
+    def type_desc():
+        return "Startup Message"
+
+    @classmethod
+    def from_payload(cls, payload):
         mission_time = struct.unpack("<I", payload[0:4])[0]
         return DebugMessageDataBlock(mission_time, payload[4:].decode('utf-8'))
 
@@ -211,7 +239,7 @@ class StatusDataBlock(DataBlock):
         return "Status"
 
     @classmethod
-    def _parse(cls, payload):
+    def from_payload(cls, payload):
         parts = struct.unpack("<IIII", payload)
 
         try:
@@ -283,7 +311,7 @@ class AltitudeDataBlock(DataBlock):
         return "Altitude"
 
     @classmethod
-    def _parse(cls, payload):
+    def from_payload(cls, payload):
         parts = struct.unpack("<Iiii", payload)
         return AltitudeDataBlock(parts[0], parts[1], parts[2] / 1000, parts[3] / 1000)
 
@@ -292,8 +320,15 @@ class AltitudeDataBlock(DataBlock):
                            int(self.temperature * 1000), int(self.altitude * 1000))
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time}, pressure: {self.pressure} Pa, "
+        return (f"{self.type_desc()} -> time: {self.mission_time} ms, pressure: {self.pressure} Pa, "
                 f"temperature: {self.temperature} C, altitude: {self.altitude} m")
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "pressure", {"pascals": self.pressure, "kilopascals": self.pressure / 1000}
+        yield "altitude", {"metres": self.altitude, "feet": converter.metres_to_feet(self.altitude)}
+        yield "temperature", {"celsius": self.temperature,
+                              "fahrenheit": converter.celsius_to_fahrenheit(self.temperature)}
 
 
 #
@@ -320,7 +355,7 @@ class AccelerationDataBlock(DataBlock):
         return "Acceleration"
 
     @classmethod
-    def _parse(cls, payload):
+    def from_payload(cls, payload):
         parts = struct.unpack("<IBBhhh", payload)
         fsr = parts[1]
         x = parts[3] * (fsr / (2 ** 15))
@@ -363,7 +398,7 @@ class AngularVelocityDataBlock(DataBlock):
         return "Angular Velocity"
 
     @classmethod
-    def _parse(cls, payload):
+    def from_payload(cls, payload):
         parts = struct.unpack("<IHhhh", payload)
         fsr = parts[1]
         x = parts[2] * (fsr / (2 ** 15))
@@ -421,7 +456,7 @@ class GNSSLocationBlock(DataBlock):
         return "GNSS Location"
 
     @classmethod
-    def _parse(cls, payload):
+    def from_payload(cls, payload):
         parts = struct.unpack("<IiiIihhHHHBB", payload)
 
         try:
@@ -441,7 +476,7 @@ class GNSSLocationBlock(DataBlock):
 
     @staticmethod
     def coord_to_str(coord, ew=False):
-        direction = coord >= 0;
+        direction = coord >= 0
         coord = abs(coord)
         degrees = coord // 600000
         coord -= degrees * 600000
@@ -507,7 +542,7 @@ class GNSSSatInfo:
     def to_bytes(self):
         if self.sat_type == GNSSSatType.GPS:
             id_adjusted = self.identifier - GNSSSatInfo.GPS_SV_OFFSET
-        elif self.sat_type == GNSSSatType.GLONASS:
+        else:
             id_adjusted = self.identifier - GNSSSatInfo.GLONASS_SV_OFFSET
 
         id_and_azimuth = ((id_adjusted & 0x1f) | ((self.azimuth & 0x1ff) << 5) |
@@ -541,17 +576,17 @@ class GNSSMetadataBlock(DataBlock):
         return "GNSS Metadata"
 
     @classmethod
-    def _parse(cls, payload):
+    def from_payload(cls, payload):
         parts = struct.unpack("<III", payload[0:12])
 
         gps_sats_in_use = set()
         for i in range(32):
-            if (parts[1] & (1 << i)):
+            if parts[1] & (1 << i):
                 gps_sats_in_use.add(i + GNSSSatInfo.GPS_SV_OFFSET)
 
         glonass_sats_in_use = set()
         for i in range(32):
-            if (parts[1] & (1 << i)):
+            if parts[1] & (1 << i):
                 glonass_sats_in_use.add(i + GNSSSatInfo.GLONASS_SV_OFFSET)
 
         sats_in_view = list()
@@ -684,14 +719,15 @@ class KX134AccelerometerDataBlock(DataBlock):
 
     @property
     def subtype(self):
-        return DataBlockSubtype.KX123_1211_ACCEL
+        return DataBlockSubtype.KX134_1211_ACCEL
+
 
     @staticmethod
     def type_desc():
         return "KX134 Accelerometer Data"
 
     @classmethod
-    def _parse(cls, payload):
+    def from_payload(cls, payload):
         parts = struct.unpack("<IH", payload[0:6])
 
         try:
@@ -1017,14 +1053,14 @@ class MPU9250IMUDataBlock(DataBlock):
 
     @property
     def subtype(self):
-        return DataBlockSubtype.KX123_1211_ACCEL
+        return DataBlockSubtype.KX134_1211_ACCEL
 
     @staticmethod
     def type_desc():
         return "MPU9250 IMU Data"
 
     @classmethod
-    def _parse(cls, payload):
+    def from_payload(cls, payload):
         parts = struct.unpack("<II", payload[0:8])
 
         ag_sample_rate = 1000 / ((parts[1] & 0xff) + 1)
