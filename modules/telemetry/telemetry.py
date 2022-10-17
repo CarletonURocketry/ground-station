@@ -40,7 +40,7 @@ class Telemetry(multiprocessing.Process):
             self.telemetry_json_output.put(self.generate_websocket_response())
 
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.2.3", "org": "CU InSpace", "status": self.generate_status_data(),
+        return {"version": "0.2.4", "org": "CU InSpace", "status": self.generate_status_data(),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys)}
 
     def generate_status_data(self):
@@ -133,8 +133,6 @@ def _parse_block_header(header) -> tuple:
     destination_addr: int
     """
     header = struct.unpack('<I', bytes.fromhex(header))
-    #print("XXXXXXXXXX", header)
-
 
     block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
     crypto_signature = ((header[0] >> 5) & 0x1)
@@ -142,17 +140,11 @@ def _parse_block_header(header) -> tuple:
     message_subtype = ((header[0] >> 10) & 0x3f)
     destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
 
-    lol = 13634180
-    header = struct.pack('<I', lol)
-    print("HEADDDDDDDDD", int.from_bytes(header, "little"))
-
-    test = struct.pack('<I?III', 20, False, 2, 3, 0)
-    print("LLLLLLLL",test.hex())
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
 
 
-def make_block(payload) -> tuple:
-
+def make_block_header():
+    header = "840C0000"
 
     #block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
     #crypto_signature = ((header[0] >> 5) & 0x1)
@@ -160,7 +152,13 @@ def make_block(payload) -> tuple:
     #message_subtype = ((header[0] >> 10) & 0x3f)
     #destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
 
-    lol = "13634180"
-    header = struct.pack('<I', lol)
+    #lol = "13634180"
+    #header = struct.pack('<I', lol)
     #print("HEADDDDDDDDD",header)
+    # lol = 13634180
+    #header = struct.pack('<I', lol)
+    #print("HEADDDDDDDDD", int.from_bytes(header, "little"))
+
+    #test = struct.pack('<I?III', 20, False, 2, 3, 0)
+    #print("LLLLLLLL",test.hex())
     return header
