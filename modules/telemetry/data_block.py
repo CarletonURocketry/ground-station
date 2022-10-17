@@ -130,7 +130,7 @@ class StartupMessageDataBlock(DataBlock):
     @classmethod
     def from_payload(cls, payload):
         mission_time = struct.unpack("<I", payload[0:4])[0]
-        return DebugMessageDataBlock(mission_time, payload[4:].decode('utf-8'))
+        return StartupMessageDataBlock(mission_time, payload[4:].decode('utf-8'))
 
     def to_payload(self):
         b = self.msg.encode('utf-8')

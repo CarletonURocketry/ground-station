@@ -11,10 +11,9 @@ going_up = True
 
 
 class SerialTestClass(Process):
-    def __init__(self, serial_input: Queue, serial_output: multiprocessing.Queue, COM_PORT="COM1"):
+    def __init__(self, serial_input: Queue, serial_output: multiprocessing.Queue):
         super().__init__()
 
-        self.SERIAL_PORT = COM_PORT
         self.serial_input = serial_input
         self.serial_output = serial_output
 
@@ -28,14 +27,6 @@ class SerialTestClass(Process):
         self.run()
 
     def run(self):
-        # test_serial = serial.Serial(
-        # port='COM1',
-        # baudrate=115200,
-        # parity=serial.PARITY_NONE,
-        # stopbits=serial.STOPBITS_ONE,
-        # bytesize=serial.EIGHTBITS,
-        # timeout=0.1)
-
         while True:
             random_data = int(random.uniform(0, 1000))
             # print(f"SERIAL TEST: {random_data}")

@@ -10,7 +10,6 @@ def printCURocket(call_sign, version, status):
         |Space|
         |     |
         |     |
-        |     |
        /|##!##|\
       / |##!##| \
      /  |##!##|  \

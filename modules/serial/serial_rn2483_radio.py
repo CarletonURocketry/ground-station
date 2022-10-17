@@ -19,7 +19,7 @@ from multiprocessing import Queue
 class SerialRN2483Radio(multiprocessing.Process):
 
     def __init__(self, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, console_input: Queue,
-                 console_input_request: Queue, com_port='COM1'):
+                 console_input_request: Queue):
         multiprocessing.Process.__init__(self)
 
         self.rn2483_radio_input = rn2483_radio_input
@@ -27,39 +27,56 @@ class SerialRN2483Radio(multiprocessing.Process):
 
         self.console_input = console_input
         self.console_input_request = console_input_request
-        print(f"RN2483 Radio: {str(', ').join(serial_ports()[1])}")
 
-        self.console_input_request.put("WHAT COM PORT?")
 
-        waiting_for_user_input = True
-        while waiting_for_user_input:
-            while not self.console_input.empty():
-                user_input = self.console_input.get()
-                print(f"USER INPUT IS {user_input}")
-                waiting_for_user_input = False
-                com_port = user_input
+        self.serial_port = None
+        self.ser = None
 
-        try:
-            # initiate the USB serial connection
-            self.ser = serial.Serial(port=com_port,
-                                     timeout=1,
-                                     baudrate=57600,
-                                     # number of bits per message
-                                     bytesize=serial.EIGHTBITS,
-                                     # set parity check: no parity
-                                     parity=serial.PARITY_NONE,
-                                     # number of stop bits
-                                     stopbits=1,
-                                     # disable hardware (RTS/CTS) flow control
-                                     rtscts=False)
-            print(f"RN2483 Radio: Connected to {com_port}")
-            self.init_rn2483_radio()
-            q = queue.Queue()
-            self.set_rx_mode(q)
+        self.run()
 
-        except serial.SerialException:
-            print("RN2483 Radio: Error communicating with serial device.")
+    def run(self):
+        while True:
+            available_ports = serial_ports()[1]
+            available_ports.append("test")
+            print(f"RN2483 Radio: {str(', ').join(available_ports)}")
 
+            self.console_input_request.put("WHAT PORT?")
+
+            waiting_for_user_input = True
+
+            while waiting_for_user_input:
+                while not self.console_input.empty():
+                    waiting_for_user_input = False
+                    user_input = self.console_input.get()
+
+                    if user_input == "test":
+                        self.console_input_request.put("TEST MODE")
+                        print("RN2483 Radio: Disabled from enabling test mode.")
+                        return
+                    else:
+                        self.serial_port = user_input.upper()
+
+            try:
+                # initiate the USB serial connection
+                print(f"RN2483 Radio: Connecting to {self.serial_port}")
+                self.ser = serial.Serial(port=self.serial_port,
+                                         timeout=1,
+                                         baudrate=57600,
+                                         # number of bits per message
+                                         bytesize=serial.EIGHTBITS,
+                                         # set parity check: no parity
+                                         parity=serial.PARITY_NONE,
+                                         # number of stop bits
+                                         stopbits=1,
+                                         # disable hardware (RTS/CTS) flow control
+                                         rtscts=False)
+                print(f"RN2483 Radio: Connected to {self.serial_port}")
+                self.init_rn2483_radio()
+                q = queue.Queue()
+                self.set_rx_mode(q)
+
+            except serial.SerialException:
+                print("RN2483 Radio: Error communicating with serial device.")
 
 
     def _read_ser(self):
