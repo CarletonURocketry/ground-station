@@ -19,16 +19,19 @@ ws_commands = multiprocessing.Queue()
 class GroundStation(ABC):
 
     def main(self):
-        printCURocket("Not a missile", "Lethal", "POWERED ASCENT")
+        debug_mode = input("Do you want to start in DEBUG Mode?")
 
+        printCURocket("Not a missile", "Lethal", "POWERED ASCENT")
         # Initialize Serial process to communicate with board
         # Incoming information comes directly from RN2483 LoRa radio module over serial UART
         # Outputs information in hexadecimal payload format to rn2483_radio_payloads
         Serial_Test = multiprocessing.Process(target=SerialTestClass, args=(rn2483_radio_input,
                                                                             rn2483_radio_payloads, "COM1"))
         Serial_Test.daemon = True
-        # UNCOMMENT THIS LINE TO SPIT OUT TEST PAYLOAD DATA
-        # Serial_Test.start()
+
+
+        if debug_mode == "True" or debug_mode == "yes":
+            Serial_Test.start()
 
         Serial_Radio = multiprocessing.Process(target=SerialRN2483Radio, args=(rn2483_radio_input,
                                                                                rn2483_radio_payloads,
