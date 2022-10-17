@@ -85,13 +85,11 @@ class Telemetry(multiprocessing.Process):
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
             payload = bytes.fromhex(blocks[8: 8 + block_len])
 
-            block_contents = DataBlock.from_payload(DataBlockSubtype(block_subtype), payload)
+            block_contents = DataBlock.parse(DataBlockSubtype(block_subtype), payload)
             self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_contents)
             print(block_contents)
 
-            # print("BLOCKHEADER:", _parse_block_header("840C0000"))
-            # print("BLOCKHEADER:", _parse_block_header("8400B000"))
-            # print("BLOCKHEADER:", _parse_block_header("840AD000"))
+            #print("BLOCKHEADER:", _parse_block_header("840C0000"))
 
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[8 + block_len:]
@@ -123,6 +121,7 @@ def _parse_packet_header(header) -> tuple:
     return call_sign, length, version, src_addr, packet_num
 
 
+
 def _parse_block_header(header) -> tuple:
     """
     Parses a block header string into its information components and returns them in a tuple.
@@ -134,6 +133,8 @@ def _parse_block_header(header) -> tuple:
     destination_addr: int
     """
     header = struct.unpack('<I', bytes.fromhex(header))
+    #print("XXXXXXXXXX", header)
+
 
     block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
     crypto_signature = ((header[0] >> 5) & 0x1)
@@ -141,4 +142,25 @@ def _parse_block_header(header) -> tuple:
     message_subtype = ((header[0] >> 10) & 0x3f)
     destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
 
+    lol = 13634180
+    header = struct.pack('<I', lol)
+    print("HEADDDDDDDDD", int.from_bytes(header, "little"))
+
+    test = struct.pack('<I?III', 20, False, 2, 3, 0)
+    print("LLLLLLLL",test.hex())
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
+
+
+def make_block(payload) -> tuple:
+
+
+    #block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
+    #crypto_signature = ((header[0] >> 5) & 0x1)
+    #message_type = ((header[0] >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
+    #message_subtype = ((header[0] >> 10) & 0x3f)
+    #destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
+
+    lol = "13634180"
+    header = struct.pack('<I', lol)
+    #print("HEADDDDDDDDD",header)
+    return header
