@@ -1,5 +1,6 @@
-# Ground station software for communication with the CU-InSpace rocket via an
-# RN2483 LoRa radio module.
+# Serial communication to the RN2483 LoRa Radio Module
+# Outputs radio payloads from the CU-InSpace rocket
+
 # Authors:
 # Arsalan
 # Thomas Selwyn
@@ -11,19 +12,32 @@ import sys
 import serial
 import queue
 import time
-import os
+
+from multiprocessing import Queue
 
 
-class GroundStation(multiprocessing.Process):
+class SerialRN2483Radio(multiprocessing.Process):
 
-
-    def __init__(self, serial_data_output: multiprocessing.Queue, com_port='COM1'):
+    def __init__(self, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, console_input: Queue,
+                 console_input_request: Queue, com_port='COM1'):
         multiprocessing.Process.__init__(self)
-        self.serial_data_output = serial_data_output
 
-        curr_dir = os.path.dirname(os.path.abspath(__file__))
-        #log_path = os.path.join(curr_dir, '../../data_log.txt')
-        #self.log = open(log_path, 'w')
+        self.rn2483_radio_input = rn2483_radio_input
+        self.rn2483_radio_payloads = rn2483_radio_payloads
+
+        self.console_input = console_input
+        self.console_input_request = console_input_request
+        print(f"RN2483 Radio: {str(', ').join(serial_ports()[1])}")
+
+        self.console_input_request.put("WHAT COM PORT?")
+
+        waiting_for_user_input = True
+        while waiting_for_user_input:
+            while not self.console_input.empty():
+                user_input = self.console_input.get()
+                print(f"USER INPUT IS {user_input}")
+                waiting_for_user_input = False
+                com_port = user_input
 
         try:
             # initiate the USB serial connection
@@ -38,13 +52,15 @@ class GroundStation(multiprocessing.Process):
                                      stopbits=1,
                                      # disable hardware (RTS/CTS) flow control
                                      rtscts=False)
-        except serial.SerialException:
-            print("Error communicating with serial device.")
+            print(f"RN2483 Radio: Connected to {com_port}")
+            self.init_rn2483_radio()
+            q = queue.Queue()
+            self.set_rx_mode(q)
 
-        print('_____________________________________')
-        self.init_ground_station()
-        q = queue.Queue()
-        self.set_rx_mode(q)
+        except serial.SerialException:
+            print("RN2483 Radio: Error communicating with serial device.")
+
+
 
     def _read_ser(self):
         # read from serial line
@@ -55,24 +71,24 @@ class GroundStation(multiprocessing.Process):
     def init_gpio(self):
         """set all GPIO pins to input mode, thereby putting them in a state of high impedance"""
 
-        self.write_to_ground_station("sys set pinmode GPIO0 digout")
-        self.write_to_ground_station("sys set pinmode GPIO1 digout")
-        self.write_to_ground_station("sys set pinmode GPIO2 digout")
-        self.write_to_ground_station("sys set pindig GPIO0 1")
-        self.write_to_ground_station("sys set pindig GPIO1 1")
-        self.write_to_ground_station("sys set pindig GPIO2 0")
+        self.write_to_rn2483_radio("sys set pinmode GPIO0 digout")
+        self.write_to_rn2483_radio("sys set pinmode GPIO1 digout")
+        self.write_to_rn2483_radio("sys set pinmode GPIO2 digout")
+        self.write_to_rn2483_radio("sys set pindig GPIO0 1")
+        self.write_to_rn2483_radio("sys set pindig GPIO1 1")
+        self.write_to_rn2483_radio("sys set pindig GPIO2 0")
 
         for i in range(0, 14):
-            self.write_to_ground_station(f"sys set pinmode GPIO{i} digin")
+            self.write_to_rn2483_radio(f"sys set pinmode GPIO{i} digin")
 
         print('successfully set GPIO')
 
     def reset(self):
-        """perform a software reset on the ground station"""
+        """perform a software reset on the rn2483 radio"""
 
-        self.write_to_ground_station('sys reset')
+        self.write_to_rn2483_radio('sys reset')
 
-        # confirm from the ground station that the reset was a success
+        # confirm from the rn2483 radio that the reset was a success
         ret = self._read_ser()
 
         if 'RN2483' in ret:
@@ -81,8 +97,8 @@ class GroundStation(multiprocessing.Process):
         else:
             return False
 
-    def init_ground_station(self):
-        """initialize the ground station with default parameters for the following parameters:
+    def init_rn2483_radio(self):
+        """initialize the rn2483 radio with default parameters for the following parameters:
            radio frequency: the frequency of the signal the radio uses to communicate with
            power: the power of the signal (output)
            spreading factor:
@@ -91,8 +107,8 @@ class GroundStation(multiprocessing.Process):
            should cyclic redundancy check (CRC) be enabled?
            should image quality indicators (IQI) be enabled?
            setting the sync word
-
         """
+
         # restart the radio module
         self.reset()
 
@@ -118,7 +134,7 @@ class GroundStation(multiprocessing.Process):
         self.set_cr("4/7")
 
         # set reception bandwidth. This should match the transmission bandwidth of the
-        # node that this ground station is trying to receive.
+        # node that this rn2483 radio is trying to receive.
         self.set_rxbw(500)
 
         # set the length of the preamble. Preamble means introduction. It's a
@@ -138,14 +154,13 @@ class GroundStation(multiprocessing.Process):
         # set the bandwidth of reception
         self.set_bw(500)
 
-    def write_to_ground_station(self, command_string):
-        """writes data to the ground station via UART
+    def write_to_rn2483_radio(self, command_string):
+        """writes data to the rn2483 radio via UART
         author: Tarik
-        @param command_string: full command to be sent to the ground station
-        @param COM_PORT: the COM port to be used for the UART transmission
+        @param command_string: full command to be sent to the rn2483 radio
 
         Ex.
-        >>write_to_ground_station("radio set pwr 7", COM1)
+        >>write_to_rn2483_radio("radio set pwr 7", COM1)
         >>"ok"
 
         //above example sets the radio transmission power to 7 using COM1
@@ -171,7 +186,7 @@ class GroundStation(multiprocessing.Process):
 
     def wait_for_ok(self):
         """
-        Check to see if 'ok' is loaded onto the serial line by the ground station. If we receive 'ok' then this
+        Check to see if 'ok' is loaded onto the serial line by the rn2483 radio. If we receive 'ok' then this
         function returns True. If anything else is read form the serial line then this function returns False.
         """
 
@@ -197,7 +212,7 @@ class GroundStation(multiprocessing.Process):
             print('invalid frequency parameter.')
             return False
 
-        success = self.write_to_ground_station("radio set freq " + str(freq))
+        success = self.write_to_rn2483_radio("radio set freq " + str(freq))
         if success:
             print("frequency successfully set")
             return True
@@ -208,7 +223,7 @@ class GroundStation(multiprocessing.Process):
     def set_mod(self, mod):
 
         if mod in ['lora', 'fsk']:
-            success = self.write_to_ground_station('radio set mod ' + mod)
+            success = self.write_to_rn2483_radio('radio set mod ' + mod)
             if success:
                 print('successfully set modulation')
             else:
@@ -221,7 +236,7 @@ class GroundStation(multiprocessing.Process):
         # TODO: FIGURE OUT MAX POWER
         if pwr in range(-3, 16):
 
-            success = self.write_to_ground_station("radio set pwr " + str(pwr))
+            success = self.write_to_rn2483_radio("radio set pwr " + str(pwr))
             if success:
                 print("value power successfully set")
                 return
@@ -234,13 +249,13 @@ class GroundStation(multiprocessing.Process):
         return
 
     def set_sf(self, sf):
-        """set the spreading factor for the ground station. Spreading factor
+        """set the spreading factor for the rn2483 radio. Spreading factor
            can only be set to 7, 8, 9, 10, 11, or 12.
 
         """
 
         if sf in [7, 8, 9, 10, 11, 12]:
-            success = self.write_to_ground_station("radio set sf sf" + str(sf))
+            success = self.write_to_rn2483_radio("radio set sf sf" + str(sf))
             if success:
                 print("value spreading factor successfully set")
                 return
@@ -255,7 +270,7 @@ class GroundStation(multiprocessing.Process):
         """set coding rate which can only be "4/5", "4/6", "4/7", "4/8"""
 
         if cr in ["4/5", "4/6", "4/7", "4/8"]:
-            success = self.write_to_ground_station("radio set cr " + str(cr))
+            success = self.write_to_rn2483_radio("radio set cr " + str(cr))
             if success:
                 print("value cr successfully set")
                 return
@@ -269,7 +284,7 @@ class GroundStation(multiprocessing.Process):
         """set the bandwidth which can only be 125, 250 or 500 hz"""
 
         if bw in [125, 250, 500]:
-            success = self.write_to_ground_station("radio set bw " + str(bw))
+            success = self.write_to_rn2483_radio("radio set bw " + str(bw))
             if success:
                 print("value rxbw successfully set")
                 return
@@ -282,7 +297,7 @@ class GroundStation(multiprocessing.Process):
 
     def set_iqi(self, iqi):
         if iqi in ["on", "off"]:
-            success = self.write_to_ground_station("radio set iqi " + str(iqi))
+            success = self.write_to_rn2483_radio("radio set iqi " + str(iqi))
             if success:
                 print("value successfully set")
                 return
@@ -298,7 +313,7 @@ class GroundStation(multiprocessing.Process):
         # TODO: make sure sync is between 0- 255 for lora modulation
         # TODO: make sure sync is between 0 - 2^8 - 1 for fsk modulation
 
-        success = self.write_to_ground_station("radio set sync " + str(sync))
+        success = self.write_to_rn2483_radio("radio set sync " + str(sync))
         if success:
             print("value sync word successfully set")
             return
@@ -310,7 +325,7 @@ class GroundStation(multiprocessing.Process):
         """set the preamble length between 0 and 65535"""
 
         if pr in range(0, 65535):
-            success = self.write_to_ground_station("radio set prlen " + str(pr))
+            success = self.write_to_rn2483_radio("radio set prlen " + str(pr))
             if success:
                 print("preamble length successfully set")
                 return
@@ -324,7 +339,7 @@ class GroundStation(multiprocessing.Process):
         """enable or disable the cyclic redundancy check"""
 
         if crc in ["on", "off"]:
-            success = self.write_to_ground_station("radio set crc " + str(crc))
+            success = self.write_to_rn2483_radio("radio set crc " + str(crc))
             if success:
                 print("value crc successfully set")
                 return
@@ -336,21 +351,20 @@ class GroundStation(multiprocessing.Process):
 
     def set_bw(self, bw):
         # TODO finish this function
-        self.write_to_ground_station(f'radio set bw {bw}')
-
+        self.write_to_rn2483_radio(f'radio set bw {bw}')
 
     def set_rx_mode(self, message_q: queue.Queue):
-        """set the ground station so that it constantly
+        """set the rn2483 radio so that it constantly
            listens for transmissions"""
 
         # turn off watch dog timer
-        self.write_to_ground_station('radio set wdt 0')
+        self.write_to_rn2483_radio('radio set wdt 0')
 
         # this command must be passed before any reception can occur
-        self.write_to_ground_station("mac pause")
+        self.write_to_rn2483_radio("mac pause")
 
         # command radio to go into continuous reception mode
-        success = self.write_to_ground_station("radio rx 0")
+        success = self.write_to_rn2483_radio("radio rx 0")
 
         # if radio has not been put into rx mode
         if not success:
@@ -361,19 +375,17 @@ class GroundStation(multiprocessing.Process):
         while True:
             message = str(self.ser.readline())
 
-            # if serial port has nothing that can be read
-            if message == "b''":
-                print('nothing received')
-
-            else:
+            if message != "b''":
                 # trim unnecessary elements of the message
                 message = message[10:-5]
 
                 # put serial message in data queue for telemetry
-                self.serial_data_output.put(message)
+                self.rn2483_radio_payloads.put(message)
 
                 # put radio back into rx mode
                 self.set_rx_mode(message_q)
+            else:
+                print('nothing received')
 
     def _tx(self, data):
         """transmit data, a method used for debugging
@@ -381,10 +393,10 @@ class GroundStation(multiprocessing.Process):
         ROCKET DOES NOT RESPOND TO TRANSMISSIONS AT THIS TIME"""
 
         # command that must be called before each transmission and receive
-        self.write_to_ground_station("mac pause")
+        self.write_to_rn2483_radio("mac pause")
 
         # is the data we wish to transmit valid?
-        valid = self.write_to_ground_station("radio tx " + data)
+        valid = self.write_to_rn2483_radio("radio tx " + data)
 
         if not valid:
             print('invalid transmission message')
@@ -418,7 +430,7 @@ def serial_ports() -> tuple[list[str], list[str]]:
         :returns:
             A list of the serial ports available on the system
     """
-    com_ports = []
+
     if sys.platform.startswith('win'):
         com_ports = ['COM%s' % (i + 1) for i in range(256)]
     elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
@@ -452,9 +464,9 @@ if __name__ == '__main__':
         port = input("What COM Port? \n")
 
         try:
-            # rx = GroundStation('/dev/ttyUSB1')
+            # rx = SerialRN2483Radio('/dev/ttyUSB1')
             msg_output = queue.Queue
-            rx = GroundStation(msg_output, "COM1")
+            rx = SerialRN2483Radio(msg_output, msg_output, "COM1")
             print('_____________________________________')
             q = queue.Queue()
             rx.set_rx_mode(q)

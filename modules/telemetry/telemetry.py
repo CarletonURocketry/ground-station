@@ -31,6 +31,10 @@ class Telemetry(multiprocessing.Process):
 
         self.log = "Payloads\n"
 
+        # curr_dir = os.path.dirname(os.path.abspath(__file__))
+        # log_path = os.path.join(curr_dir, '../../data_log.txt')
+        # self.log = open(log_path, 'w')
+
         self.run()
 
     def run(self):
@@ -109,10 +113,8 @@ class Telemetry(multiprocessing.Process):
             self.telemetry_json_output.put(self.generate_websocket_response())
 
         elif ws_cmd == "connected":
-            board_connected = self.status_data["board"]["connected"]
-            self.status_data["board"]["connected"] = not board_connected
+            self.status_data["board"]["connected"] = not self.status_data["board"]["connected"]
             self.telemetry_json_output.put(self.generate_websocket_response())
-
 
 
 def _parse_packet_header(header) -> tuple:
