@@ -1,3 +1,9 @@
+# Data Block classes for radio transmission payload packets.
+#
+# Authors:
+# Samuel Dewan
+# Thomas Selwyn (Devil)
+
 import struct
 from abc import ABC, abstractmethod
 from enum import IntEnum

@@ -1,13 +1,20 @@
-import multiprocessing
+# Telemetry to parse radio packets, keep history and to log everything
+# Incoming information comes from rn2483_radio_payloads in payload format
+# Outputs information to telemetry_json_output in friendly json for UI
+#
+# Authors:
+# Thomas Selwyn (Devil)
+
 import struct
 import time
 
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
+from multiprocessing import Queue, Process
 
 
-class Telemetry(multiprocessing.Process):
-    def __init__(self, serial_input: multiprocessing.Queue, radio_payloads: multiprocessing.Queue,
-                 telemetry_json_output: multiprocessing.Queue, websocket_commands: multiprocessing.Queue):
+class Telemetry(Process):
+    def __init__(self, serial_input: Queue, radio_payloads: Queue,
+                 telemetry_json_output: Queue, websocket_commands: Queue):
         super().__init__()
 
         self.serial_input = serial_input
@@ -29,7 +36,7 @@ class Telemetry(multiprocessing.Process):
                 "last_mission_time": -1
             }}
 
-        self.log = "Payloads\n"
+        # self.log = "Payloads\n"
 
         # curr_dir = os.path.dirname(os.path.abspath(__file__))
         # log_path = os.path.join(curr_dir, '../../data_log.txt')
@@ -67,7 +74,7 @@ class Telemetry(multiprocessing.Process):
         return telemetry_data_block
 
     def parse_radio_payload(self, data: str) -> tuple | None:
-        self.log += data
+        # self.log += data
 
         # Extract the packet header
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])

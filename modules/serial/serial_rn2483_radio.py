@@ -1,26 +1,25 @@
 # Serial communication to the RN2483 LoRa Radio Module
 # Outputs radio payloads from the CU-InSpace rocket
-
+#
 # Authors:
-# Arsalan
-# Thomas Selwyn
+# Arsalan Syed
+# Thomas Selwyn (Devil)
 # Zacchaeus Liang
 
 import glob
-import multiprocessing
 import sys
 import serial
 import queue
 import time
 
-from multiprocessing import Queue
+from multiprocessing import Queue, Process
 
 
-class SerialRN2483Radio(multiprocessing.Process):
+class SerialRN2483Radio(Process):
 
     def __init__(self, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, console_input: Queue,
                  console_input_request: Queue):
-        multiprocessing.Process.__init__(self)
+        Process.__init__(self)
 
         self.rn2483_radio_input = rn2483_radio_input
         self.rn2483_radio_payloads = rn2483_radio_payloads
@@ -51,7 +50,7 @@ class SerialRN2483Radio(multiprocessing.Process):
 
                     if user_input == "test":
                         self.console_input_request.put("TEST MODE")
-                        print("RN2483 Radio: Disabled from enabling test mode.")
+                        print("RN2483 Radio: Serial link disabled due to enabling test mode.")
                         return
                     else:
                         self.serial_port = user_input.upper()

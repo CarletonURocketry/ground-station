@@ -1,4 +1,9 @@
-import multiprocessing
+# Emulates the RN2483 LoRa Radio Module
+# Outputs emulated radio payloads from the CU-InSpace rocket
+#
+# Authors:
+# Thomas Selwyn (Devil)
+
 import random
 import struct
 import time
@@ -11,7 +16,7 @@ going_up = True
 
 
 class SerialTestClass(Process):
-    def __init__(self, serial_input: Queue, serial_output: multiprocessing.Queue):
+    def __init__(self, serial_input: Queue, serial_output: Queue):
         super().__init__()
 
         self.serial_input = serial_input
@@ -28,15 +33,7 @@ class SerialTestClass(Process):
 
     def run(self):
         while True:
-            random_data = int(random.uniform(0, 1000))
-            # print(f"SERIAL TEST: {random_data}")
-            # self.serial_output.put(random_data)
-            # print("Read from serial", test_serial.readline())
-
-            # print("Read from serial b''")
-
             self.tester()
-            # time.sleep(1)
             time.sleep(random.uniform(0, 2000) / 1000)
 
     def tester(self):

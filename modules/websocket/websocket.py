@@ -1,5 +1,13 @@
+# Tornado websocket for UI communication
+# This is PURELY a pass through of data for connectivity. No format conversion is done here.
+# Incoming information comes from telemetry_json_output from telemetry
+# Outputs information to connected websocket clients
+#
+# Authors:
+# Thomas Selwyn (Devil)
+
 import json
-import multiprocessing
+from multiprocessing import Queue, Process
 import random
 from abc import ABC
 
@@ -9,7 +17,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 
-ws_commands_queue = multiprocessing.Queue
+ws_commands_queue = Queue
 
 
 class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
@@ -44,8 +52,8 @@ def random_number():
     return int(random.uniform(0, 1000))
 
 
-class WebSocketHandler(multiprocessing.Process):
-    def __init__(self, ws_commands: multiprocessing.Queue, telemetry_json_output: multiprocessing.Queue):
+class WebSocketHandler(Process):
+    def __init__(self, ws_commands: Queue, telemetry_json_output: Queue):
         super().__init__()
         global ws_commands_queue
 
