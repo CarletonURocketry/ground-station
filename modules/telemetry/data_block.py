@@ -115,6 +115,10 @@ class DebugMessageDataBlock(DataBlock):
     def __str__(self):
         return f"{self.type_desc()} -> mission_time: {self.mission_time}, message: \"{self.debug_msg}\""
 
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "message", self.debug_msg
+
 
 class StartupMessageDataBlock(DataBlock):
     def __init__(self, mission_time, startup_msg):
@@ -146,6 +150,10 @@ class StartupMessageDataBlock(DataBlock):
     def __str__(self):
         return f"{self.type_desc()} -> mission_time: {self.mission_time}, message: \"{self.msg}\""
 
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "message", self.msg
+
 
 #
 #   Software Status
@@ -159,18 +167,19 @@ class SensorStatus(IntEnum):
     SENSOR_STATUS_FAILED = 0x4
 
     def __str__(self):
-        if self == SensorStatus.SENSOR_STATUS_NONE:
-            return "none"
-        elif self == SensorStatus.SENSOR_STATUS_INITIALIZING:
-            return "initializing"
-        elif self == SensorStatus.SENSOR_STATUS_RUNNING:
-            return "running"
-        elif self == SensorStatus.SENSOR_STATUS_SELF_TEST_FAILED:
-            return "self test failed"
-        elif self == SensorStatus.SENSOR_STATUS_FAILED:
-            return "failed"
-        else:
-            return "unknown"
+        match self:
+            case SensorStatus.SENSOR_STATUS_NONE:
+                return "none"
+            case SensorStatus.SENSOR_STATUS_INITIALIZING:
+                return "initializing"
+            case SensorStatus.SENSOR_STATUS_RUNNING:
+                return "running"
+            case SensorStatus.SENSOR_STATUS_SELF_TEST_FAILED:
+                return "self test failed"
+            case SensorStatus.SENSOR_STATUS_FAILED:
+                return "failed"
+            case _:
+                return "unknown"
 
 
 class SDCardStatus(IntEnum):
@@ -180,16 +189,17 @@ class SDCardStatus(IntEnum):
     SD_CARD_STATUS_FAILED = 0x3
 
     def __str__(self):
-        if self == SDCardStatus.SD_CARD_STATUS_NOT_PRESENT:
-            return "card not present"
-        elif self == SDCardStatus.SD_CARD_STATUS_INITIALIZING:
-            return "initializing"
-        elif self == SDCardStatus.SD_CARD_STATUS_READY:
-            return "ready"
-        elif self == SDCardStatus.SD_CARD_STATUS_FAILED:
-            return "failed"
-        else:
-            return "unknown"
+        match self:
+            case SDCardStatus.SD_CARD_STATUS_NOT_PRESENT:
+                return "card not present"
+            case SDCardStatus.SD_CARD_STATUS_INITIALIZING:
+                return "initializing"
+            case SDCardStatus.SD_CARD_STATUS_READY:
+                return "ready"
+            case SDCardStatus.SD_CARD_STATUS_FAILED:
+                return "failed"
+            case _:
+                return "unknown"
 
 
 class DeploymentState(IntEnum):
@@ -294,6 +304,16 @@ class StatusDataBlock(DataBlock):
                 f"deployment state: {str(self.deployment_state)}, blocks recorded: "
                 f" {self.sd_blocks_recorded}, checkouts missed: {self.sd_checkouts_missed}")
 
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "kx_134", self.kx134_state
+        yield "altimeter_state", self.alt_state
+        yield "imu_state", self.imu_state
+        yield "sd_driver_state", self.sd_state
+        yield "deployment_state", self.deployment_state
+        yield "blocks_recorded", self.sd_blocks_recorded
+        yield "checkouts_missed", self.sd_checkouts_missed
+
 
 #
 #   Altitude
@@ -380,6 +400,13 @@ class AccelerationDataBlock(DataBlock):
         return (f"{self.type_desc()} -> time: {self.mission_time}, fsr: {self.fsr}, "
                 f"x: {self.x} g, y: {self.y} g, z: {self.z} g")
 
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "fsr", self.fsr
+        yield "x", self.x
+        yield "y", self.y
+        yield "z", self.y
+
 
 #
 #   Angular Velocity
@@ -422,6 +449,13 @@ class AngularVelocityDataBlock(DataBlock):
     def __str__(self):
         return (f"{self.type_desc()} -> time: {self.mission_time}, fsr: {self.fsr}, "
                 f"x: {self.x} g, y: {self.y} g, z: {self.z} g")
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "fsr", self.fsr
+        yield "x", self.x
+        yield "y", self.y
+        yield "z", self.z
 
 
 #
@@ -507,6 +541,20 @@ class GNSSLocationBlock(DataBlock):
                 f"course: {self.course}°, pdop: {self.pdop}, hdop: {self.hdop}, vdop: "
                 f"{self.vdop}, sats in use: {self.sats}, type: {self.fix_type.name}")
 
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "position", {"latitude": GNSSLocationBlock.coord_to_str(self.latitude),
+                           "longitude": GNSSLocationBlock.coord_to_str(self.longitude, ew=True)}
+        yield "utc_time", self.utc_time
+        yield "altitude", self.altitude
+        yield "speed", self.speed
+        yield "course", self.course
+        yield "pdop", self.pdop
+        yield "hdop", self.hdop
+        yield "vdop", self.vdop
+        yield "sats in use", self.sats
+        yield "type", self.fix_type.name
+
 
 #
 #   GNSS Metadata
@@ -561,6 +609,13 @@ class GNSSSatInfo:
         return (f"{'GPS' if self.sat_type == GNSSSatType.GPS else 'GLONASS'} sat -> elevation: "
                 f"{self.elevation}°, SNR: {self.snr} dB-Hz, id: {self.identifier}, azimuth: "
                 f"{self.azimuth}°")
+
+    def __iter__(self):
+        yield "sat_type", "GPS" if self.sat_type == GNSSSatType.GPS else "GLONASS"
+        yield "elevation", self.elevation
+        yield "snr", self.snr
+        yield "id", self.identifier
+        yield "azimuth", self.azimuth
 
 
 class GNSSMetadataBlock(DataBlock):
@@ -629,11 +684,16 @@ class GNSSMetadataBlock(DataBlock):
             s += f"\n\t{sat}"
         return s
 
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "gps_sats_in_use", self.gps_sats_in_use
+        yield "glonass_sats_in_use", self.glonass_sats_in_use
+        yield "sats_in_view", self.sats_in_view
+
 
 #
 #   KX134-1211 Acceleromter Data
 #
-
 class KX134ODR(IntEnum):
     ODR_781 = 0
     ODR_1563 = 1
@@ -654,7 +714,7 @@ class KX134ODR(IntEnum):
 
     @property
     def samples_per_sec(self):
-        return 25600.0 / (2 ** (15 - self.value))
+        return 25600.0 / (2 ** (15 - self))
 
     def __str__(self):
         return f"{self.samples_per_sec} Hz"
@@ -668,15 +728,19 @@ class KX134Range(IntEnum):
 
     @property
     def acceleration(self):
-        if self == KX134Range.ACCEL_8G:
-            return 8
-        elif self == KX134Range.ACCEL_16G:
-            return 16
-        elif self == KX134Range.ACCEL_32G:
-            return 32
-        elif self == KX134Range.ACCEL_64G:
-            return 64
-        return 0
+        match self:
+            case KX134Range.ACCEL_8G:
+                return 8
+            case KX134Range.ACCEL_8G:
+                return 8
+            case KX134Range.ACCEL_16G:
+                return 16
+            case KX134Range.ACCEL_32G:
+                return 32
+            case KX134Range.ACCEL_64G:
+                return 64
+            case _:
+                return 0
 
     def __str__(self):
         return f"±{self.acceleration} g"
@@ -727,7 +791,6 @@ class KX134AccelerometerDataBlock(DataBlock):
     @property
     def subtype(self):
         return DataBlockSubtype.KX134_1211_ACCEL
-
 
     @staticmethod
     def type_desc():
@@ -813,23 +876,31 @@ class KX134AccelerometerDataBlock(DataBlock):
                 f"ODR: {self.odr}, range: {self.accel_range}, rolloff: {self.rolloff}, "
                 f"resolution: {self.resolution}")
 
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "samples", len(self.samples)
+        yield "odr", self.odr
+        yield "range", self.accel_range
+        yield "rolloff", self.rolloff
+        yield "resolution", self.resolution
+
 
 #
 #   MPU9250 IMU Data
 #
-
 class MPU9250MagSR(IntEnum):
     SR_8 = 0
     SR_100 = 1
 
     @property
     def samples_per_sec(self):
-        if self == MPU9250MagSR.SR_8:
-            return 8
-        elif self == MPU9250MagSR.SR_100:
-            return 100
-        else:
-            return 0
+        match self:
+            case MPU9250MagSR.SR_8:
+                return 8
+            case MPU9250MagSR.SR_100:
+                return 100
+            case _:
+                return 0
 
     def __str__(self):
         return f"{self.samples_per_sec} Hz"
@@ -843,15 +914,17 @@ class MPU9250AccelFSR(IntEnum):
 
     @property
     def acceleration(self):
-        if self == MPU9250AccelFSR.ACCEL_2G:
-            return 2
-        elif self == MPU9250AccelFSR.ACCEL_4G:
-            return 4
-        elif self == MPU9250AccelFSR.ACCEL_8G:
-            return 8
-        elif self == MPU9250AccelFSR.ACCEL_16G:
-            return 16
-        return 0
+        match self:
+            case MPU9250AccelFSR.ACCEL_2G:
+                return 2
+            case MPU9250AccelFSR.ACCEL_4G:
+                return 4
+            case MPU9250AccelFSR.ACCEL_8G:
+                return 8
+            case MPU9250AccelFSR.ACCEL_16G:
+                return 16
+            case _:
+                return 0
 
     @property
     def sensitivity(self):
@@ -869,14 +942,15 @@ class MPU9250GyroFSR(IntEnum):
 
     @property
     def angular_velocity(self):
-        if self == MPU9250GyroFSR.AV_250DPS:
-            return 250
-        elif self == MPU9250GyroFSR.AV_500DPS:
-            return 500
-        elif self == MPU9250GyroFSR.AV_1000DPS:
-            return 1000
-        elif self == MPU9250GyroFSR.AV_2000DPS:
-            return 2000
+        match self:
+            case MPU9250GyroFSR.AV_250DPS:
+                return 250
+            case MPU9250GyroFSR.AV_500DPS:
+                return 500
+            case MPU9250GyroFSR.AV_1000DPS:
+                return 1000
+            case MPU9250GyroFSR.AV_2000DPS:
+                return 2000
         return 0
 
     @property
@@ -898,21 +972,23 @@ class MPU9250AccelBW(IntEnum):
 
     @property
     def bandwidth(self):
-        if self == MPU9250AccelBW.BW_5_HZ:
-            return 5.05
-        elif self == MPU9250AccelBW.BW_10_HZ:
-            return 10.2
-        elif self == MPU9250AccelBW.BW_21_HZ:
-            return 21.2
-        elif self == MPU9250AccelBW.BW_45_HZ:
-            return 44.8
-        elif self == MPU9250AccelBW.BW_99_HZ:
-            return 99
-        elif self == MPU9250AccelBW.BW_218_HZ:
-            return 218.1
-        elif self == MPU9250AccelBW.BW_420_HZ:
-            return 420
-        return 0
+        match self:
+            case MPU9250AccelBW.BW_5_HZ:
+                return 5.05
+            case MPU9250AccelBW.BW_10_HZ:
+                return 10.2
+            case MPU9250AccelBW.BW_21_HZ:
+                return 21.2
+            case MPU9250AccelBW.BW_45_HZ:
+                return 44.8
+            case MPU9250AccelBW.BW_99_HZ:
+                return 99
+            case MPU9250AccelBW.BW_218_HZ:
+                return 218.1
+            case MPU9250AccelBW.BW_420_HZ:
+                return 420
+            case _:
+                return 0
 
     def __str__(self):
         return f"{self.bandwidth} Hz"
@@ -929,21 +1005,23 @@ class MPU9250GyroBW(IntEnum):
 
     @property
     def bandwidth(self):
-        if self == MPU9250GyroBW.BW_5_HZ:
-            return 5
-        elif self == MPU9250GyroBW.BW_10_HZ:
-            return 10
-        elif self == MPU9250GyroBW.BW_20_HZ:
-            return 20
-        elif self == MPU9250GyroBW.BW_41_HZ:
-            return 41
-        elif self == MPU9250GyroBW.BW_92_HZ:
-            return 92
-        elif self == MPU9250GyroBW.BW_184_HZ:
-            return 184
-        elif self == MPU9250GyroBW.BW_250_HZ:
-            return 250
-        return 0
+        match self:
+            case MPU9250GyroBW.BW_5_HZ:
+                return 5
+            case MPU9250GyroBW.BW_10_HZ:
+                return 10
+            case MPU9250GyroBW.BW_20_HZ:
+                return 20
+            case MPU9250GyroBW.BW_41_HZ:
+                return 41
+            case MPU9250GyroBW.BW_92_HZ:
+                return 92
+            case MPU9250GyroBW.BW_184_HZ:
+                return 184
+            case MPU9250GyroBW.BW_250_HZ:
+                return 250
+            case _:
+                return 0
 
     def __str__(self):
         return f"{self.bandwidth} Hz"
@@ -955,19 +1033,23 @@ class MPU9250MagResolution(IntEnum):
 
     @property
     def bits(self):
-        if self == MPU9250MagResolution.RES_14_BIT:
-            return 14
-        elif self == MPU9250MagResolution.RES_16_BIT:
-            return 16
-        return 0
+        match self:
+            case MPU9250MagResolution.RES_14_BIT:
+                return 14
+            case MPU9250MagResolution.RES_16_BIT:
+                return 16
+            case _:
+                return 0
 
     @property
     def sensitivity(self):
-        if self == MPU9250MagResolution.RES_14_BIT:
-            return 1 / 0.6
-        elif self == MPU9250MagResolution.RES_16_BIT:
-            return 1 / 0.15
-        return 0
+        match self:
+            case MPU9250MagResolution.RES_14_BIT:
+                return 1 / 0.6
+            case MPU9250MagResolution.RES_16_BIT:
+                return 1 / 0.15
+            case _:
+                return 0
 
     def __str__(self):
         return f"{self.bits} bits per sample"
@@ -1143,3 +1225,10 @@ class MPU9250IMUDataBlock(DataBlock):
         return (f"{self.type_desc()} -> time: {self.mission_time}, samples: {len(self.samples)}, "
                 f"accel/gyro sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "
                 f"gyro fsr: {self.gyro_fsr}")
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "samples", len(self.samples)
+        yield "sensor_sample_rate", self.ag_sample_rate
+        yield "accel_fsr", self.accel_fsr
+        yield "gyro_fsr", self.gyro_fsr
