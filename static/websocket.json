@@ -1,9 +1,11 @@
 {
-    "version": "0.2.5",
+    "version": "0.2.6",
     "org": "CU InSpace",
     "status": {
         "board": {
-            "connected": true
+            "connected": false,
+            "connected_port": "",
+            "serial_ports": ["COM1", "test"]
         },
         "rocket": {
             "call_sign": "Not a missile",
@@ -28,14 +30,14 @@
             }
         },
         "acceleration_data": {
-            "mission_time": "8120",
+            "mission_time": 8120,
             "acceleration": {
                 "ms2": "40",
                 "fts2": "131"
             }
         },
         "position_data": {
-            "mission_time": "8120",
+            "mission_time": 8120,
             "coordinates": {
                 "lat": "45.385273194259014",
                 "long": "-75.69838116342798"

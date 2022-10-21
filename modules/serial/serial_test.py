@@ -48,7 +48,7 @@ class SerialTestClass(Process):
         elif self.temp < 20:
             self.going_up = True
 
-        self.altitude += random.uniform(0, 3)
+        self.altitude += random.uniform(0, 4)
 
         packet_call_sign = b"Devils".hex()
         six_byte_spacer = b"      ".hex()  # Should be packet header data!!!

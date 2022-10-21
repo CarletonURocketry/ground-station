@@ -33,7 +33,6 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
         TornadoWSServer.clients.remove(self)
 
     def on_message(self, message):
-        #print(f"R<<< {message}")
         ws_commands_queue.put(message)
 
     def check_origin(self, origin):
@@ -41,9 +40,8 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     @classmethod
     def send_message(cls, message: str):
-        if message != "null":  # and message != cls.last_msg_send:
+        if message != "null":
             cls.last_msg_send = message
-            # print("SENDING")
             for client in cls.clients:
                 client.write_message(message)
 
@@ -59,6 +57,9 @@ class WebSocketHandler(Process):
 
         self.telemetry_json_output = telemetry_json_output
         ws_commands_queue = ws_commands
+
+        # Default to test mode
+        ws_commands_queue.put("connect test")
 
         self.startWSS()
 
