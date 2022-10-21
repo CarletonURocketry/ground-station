@@ -25,7 +25,6 @@ class SerialRN2483Radio(Process):
         self.rn2483_radio_payloads = rn2483_radio_payloads
 
         self.console_input = console_input
-        self.console_input_request = console_input_request
 
         self.serial_port = None
         self.ser = None
@@ -38,24 +37,8 @@ class SerialRN2483Radio(Process):
 
     def run(self):
         while True:
-            print("RN2483 Radio: Please input `connect test` in websocket")
+            print("RN2483 Radio: Please input `serial rn2483 connect test` in websocket")
             print("RN2483 Radio: **NOTE THIS IS TEMPORARILY AUTOMATICALLY SENT**")
-
-            waiting_for_user_input = True
-
-            while waiting_for_user_input:
-                while not self.console_input.empty():
-                    waiting_for_user_input = False
-                    user_input = self.console_input.get()
-
-                    if user_input == "test":
-                        self.console_input_request.put("TEST MODE")
-                        print("RN2483 Radio: Serial link disabled due to enabling test mode.")
-                        self.serial_connected.value = True
-                        self.serial_connected_port[0] = "test"
-                        return
-                    else:
-                        self.serial_port = user_input.upper()
 
             try:
                 # initiate the USB serial connection
@@ -82,8 +65,6 @@ class SerialRN2483Radio(Process):
                 self.serial_connected.value = False
                 self.serial_connected_port[0] = ""
                 print("RN2483 Radio: Error communicating with serial device.")
-
-            time.sleep(2)
 
     def _read_ser(self):
         # read from serial line

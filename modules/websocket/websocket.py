@@ -27,7 +27,8 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     def open(self):
         TornadoWSServer.clients.add(self)
-        print(self.request)
+        print(f"WebSocket: Client connected")
+        #print(self.request)
 
     def on_close(self):
         TornadoWSServer.clients.remove(self)
@@ -51,7 +52,7 @@ def random_number():
 
 
 class WebSocketHandler(Process):
-    def __init__(self, ws_commands: Queue, telemetry_json_output: Queue):
+    def __init__(self, telemetry_json_output: Queue, ws_commands: Queue):
         super().__init__()
         global ws_commands_queue
 
@@ -59,7 +60,7 @@ class WebSocketHandler(Process):
         ws_commands_queue = ws_commands
 
         # Default to test mode
-        ws_commands_queue.put("connect test")
+        ws_commands_queue.put("serial rn2483_radio connect test")
 
         self.startWSS()
 
@@ -82,8 +83,6 @@ class WebSocketHandler(Process):
 
     def check_for_messages(self):
         json_data = None
-        # print(f"LEN OF TELE? {self.telemetry_json_output.qsize()}")
         while not self.telemetry_json_output.empty():
             json_data = self.telemetry_json_output.get()
-            # print(f"WSHandler READING TELEMETRY OUTPUT QUEUE: {json_data}")
         return json.dumps(json_data)

@@ -19,7 +19,7 @@
             };
             ws.onmessage = function(e){
                 updatedata = JSON.parse(e.data);
-                rocket_status.innerHTML = "Rocket Status " + updatedata.status.rocket.status_name
+                rocket_status.innerHTML = "Rocket Status " + updatedata.status.rocket.status.status_name
                 // Log all websocket data streams
                 // msglog.innerHTML = msglog.innerHTML + "<br><<< Received data: " + e.data
                 msglog.innerHTML = "<br>>>> Received data: " + e.data;

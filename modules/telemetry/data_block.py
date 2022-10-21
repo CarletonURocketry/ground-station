@@ -202,22 +202,23 @@ class DeploymentState(IntEnum):
     DEPLOYMENT_STATE_RECOVERY = 0x6
 
     def __str__(self):
-        if self == DeploymentState.DEPLOYMENT_STATE_IDLE:
-            return "idle"
-        elif self == DeploymentState.DEPLOYMENT_STATE_ARMED:
-            return "armed"
-        elif self == DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT:
-            return "powered ascent"
-        elif self == DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT:
-            return "coasting ascent"
-        elif self == DeploymentState.DEPLOYMENT_STATE_DEPLOYING:
-            return "deploying"
-        elif self == DeploymentState.DEPLOYMENT_STATE_DESCENT:
-            return "descent"
-        elif self == DeploymentState.DEPLOYMENT_STATE_RECOVERY:
-            return "recovery"
-        else:
-            return "unknown"
+        match self:
+            case DeploymentState.DEPLOYMENT_STATE_IDLE:
+                return "idle"
+            case DeploymentState.DEPLOYMENT_STATE_ARMED:
+                return "armed"
+            case DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT:
+                return "powered ascent"
+            case DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT:
+                return "coasting ascent"
+            case DeploymentState.DEPLOYMENT_STATE_DEPLOYING:
+                return "deploying"
+            case DeploymentState.DEPLOYMENT_STATE_DESCENT:
+                return "descent"
+            case DeploymentState.DEPLOYMENT_STATE_RECOVERY:
+                return "recovery"
+            case _:
+                return "unknown"
 
 
 class StatusDataBlock(DataBlock):

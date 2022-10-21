@@ -8,6 +8,7 @@ import random
 import struct
 import time
 from multiprocessing import Process, Queue
+from multiprocessing.shared_memory import ShareableList
 from datetime import datetime
 
 altitude = 0
@@ -16,11 +17,10 @@ going_up = True
 
 
 class SerialTestClass(Process):
-    def __init__(self, serial_input: Queue, serial_output: Queue):
+    def __init__(self, serial_ports: ShareableList, rn2483_radio_payloads: Queue):
         super().__init__()
 
-        self.serial_input = serial_input
-        self.serial_output = serial_output
+        self.rn2483_radio_payloads = rn2483_radio_payloads
 
         # Continually add to these
         self.altitude = altitude
@@ -58,5 +58,4 @@ class SerialTestClass(Process):
         offset = datetime.now() - self.startup_time
 
         # self.serial_output.put(f"{packet_call_sign}{six_byte_spacer}{block_header}{'E01F00008D540100BC57FF0010FEFFFF'}")
-        self.serial_output.put(
-            f"{packet_header}{block_header}{struct.pack('<Iiii', int(offset.total_seconds() * 1000), int(87181 + self.temp * 50), int(self.temp * 1000), int(self.altitude * 1000)).hex().upper()}")
+        self.rn2483_radio_payloads.put(f"{packet_header}{block_header}{struct.pack('<Iiii', int(offset.total_seconds() * 1000), int(87181 + self.temp * 50), int(self.temp * 1000), int(self.altitude * 1000)).hex().upper()}")

@@ -14,27 +14,37 @@ from multiprocessing import Queue, Process, Value
 from multiprocessing.shared_memory import ShareableList
 
 
-def shareableList_to_list(shareable_list, empty_padded=True) -> list:
-    new_list = [""] * len(shareable_list)
+def shareable_to_list(shareable_list, empty_padding=True) -> list:
+    new_list = [""]
+    try:
+        new_list = [""] * len(shareable_list)
 
-    for i in range(len(shareable_list)):
-        new_list[i] = shareable_list[i]
+        for i in range(len(shareable_list)):
+            new_list[i] = str(shareable_list[i])
 
-    if empty_padded:
-        return ' '.join(new_list).split()
+        if empty_padding:
+            new_list = ' '.join(new_list).split()
+
+
+    except TypeError:
+        print(f"UH OH SPAGHETTI OH {new_list}")
+
     return new_list
 
 
 class Telemetry(Process):
-    def __init__(self, serial_input: Queue, serial_user_input: Queue, radio_payloads: Queue,
-                 telemetry_json_output: Queue, websocket_commands: Queue, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList):
+    def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
+                 serial_ws_commands: Queue, radio_payloads: Queue,
+                 telemetry_json_output: Queue, telemetry_ws_commands: Queue):
         super().__init__()
 
-        self.serial_input = serial_input
-        self.serial_user_input = serial_user_input
+        self.serial_ws_commands = serial_ws_commands
+
         self.radio_payloads = radio_payloads
         self.telemetry_json_output = telemetry_json_output
-        self.websocket_commands = websocket_commands
+
+        self.telemetry_ws_commands = telemetry_ws_commands
+
         self.serial_ports = serial_ports
         self.serial_connected = serial_connected
         self.serial_connected_port = serial_connected_port
@@ -42,18 +52,20 @@ class Telemetry(Process):
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
         self.telemetry_last_mission_time_sent = -1
         self.telemetry_data = {}
-
-
         self.status_data = {
-            "board": {
+            "serial": {
+                "serial_ports": [""]
+            },
+            "rn2483_radio": {
                 "connected": False,
-                "connected_port": "",
-                "serial_ports": ["", ""]
+                "connected_port": ""
             },
             "rocket": {
                 "call_sign": "Not a missile",
-                "status_code": 2,
-                "status_name": "POWERED ASCENT",
+                "status": {
+                    "status_code": 2,
+                    "status_name": "POWERED ASCENT"
+                },
                 "last_mission_time": -1
             }}
 
@@ -68,26 +80,28 @@ class Telemetry(Process):
         while True:
             while not self.radio_payloads.empty():
                 self.parse_rn2483_payload(self.radio_payloads.get())
-            while not self.websocket_commands.empty():
-                self.parse_ws_command(self.websocket_commands.get())
 
             # TEMP Serial port change detected :)
-            if len(shareableList_to_list(self.serial_ports, True)) != len(self.status_data["board"]["serial_ports"]):
+            if len(shareable_to_list(self.serial_ports, True)) != len(self.status_data["serial"]["serial_ports"]):
                 self.telemetry_json_output.put(self.generate_websocket_response())
 
-            time.sleep(0.5)
+            if bool(self.serial_connected.value) != bool(self.status_data["rn2483_radio"]["connected"]):
+                self.telemetry_json_output.put(self.generate_websocket_response())
+            time.sleep(.05)
 
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.2.6", "org": "CU InSpace", "status": self.generate_status_data(),
+        return {"version": "0.3.0", "org": "CU InSpace", "status": self.generate_status_data(),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys)}
 
     def generate_status_data(self):
-        self.status_data["board"]["connected"] = bool(self.serial_connected.value)
-        self.status_data["board"]["connected_port"] = self.serial_connected_port[0]
-        self.status_data["board"]["serial_ports"] = shareableList_to_list(self.serial_ports)
+        self.status_data["rn2483_radio"]["connected"] = bool(self.serial_connected.value)
+        self.status_data["rn2483_radio"]["connected_port"] = self.serial_connected_port[0]
+        self.status_data["serial"]["serial_ports"] = shareable_to_list(self.serial_ports)
 
 
-        return {"board": self.status_data["board"], "rocket": self.status_data["rocket"]}
+        return {"serial": self.status_data["serial"],
+                "rn2483_radio": self.status_data["rn2483_radio"],
+                "rocket": self.status_data["rocket"]}
 
     def generate_telemetry_data(self, keys_to_send="all"):
         if keys_to_send == "all":
@@ -141,23 +155,6 @@ class Telemetry(Process):
 
         self.telemetry_last_mission_time_sent = self.status_data["rocket"]["last_mission_time"]
         self.telemetry_json_output.put(self.generate_websocket_response())
-
-    def parse_ws_command(self, ws_cmd: str):
-        ws_cmd = ws_cmd.split(' ')
-        if ws_cmd[0] == "update":
-            print("WSCommand: Sending update frame")
-            self.telemetry_json_output.put(self.generate_websocket_response())
-
-        elif ws_cmd[0] == "connected":
-            self.status_data["board"]["connected"] = not self.status_data["board"]["connected"]
-            self.telemetry_json_output.put(self.generate_websocket_response())
-
-        elif ws_cmd[0] == "connect":
-            # CHANGE CONNECTED SER PORT
-            print(f"WSCommand Sending connect command: {ws_cmd[1::]}")
-            self.serial_user_input.put(ws_cmd[1])
-        else:
-            print(f"Unknown command {ws_cmd}")
 
 
 def _parse_packet_header(header) -> tuple:
