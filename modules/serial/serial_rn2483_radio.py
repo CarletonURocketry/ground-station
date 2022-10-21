@@ -8,10 +8,10 @@
 
 import glob
 import sys
-import serial
 import queue
 import time
 
+from serial import Serial, SerialException, EIGHTBITS, PARITY_NONE
 from multiprocessing import Queue, Process
 
 
@@ -26,7 +26,6 @@ class SerialRN2483Radio(Process):
 
         self.console_input = console_input
         self.console_input_request = console_input_request
-
 
         self.serial_port = None
         self.ser = None
@@ -58,25 +57,24 @@ class SerialRN2483Radio(Process):
             try:
                 # initiate the USB serial connection
                 print(f"RN2483 Radio: Connecting to {self.serial_port}")
-                self.ser = serial.Serial(port=self.serial_port,
-                                         timeout=1,
-                                         baudrate=57600,
-                                         # number of bits per message
-                                         bytesize=serial.EIGHTBITS,
-                                         # set parity check: no parity
-                                         parity=serial.PARITY_NONE,
-                                         # number of stop bits
-                                         stopbits=1,
-                                         # disable hardware (RTS/CTS) flow control
-                                         rtscts=False)
+                self.ser = Serial(port=self.serial_port,
+                                  timeout=1,
+                                  baudrate=57600,
+                                  # number of bits per message
+                                  bytesize=EIGHTBITS,
+                                  # set parity check: no parity
+                                  parity=PARITY_NONE,
+                                  # number of stop bits
+                                  stopbits=1,
+                                  # disable hardware (RTS/CTS) flow control
+                                  rtscts=False)
                 print(f"RN2483 Radio: Connected to {self.serial_port}")
                 self.init_rn2483_radio()
                 q = queue.Queue()
                 self.set_rx_mode(q)
 
-            except serial.SerialException:
+            except SerialException:
                 print("RN2483 Radio: Error communicating with serial device.")
-
 
     def _read_ser(self):
         # read from serial line
@@ -149,9 +147,8 @@ class SerialRN2483Radio(Process):
         # is transmitted. The lower the coding rate the lower the data rate.
         self.set_cr("4/7")
 
-        # set reception bandwidth. This should match the transmission bandwidth of the
-        # node that this rn2483 radio is trying to receive.
-        self.set_rxbw(500)
+        # set radio bandwidth.
+        self.set_bw(500)
 
         # set the length of the preamble. Preamble means introduction. It's a
         # transmission that is used to synchronize the receiver.
@@ -167,19 +164,16 @@ class SerialRN2483Radio(Process):
         # set sync word to be 0x43
         self.set_sync("43")
 
-        # set the bandwidth of reception
-        self.set_bw(500)
-
     def write_to_rn2483_radio(self, command_string):
         """writes data to the rn2483 radio via UART
         author: Tarik
         @param command_string: full command to be sent to the rn2483 radio
 
         Ex.
-        >>write_to_rn2483_radio("radio set pwr 7", COM1)
+        >>write_to_rn2483_radio("radio set pwr 7")
         >>"ok"
 
-        //above example sets the radio transmission power to 7 using COM1
+        //above example sets the radio transmission power to 7
 
         """
 
@@ -203,7 +197,7 @@ class SerialRN2483Radio(Process):
     def wait_for_ok(self):
         """
         Check to see if 'ok' is loaded onto the serial line by the rn2483 radio. If we receive 'ok' then this
-        function returns True. If anything else is read form the serial line then this function returns False.
+        function returns True. If anything else is read from the serial line then this function returns False.
         """
 
         # read from serial line
@@ -296,16 +290,16 @@ class SerialRN2483Radio(Process):
         print("invalid cycling rate ")
         return
 
-    def set_rxbw(self, bw):
+    def set_bw(self, bw):
         """set the bandwidth which can only be 125, 250 or 500 hz"""
 
         if bw in [125, 250, 500]:
-            success = self.write_to_rn2483_radio("radio set bw " + str(bw))
+            success = self.write_to_rn2483_radio(f"radio set bw {bw}")
             if success:
-                print("value rxbw successfully set")
+                print("value bw successfully set")
                 return
             else:
-                print("rxbw error:radio unable to set")
+                print("bw error: radio unable to set")
                 return
 
         print("invalid receiving bandwidth")
@@ -365,10 +359,6 @@ class SerialRN2483Radio(Process):
 
         print("invalid crc param ")
 
-    def set_bw(self, bw):
-        # TODO finish this function
-        self.write_to_rn2483_radio(f'radio set bw {bw}')
-
     def set_rx_mode(self, message_q: queue.Queue):
         """set the rn2483 radio so that it constantly
            listens for transmissions"""
@@ -385,7 +375,7 @@ class SerialRN2483Radio(Process):
         # if radio has not been put into rx mode
         if not success:
             print('error putting radio into rx mode')
-            return -1
+            return
 
         # keep reading from serial port
         while True:
@@ -460,32 +450,9 @@ def serial_ports() -> tuple[list[str], list[str]]:
     result = []
     for test_port in com_ports:
         try:
-            s = serial.Serial(test_port)
+            s = Serial(test_port)
             s.close()
             result.append(test_port)
-        except (OSError, serial.SerialException):
+        except (OSError, SerialException):
             pass
     return com_ports, result
-
-
-# for debugging
-
-if __name__ == '__main__':
-    ports, results = serial_ports()
-    # print("DEBUG All Ports:", ports)
-    # print(f"{len(ports)} ports found. ")
-    print("Possible COM Serial Ports:", results)
-
-    if len(results) >= 1:
-        port = input("What COM Port? \n")
-
-        try:
-            # rx = SerialRN2483Radio('/dev/ttyUSB1')
-            msg_output = queue.Queue
-            rx = SerialRN2483Radio(msg_output, msg_output, "COM1")
-            print('_____________________________________')
-            q = queue.Queue()
-            rx.set_rx_mode(q)
-
-        except EnvironmentError:
-            print("Error")
