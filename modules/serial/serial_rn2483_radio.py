@@ -16,30 +16,24 @@ from serial import Serial, SerialException, EIGHTBITS, PARITY_NONE
 
 class SerialRN2483Radio(Process):
 
-    def __init__(self, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, console_input: Queue,
-                 console_input_request: Queue, serial_connected: Value, serial_connected_port: Value,
-                 available_ports: ShareableList):
+    def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
+                 rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, serial_port: str):
         Process.__init__(self)
+
+        self.serial_connected = serial_connected
+        self.serial_connected_port = serial_connected_port
+        self.serial_ports = serial_ports
 
         self.rn2483_radio_input = rn2483_radio_input
         self.rn2483_radio_payloads = rn2483_radio_payloads
 
-        self.console_input = console_input
-
-        self.serial_port = None
+        self.serial_port = serial_port
         self.ser = None
-
-        self.serial_connected = serial_connected
-        self.available_ports = available_ports
-        self.serial_connected_port = serial_connected_port
 
         self.run()
 
     def run(self):
         while True:
-            print("RN2483 Radio: Please input `serial rn2483 connect test` in websocket")
-            print("RN2483 Radio: **NOTE THIS IS TEMPORARILY AUTOMATICALLY SENT**")
-
             try:
                 # initiate the USB serial connection
                 print(f"RN2483 Radio: Connecting to {self.serial_port}")
@@ -65,6 +59,7 @@ class SerialRN2483Radio(Process):
                 self.serial_connected.value = False
                 self.serial_connected_port[0] = ""
                 print("RN2483 Radio: Error communicating with serial device.")
+                time.sleep(3)
 
     def _read_ser(self):
         # read from serial line

@@ -3,7 +3,7 @@
     "org": "CU InSpace",
     "status": {
         "serial": {
-            "serial_ports": ["COM1", "test"]
+            "available_ports": ["COM1", "test"]
         },
         "rn2483_radio": {
             "connected": false,
@@ -40,18 +40,21 @@
                 "fts2": "131"
             }
         },
-        "position_data": {
+        "gnss": {
             "mission_time": 8120,
-            "coordinates": {
-                "lat": "45.385273194259014",
-                "long": "-75.69838116342798"
+            "position": {
+                "latitude": "45.385273194259014",
+                "longitude": "-75.69838116342798"
             },
-            "gnss_metadata": {
-                "gnss_sat_type": "gps",
-                "gps_sats_in_view": 3,
-                "glonass_sats_in_view": 2,
-                "sats_in_view": 5
-            }
+            "speed": 0,
+            "type": "GPS"
+
+        },
+        "gnss_metadata": {
+            "gnss_sat_type": "gps",
+            "gps_sats_in_view": 3,
+            "glonass_sats_in_view": 2,
+            "sats_in_view": 5
         }
     }
 }

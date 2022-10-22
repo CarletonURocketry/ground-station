@@ -7,31 +7,34 @@
 import random
 import struct
 import time
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Value
 from multiprocessing.shared_memory import ShareableList
 from datetime import datetime
 
-altitude = 0
-temp = 22
-going_up = True
 
-
-class SerialTestClass(Process):
-    def __init__(self, serial_ports: ShareableList, rn2483_radio_payloads: Queue):
+class SerialRN2483Emulator(Process):
+    def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
+                 rn2483_radio_payloads: Queue):
         super().__init__()
+
+        self.serial_connected = serial_connected
+        self.serial_connected_port = serial_connected_port
+        self.serial_ports = serial_ports
 
         self.rn2483_radio_payloads = rn2483_radio_payloads
 
-        # Continually add to these
-        self.altitude = altitude
-        self.temp = temp
-        self.going_up = going_up
-
+        # Emulation Variables
+        self.altitude = 0
+        self.temp = 22
+        self.going_up = True
         self.startup_time = datetime.now()
 
         self.run()
 
     def run(self):
+        self.serial_connected.value = True
+        self.serial_connected_port[0] = "test"
+
         while True:
             self.tester()
             time.sleep(random.uniform(0, 2000) / 1000)
@@ -57,5 +60,5 @@ class SerialTestClass(Process):
 
         offset = datetime.now() - self.startup_time
 
-        # self.serial_output.put(f"{packet_call_sign}{six_byte_spacer}{block_header}{'E01F00008D540100BC57FF0010FEFFFF'}")
+        #self.rn2483_radio_payloads.put(f"{packet_header}{block_header}{'E01F00008D540100BC57FF0010FEFFFF'}")
         self.rn2483_radio_payloads.put(f"{packet_header}{block_header}{struct.pack('<Iiii', int(offset.total_seconds() * 1000), int(87181 + self.temp * 50), int(self.temp * 1000), int(self.altitude * 1000)).hex().upper()}")

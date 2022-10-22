@@ -54,7 +54,7 @@ class Telemetry(Process):
         self.telemetry_data = {}
         self.status_data = {
             "serial": {
-                "serial_ports": [""]
+                "available_ports": [""]
             },
             "rn2483_radio": {
                 "connected": False,
@@ -80,9 +80,11 @@ class Telemetry(Process):
         while True:
             while not self.radio_payloads.empty():
                 self.parse_rn2483_payload(self.radio_payloads.get())
+            while not self.telemetry_ws_commands.empty():
+                self.parse_ws_commands(self.telemetry_ws_commands.get())
 
             # TEMP Serial port change detected :)
-            if len(shareable_to_list(self.serial_ports, True)) != len(self.status_data["serial"]["serial_ports"]):
+            if len(shareable_to_list(self.serial_ports, True)) != len(self.status_data["serial"]["available_ports"]):
                 self.telemetry_json_output.put(self.generate_websocket_response())
 
             if bool(self.serial_connected.value) != bool(self.status_data["rn2483_radio"]["connected"]):
@@ -96,7 +98,7 @@ class Telemetry(Process):
     def generate_status_data(self):
         self.status_data["rn2483_radio"]["connected"] = bool(self.serial_connected.value)
         self.status_data["rn2483_radio"]["connected_port"] = self.serial_connected_port[0]
-        self.status_data["serial"]["serial_ports"] = shareable_to_list(self.serial_ports)
+        self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports)
 
 
         return {"serial": self.status_data["serial"],
@@ -113,6 +115,11 @@ class Telemetry(Process):
                 telemetry_data_block[key] = self.telemetry_data[key]
 
         return telemetry_data_block
+
+
+    def parse_ws_commands(self, ws_cmd):
+        if ws_cmd[1] == "update":
+            self.telemetry_json_output.put(self.generate_websocket_response())
 
     def parse_rn2483_payload(self, data: str) -> tuple | None:
         self.log.write(data + "\n")

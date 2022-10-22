@@ -12,6 +12,7 @@ from modules.serial.serial_manager import SerialManager
 from modules.telemetry.telemetry import Telemetry
 from modules.websocket.websocket import WebSocketHandler
 
+from re import sub
 
 rn2483_radio_input = Queue()
 rn2483_radio_payloads = Queue()
@@ -20,7 +21,6 @@ telemetry_json_output = Queue()
 ws_commands = Queue()
 serial_ws_commands = Queue()
 telemetry_ws_commands = Queue()
-
 
 serial_connected = Value('i', 0)
 serial_connected_port = ShareableList([""])
@@ -33,8 +33,9 @@ def main():
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
     # Outputs information in hexadecimal payload format to rn2483_radio_payloads
-    Serial_Controller = Process(target=SerialManager, args=(serial_connected, serial_connected_port, serial_ports,
-                                                            serial_ws_commands, rn2483_radio_payloads))
+    Serial_Controller = Process(target=SerialManager,
+                                args=(serial_connected, serial_connected_port, serial_ports,
+                                      serial_ws_commands, rn2483_radio_input, rn2483_radio_payloads))
     Serial_Controller.start()
     print("Serial Controller started")
 
@@ -55,7 +56,6 @@ def main():
     websocket.start()
     print("WebSocket started")
 
-
     while True:
         # WS Commands get sent to main process for handling to distribute to which process should handle it.
         while not ws_commands.empty():
@@ -63,14 +63,14 @@ def main():
 
 
 def parse_ws_command(ws_cmd: str):
-    ws_cmd = ws_cmd.split(' ')
+    # Remove special characters
+    ws_cmd = sub(r"[^0-9a-zA-Z_\s]+", "", ws_cmd).split(" ")
 
     # WebSocket Command Aliases
     if ws_cmd[0] == "connect" or ws_cmd[0] == "disconnect":
         ws_cmd = ["serial", "rn2483_radio"] + ws_cmd
     elif ws_cmd[0] == "update":
         ws_cmd = ["telemetry"] + ws_cmd
-
 
     if ws_cmd[0] == "telemetry":
         print(f"WSCommand Telemetry: {ws_cmd}")
@@ -81,7 +81,6 @@ def parse_ws_command(ws_cmd: str):
 
     else:
         print(f"Unknown command {ws_cmd}")
-
 
 
 if __name__ == '__main__':
