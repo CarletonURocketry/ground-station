@@ -1,14 +1,20 @@
 {
-    "version": "0.2.5",
+    "version": "0.3.0",
     "org": "CU InSpace",
     "status": {
-        "board": {
-            "connected": true
+        "serial": {
+            "available_ports": ["COM1", "test"]
+        },
+        "rn2483_radio": {
+            "connected": false,
+            "connected_port": ""
         },
         "rocket": {
             "call_sign": "Not a missile",
-            "status_code": 2,
-            "status_name": "POWERED ASCENT",
+            "status": {
+                "status_code": 2,
+                "status_name": "POWERED ASCENT"
+            },
             "last_mission_time": 8120
         }
     },
@@ -28,24 +34,27 @@
             }
         },
         "acceleration_data": {
-            "mission_time": "8120",
+            "mission_time": 8120,
             "acceleration": {
                 "ms2": "40",
                 "fts2": "131"
             }
         },
-        "position_data": {
-            "mission_time": "8120",
-            "coordinates": {
-                "lat": "45.385273194259014",
-                "long": "-75.69838116342798"
+        "gnss": {
+            "mission_time": 8120,
+            "position": {
+                "latitude": "45.385273194259014",
+                "longitude": "-75.69838116342798"
             },
-            "gnss_metadata": {
-                "gnss_sat_type": "gps",
-                "gps_sats_in_view": 3,
-                "glonass_sats_in_view": 2,
-                "sats_in_view": 5
-            }
+            "speed": 0,
+            "type": "GPS"
+
+        },
+        "gnss_metadata": {
+            "gnss_sat_type": "gps",
+            "gps_sats_in_view": 3,
+            "glonass_sats_in_view": 2,
+            "sats_in_view": 5
         }
     }
 }

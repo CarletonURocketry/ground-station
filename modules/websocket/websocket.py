@@ -1,5 +1,13 @@
+# Tornado websocket for UI communication
+# This is PURELY a pass through of data for connectivity. No format conversion is done here.
+# Incoming information comes from telemetry_json_output from telemetry
+# Outputs information to connected websocket clients
+#
+# Authors:
+# Thomas Selwyn (Devil)
+
 import json
-import multiprocessing
+from multiprocessing import Queue, Process
 import random
 from abc import ABC
 
@@ -9,7 +17,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 
-ws_commands_queue = multiprocessing.Queue
+ws_commands_queue = Queue
 
 
 class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
@@ -19,13 +27,13 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     def open(self):
         TornadoWSServer.clients.add(self)
-        print(self.request)
+        print(f"WebSocket: Client connected")
+        #print(self.request)
 
     def on_close(self):
         TornadoWSServer.clients.remove(self)
 
     def on_message(self, message):
-        #print(f"R<<< {message}")
         ws_commands_queue.put(message)
 
     def check_origin(self, origin):
@@ -33,9 +41,8 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     @classmethod
     def send_message(cls, message: str):
-        if message != "null":  # and message != cls.last_msg_send:
+        if message != "null":
             cls.last_msg_send = message
-            # print("SENDING")
             for client in cls.clients:
                 client.write_message(message)
 
@@ -44,13 +51,16 @@ def random_number():
     return int(random.uniform(0, 1000))
 
 
-class WebSocketHandler(multiprocessing.Process):
-    def __init__(self, ws_commands: multiprocessing.Queue, telemetry_json_output: multiprocessing.Queue):
+class WebSocketHandler(Process):
+    def __init__(self, telemetry_json_output: Queue, ws_commands: Queue):
         super().__init__()
         global ws_commands_queue
 
         self.telemetry_json_output = telemetry_json_output
         ws_commands_queue = ws_commands
+
+        # Default to test mode
+        ws_commands_queue.put("serial rn2483_radio connect test")
 
         self.startWSS()
 
@@ -73,8 +83,6 @@ class WebSocketHandler(multiprocessing.Process):
 
     def check_for_messages(self):
         json_data = None
-        # print(f"LEN OF TELE? {self.telemetry_json_output.qsize()}")
         while not self.telemetry_json_output.empty():
             json_data = self.telemetry_json_output.get()
-            # print(f"WSHandler READING TELEMETRY OUTPUT QUEUE: {json_data}")
         return json.dumps(json_data)

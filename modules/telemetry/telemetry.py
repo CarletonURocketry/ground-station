@@ -1,59 +1,109 @@
-import multiprocessing
+# Telemetry to parse radio packets, keep history and to log everything
+# Incoming information comes from rn2483_radio_payloads in payload format
+# Outputs information to telemetry_json_output in friendly json for UI
+#
+# Authors:
+# Thomas Selwyn (Devil)
+import os
 import struct
 import time
+from datetime import datetime
 
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
+from multiprocessing import Queue, Process, Value
+from multiprocessing.shared_memory import ShareableList
 
 
-class Telemetry(multiprocessing.Process):
-    def __init__(self, serial_input: multiprocessing.Queue, radio_payloads: multiprocessing.Queue,
-                 telemetry_json_output: multiprocessing.Queue, websocket_commands: multiprocessing.Queue):
+def shareable_to_list(shareable_list, empty_padding=True) -> list:
+    new_list = [""]
+    try:
+        new_list = [""] * len(shareable_list)
+
+        for i in range(len(shareable_list)):
+            new_list[i] = str(shareable_list[i])
+
+        if empty_padding:
+            new_list = ' '.join(new_list).split()
+
+
+    except TypeError:
+        print(f"UH OH SPAGHETTI OH {new_list}")
+
+    return new_list
+
+
+class Telemetry(Process):
+    def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
+                 serial_ws_commands: Queue, radio_payloads: Queue,
+                 telemetry_json_output: Queue, telemetry_ws_commands: Queue):
         super().__init__()
 
-        self.serial_input = serial_input
+        self.serial_ws_commands = serial_ws_commands
+
         self.radio_payloads = radio_payloads
         self.telemetry_json_output = telemetry_json_output
-        self.websocket_commands = websocket_commands
+
+        self.telemetry_ws_commands = telemetry_ws_commands
+
+        self.serial_ports = serial_ports
+        self.serial_connected = serial_connected
+        self.serial_connected_port = serial_connected_port
 
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
         self.telemetry_last_mission_time_sent = -1
         self.telemetry_data = {}
         self.status_data = {
-            "board": {
-                "connected": True
+            "serial": {
+                "available_ports": [""]
+            },
+            "rn2483_radio": {
+                "connected": False,
+                "connected_port": ""
             },
             "rocket": {
                 "call_sign": "Not a missile",
-                "status_code": 2,
-                "status_name": "POWERED ASCENT",
+                "status": {
+                    "status_code": 2,
+                    "status_name": "POWERED ASCENT"
+                },
                 "last_mission_time": -1
             }}
 
-        self.log = "Payloads\n"
-
-        # curr_dir = os.path.dirname(os.path.abspath(__file__))
-        # log_path = os.path.join(curr_dir, '../../data_log.txt')
-        # self.log = open(log_path, 'w')
+        curr_dir = os.path.dirname(os.path.abspath(__file__))
+        log_path = os.path.join(curr_dir, '../../data_log.txt')
+        self.log = open(log_path, 'w')
+        self.log.write(f"Payloads from mission at {datetime.now()}\n")
 
         self.run()
 
     def run(self):
         while True:
             while not self.radio_payloads.empty():
-                self.parse_radio_payload(self.radio_payloads.get())
-            while not self.websocket_commands.empty():
-                self.parse_ws_command(self.websocket_commands.get())
+                self.parse_rn2483_payload(self.radio_payloads.get())
+            while not self.telemetry_ws_commands.empty():
+                self.parse_ws_commands(self.telemetry_ws_commands.get())
 
-            time.sleep(.100)
+            # TEMP Serial port change detected :)
+            if len(shareable_to_list(self.serial_ports, True)) != len(self.status_data["serial"]["available_ports"]):
+                self.telemetry_json_output.put(self.generate_websocket_response())
 
-            # _parse_block_header("840C0000")
+            if bool(self.serial_connected.value) != bool(self.status_data["rn2483_radio"]["connected"]):
+                self.telemetry_json_output.put(self.generate_websocket_response())
+            time.sleep(.05)
 
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.2.5", "org": "CU InSpace", "status": self.generate_status_data(),
+        return {"version": "0.3.0", "org": "CU InSpace", "status": self.generate_status_data(),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys)}
 
     def generate_status_data(self):
-        return {"board": self.status_data["board"], "rocket": self.status_data["rocket"]}
+        self.status_data["rn2483_radio"]["connected"] = bool(self.serial_connected.value)
+        self.status_data["rn2483_radio"]["connected_port"] = self.serial_connected_port[0]
+        self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports)
+
+
+        return {"serial": self.status_data["serial"],
+                "rn2483_radio": self.status_data["rn2483_radio"],
+                "rocket": self.status_data["rocket"]}
 
     def generate_telemetry_data(self, keys_to_send="all"):
         if keys_to_send == "all":
@@ -66,8 +116,14 @@ class Telemetry(multiprocessing.Process):
 
         return telemetry_data_block
 
-    def parse_radio_payload(self, data: str) -> tuple | None:
-        self.log += data
+
+    def parse_ws_commands(self, ws_cmd):
+        if ws_cmd[1] == "update":
+            self.telemetry_json_output.put(self.generate_websocket_response())
+
+    def parse_rn2483_payload(self, data: str) -> tuple | None:
+        self.log.write(data + "\n")
+        self.log.flush()
 
         # Extract the packet header
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
@@ -106,15 +162,6 @@ class Telemetry(multiprocessing.Process):
 
         self.telemetry_last_mission_time_sent = self.status_data["rocket"]["last_mission_time"]
         self.telemetry_json_output.put(self.generate_websocket_response())
-
-    def parse_ws_command(self, ws_cmd: str):
-        if ws_cmd == "update":
-            print("WSCommand: Sending update frame")
-            self.telemetry_json_output.put(self.generate_websocket_response())
-
-        elif ws_cmd == "connected":
-            self.status_data["board"]["connected"] = not self.status_data["board"]["connected"]
-            self.telemetry_json_output.put(self.generate_websocket_response())
 
 
 def _parse_packet_header(header) -> tuple:
