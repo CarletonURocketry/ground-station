@@ -67,7 +67,8 @@ class Telemetry(Process):
             }}
 
         curr_dir = os.path.dirname(os.path.abspath(__file__))
-        log_path = os.path.join(curr_dir, '../../data_log.txt')
+        log_file_name = f'{datetime.now().strftime("payload_log_%Y_%b_%d_%H_%M_%S.txt")}'
+        log_path = os.path.join(curr_dir, f'../../logs/{log_file_name}.txt')
         self.log = open(log_path, 'w')
         self.log.write(f"Payloads from mission at {datetime.now()}\n")
 
