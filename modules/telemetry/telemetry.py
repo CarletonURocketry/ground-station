@@ -25,7 +25,6 @@ def shareable_to_list(shareable_list, empty_padding=True) -> list:
         if empty_padding:
             new_list = ' '.join(new_list).split()
 
-
     except TypeError:
         print(f"UH OH SPAGHETTI OH {new_list}")
 
@@ -34,11 +33,9 @@ def shareable_to_list(shareable_list, empty_padding=True) -> list:
 
 class Telemetry(Process):
     def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
-                 serial_ws_commands: Queue, radio_payloads: Queue,
+                 radio_payloads: Queue,
                  telemetry_json_output: Queue, telemetry_ws_commands: Queue):
         super().__init__()
-
-        self.serial_ws_commands = serial_ws_commands
 
         self.radio_payloads = radio_payloads
         self.telemetry_json_output = telemetry_json_output
@@ -63,8 +60,8 @@ class Telemetry(Process):
             "rocket": {
                 "call_sign": "Not a missile",
                 "status": {
-                    "status_code": 2,
-                    "status_name": "POWERED ASCENT"
+                    "status_code": 0,
+                    "status_name": "IDLE"
                 },
                 "last_mission_time": -1
             }}
@@ -100,7 +97,6 @@ class Telemetry(Process):
         self.status_data["rn2483_radio"]["connected_port"] = self.serial_connected_port[0]
         self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports)
 
-
         return {"serial": self.status_data["serial"],
                 "rn2483_radio": self.status_data["rn2483_radio"],
                 "rocket": self.status_data["rocket"]}
@@ -115,7 +111,6 @@ class Telemetry(Process):
                 telemetry_data_block[key] = self.telemetry_data[key]
 
         return telemetry_data_block
-
 
     def parse_ws_commands(self, ws_cmd):
         if ws_cmd[1] == "update":
