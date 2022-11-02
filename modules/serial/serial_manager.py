@@ -68,24 +68,25 @@ class SerialManager(Process):
                                                     args=(self.serial_connected, self.serial_connected_port,
                                                           self.serial_ports, self.rn2483_radio_payloads),
                                                     daemon=True)
-
+                    self.serial_connected_port[0] = ws_cmd[3]
                     self.rn2483_radio.start()
                     time.sleep(.1)
                 else:
                     print(f"Serial: Already connected.")
 
             if ws_cmd[2] == "disconnect":
-                if self.serial_connected.value:
+                if self.rn2483_radio is not None:
                     if self.serial_connected_port[0] == "test":
                         print("Serial: RN2483 Payload Emulator terminating")
                     else:
-                        print(f"Serial: RN2483 Radio on port {self.serial_connected_port[0]} terminating")
+                        print(f"Serial: RN2483 Radio on port {'N/A' if self.serial_connected_port[0] == '' else self.serial_connected_port[0]} terminating")
 
                     self.serial_connected.value = False
                     self.serial_connected_port[0] = ""
                     self.rn2483_radio.terminate()
+                    self.rn2483_radio = None
                 else:
-                    print("Serial: Already disconnected.")
+                    print("Serial: RN2483 Radio already disconnected.")
         except IndexError:
             print("Serial: Not enough arguments.")
 
@@ -106,19 +107,21 @@ class SerialManager(Process):
         elif sys.platform.startswith('darwin'):
             com_ports = glob.glob('/dev/tty.*')
 
+        tested_com_ports = []
+
         # Checks ports if they are potential COM ports
-        results = []
         for test_port in com_ports:
             try:
-                s = Serial(test_port)
-                s.close()
-                results.append(test_port)
+                if test_port != self.serial_connected_port[0]:
+                    ser = Serial(test_port)
+                    ser.close()
+                    tested_com_ports.append(test_port)
             except (OSError, SerialException):
                 pass
 
-        results = results + ["test"]
+        tested_com_ports = tested_com_ports + ["test"]
 
         for i in range(len(self.serial_ports)):
-            self.serial_ports[i] = "" if i > len(results) - 1 else str(results[i])
+            self.serial_ports[i] = "" if i > len(tested_com_ports) - 1 else str(tested_com_ports[i])
 
-        return results
+        return tested_com_ports

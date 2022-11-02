@@ -51,9 +51,16 @@ class SerialRN2483Radio(Process):
                 print(f"RN2483 Radio: Connected to {self.serial_port}")
                 self.serial_connected.value = True
                 self.serial_connected_port[0] = self.serial_port
+
                 self.init_rn2483_radio()
-                q = queue.Queue()
-                self.set_rx_mode(q)
+                self.set_rx_mode()
+
+                while True:
+                    while not self.rn2483_radio_input.empty():
+                        print(self.rn2483_radio_input.get())
+                        # AFTER SENDING A COMMAND TO RADIO RECALL SET_RX_MODE()
+
+                    self.check_for_transmissions()
 
             except SerialException:
                 self.serial_connected.value = False
@@ -344,7 +351,7 @@ class SerialRN2483Radio(Process):
 
         print("invalid crc param ")
 
-    def set_rx_mode(self, message_q: queue.Queue):
+    def set_rx_mode(self):
         """set the rn2483 radio so that it constantly
            listens for transmissions"""
 
@@ -360,24 +367,21 @@ class SerialRN2483Radio(Process):
         # if radio has not been put into rx mode
         if not success:
             print('error putting radio into rx mode')
-            self.ser.close()
-            return
+            # self.ser.close()
 
-        # keep reading from serial port
-        while True:
-            message = str(self.ser.readline())
+    def check_for_transmissions(self):
+        """checks for new transmissions on the line"""
+        message = str(self.ser.readline())
 
-            if message != "b''":
-                # trim unnecessary elements of the message
-                message = message[10:-5]
+        if message != "b''":
+            # trim unnecessary elements of the message
+            message = message[10:-5]
 
-                # put serial message in data queue for telemetry
-                self.rn2483_radio_payloads.put(message)
+            # put serial message in data queue for telemetry
+            self.rn2483_radio_payloads.put(message)
 
-                # put radio back into rx mode
-                self.set_rx_mode(message_q)
-            else:
-                print('nothing received')
+        else:
+            print('nothing received')
 
     def _tx(self, data):
         """transmit data, a method used for debugging
