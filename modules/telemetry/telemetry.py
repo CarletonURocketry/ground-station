@@ -5,8 +5,12 @@
 # Authors:
 # Thomas Selwyn (Devil)
 import os
+import glob
 import struct
 import time
+import pathlib
+from pathlib import Path
+
 from datetime import datetime
 
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
@@ -47,7 +51,6 @@ class Telemetry(Process):
         self.serial_connected_port = serial_connected_port
 
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
-        self.telemetry_last_mission_time_sent = -1
         self.telemetry_data = {}
         self.status_data = {
             "serial": {
@@ -65,12 +68,14 @@ class Telemetry(Process):
                 },
                 "last_mission_time": -1
             }}
+        self.replay_missions_list = {}
 
-        curr_dir = os.path.dirname(os.path.abspath(__file__))
-        log_file_name = f'{datetime.now().strftime("payload_log_%Y_%b_%d_%H_%M_%S")}'
-        log_path = os.path.join(curr_dir, f'../../logs/{log_file_name}.txt')
-        self.log = open(log_path, 'w')
-        self.log.write(f"Payloads from mission at {datetime.now()}\n")
+        # log_file_name = f'{datetime.now().strftime("payload_log_%Y_%b_%d_%H_%M_%S")}'
+        self.log_path = Path.cwd().joinpath("logs")
+        # self.log_path = os.path.join(curr_dir, f'../../logs')
+
+        # self.log = open(f'{self.log_path}/{log_file_name}.txt', 'w')
+        # self.log.write(f"Payloads from mission at {datetime.now()}\n")
 
         self.run()
 
@@ -91,7 +96,24 @@ class Telemetry(Process):
 
     def generate_websocket_response(self, telemetry_keys="all"):
         return {"version": "0.3.0", "org": "CU InSpace", "status": self.generate_status_data(),
-                "telemetry_data": self.generate_telemetry_data(telemetry_keys)}
+                "telemetry_data": self.generate_telemetry_data(telemetry_keys),
+                "replay": self.generate_replay_response()}
+
+    def generate_replay_response(self):
+        return {"status": "",
+                "missions": self.generate_replay_mission_list()}
+
+    def generate_replay_mission_list(self):
+
+        files_list = [x for x in self.log_path.iterdir() if x.is_file()]
+        mission_list = []
+        for file in files_list:
+            # print(file)
+            name = str(file).split("/")[-1]
+            mission_list.append(name)
+        #print(mission_list)
+
+        return mission_list
 
     def generate_status_data(self):
         self.status_data["rn2483_radio"]["connected"] = bool(self.serial_connected.value)
@@ -114,12 +136,18 @@ class Telemetry(Process):
         return telemetry_data_block
 
     def parse_ws_commands(self, ws_cmd):
-        if ws_cmd[1] == "update":
-            self.telemetry_json_output.put(self.generate_websocket_response())
+        try:
+            if ws_cmd[1] == "update":
+                self.telemetry_json_output.put(self.generate_websocket_response())
+            if ws_cmd[1] == "record":
+                self.parse_record_ws_cmd(ws_cmd)
+
+        except IndexError:
+            print("Telemetry: Error parsing ws command")
 
     def parse_rn2483_payload(self, data: str) -> tuple | None:
-        self.log.write(data + "\n")
-        self.log.flush()
+        # self.log.write(data + "\n")
+        # self.log.flush()
 
         # Extract the packet header
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
@@ -156,8 +184,17 @@ class Telemetry(Process):
             blocks = blocks[8 + block_len:]
         print("-----" * 20)
 
-        self.telemetry_last_mission_time_sent = self.status_data["rocket"]["last_mission_time"]
         self.telemetry_json_output.put(self.generate_websocket_response())
+
+    def parse_record_ws_cmd(self, ws_cmd):
+        try:
+            if ws_cmd[2] == "start":
+                print("RECORDING START")
+            if ws_cmd[2] == "stop":
+                print("RECORDING STOP")
+        except IndexError:
+            print("Telemetry: Error parsing ws command")
+        print("ws", ws_cmd)
 
 
 def _parse_packet_header(header) -> tuple:
