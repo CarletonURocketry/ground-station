@@ -4,15 +4,10 @@
 #
 # Authors:
 # Thomas Selwyn (Devil)
-import os
-import glob
-import struct
-import time
-import pathlib
-from pathlib import Path
-
 from datetime import datetime
-
+from struct import unpack
+from time import sleep
+from pathlib import Path
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 from multiprocessing import Queue, Process, Value
 from multiprocessing.shared_memory import ShareableList
@@ -30,7 +25,7 @@ def shareable_to_list(shareable_list, empty_padding=True) -> list:
             new_list = ' '.join(new_list).split()
 
     except TypeError:
-        print(f"UH OH SPAGHETTI OH {new_list}")
+        print(f"{new_list}")
 
     return new_list
 
@@ -68,14 +63,16 @@ class Telemetry(Process):
                 },
                 "last_mission_time": -1
             }}
-        self.replay_missions_list = {}
+
+
+        # Mission Path
+        self.mission_path = Path.cwd().joinpath("missions")
+        self.mission_path.mkdir(parents=True, exist_ok=True)
 
         # log_file_name = f'{datetime.now().strftime("payload_log_%Y_%b_%d_%H_%M_%S")}'
-        self.log_path = Path.cwd().joinpath("logs")
-        # self.log_path = os.path.join(curr_dir, f'../../logs')
-
         # self.log = open(f'{self.log_path}/{log_file_name}.txt', 'w')
         # self.log.write(f"Payloads from mission at {datetime.now()}\n")
+        self.replay_missions_list = self.generate_replay_mission_list()
 
         self.run()
 
@@ -92,24 +89,22 @@ class Telemetry(Process):
 
             if bool(self.serial_connected.value) != bool(self.status_data["rn2483_radio"]["connected"]):
                 self.telemetry_json_output.put(self.generate_websocket_response())
-            time.sleep(.05)
+            sleep(.1)
 
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.3.0", "org": "CU InSpace", "status": self.generate_status_data(),
+        return {"version": "0.3.1", "org": "CU InSpace", "status": self.generate_status_data(),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
                 "replay": self.generate_replay_response()}
 
     def generate_replay_response(self):
-        return {"status": "",
-                "missions": self.generate_replay_mission_list()}
+        return {"mission_list": self.replay_missions_list}
 
     def generate_replay_mission_list(self):
 
-        files_list = [x for x in self.log_path.iterdir() if x.is_file()]
+        files_list = [x for x in self.mission_path.iterdir() if x.is_file()]
         mission_list = []
         for file in files_list:
-            # print(file)
-            name = str(file).split("/")[-1]
+            name = str(file).split("/")[-1].split(f'\\')[-1]
             mission_list.append(name)
         #print(mission_list)
 
@@ -135,15 +130,47 @@ class Telemetry(Process):
 
         return telemetry_data_block
 
+
     def parse_ws_commands(self, ws_cmd):
         try:
             if ws_cmd[1] == "update":
                 self.telemetry_json_output.put(self.generate_websocket_response())
+            if ws_cmd[1] == "replay":
+                self.parse_replay_ws_cmd(ws_cmd)
             if ws_cmd[1] == "record":
                 self.parse_record_ws_cmd(ws_cmd)
 
         except IndexError:
             print("Telemetry: Error parsing ws command")
+
+
+    def parse_replay_ws_cmd(self, ws_cmd):
+        try:
+            if ws_cmd[2] == "play":
+                print("REPLAY PLAY")
+            if ws_cmd[2] == "pause":
+                print("REPLAY PAUSE")
+            if ws_cmd[2] == "stop":
+                print("REPLAY STOP")
+        except IndexError:
+            print("Telemetry: Error parsing ws command")
+        print("ws", ws_cmd)
+
+
+    def parse_record_ws_cmd(self, ws_cmd):
+        try:
+            if ws_cmd[2] == "start":
+                print("RECORDING START")
+                self.mission_path.mkdir(parents=True, exist_ok=True)
+                file = self.mission_path.joinpath(datetime.now().strftime("%Y_%b_%d_%H_%M_%S.mission"))
+                file.touch()
+                self.replay_missions_list = self.generate_replay_mission_list()
+            if ws_cmd[2] == "stop":
+                print("RECORDING STOP")
+        except IndexError:
+            print("Telemetry: Error parsing ws command")
+        print("ws", ws_cmd)
+
 
     def parse_rn2483_payload(self, data: str) -> tuple | None:
         # self.log.write(data + "\n")
@@ -175,7 +202,9 @@ class Telemetry(Process):
             payload = bytes.fromhex(blocks[8: 8 + block_len])
 
             block_contents = DataBlock.parse(DataBlockSubtype(block_subtype), payload)
-            self.status_data["rocket"]["last_mission_time"] = block_contents.mission_time
+            if block_contents.mission_time > self.status_data["rocket"]["last_mission_time"]:
+                self.status_data["rocket"]["last_mission_time"] = block_contents.mission_time
+
             self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_contents)
 
             print(block_contents)
@@ -185,16 +214,6 @@ class Telemetry(Process):
         print("-----" * 20)
 
         self.telemetry_json_output.put(self.generate_websocket_response())
-
-    def parse_record_ws_cmd(self, ws_cmd):
-        try:
-            if ws_cmd[2] == "start":
-                print("RECORDING START")
-            if ws_cmd[2] == "stop":
-                print("RECORDING STOP")
-        except IndexError:
-            print("Telemetry: Error parsing ws command")
-        print("ws", ws_cmd)
 
 
 def _parse_packet_header(header) -> tuple:
@@ -233,7 +252,7 @@ def _parse_block_header(header) -> tuple:
     destination_addr: int
     """
     OG_header = header
-    header = struct.unpack('<I', bytes.fromhex(header))
+    header = unpack('<I', bytes.fromhex(header))
 
     block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
     crypto_signature = ((header[0] >> 5) & 0x1)

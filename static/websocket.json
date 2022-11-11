@@ -2,6 +2,8 @@
     "version": "0.3.0",
     "org": "CU InSpace",
     "status": {
+        "mission": "test flight",
+        "recording": false,
         "serial": {
             "available_ports": ["COM1", "test"]
         },
@@ -16,9 +18,7 @@
                 "status_name": "POWERED ASCENT"
             },
             "last_mission_time": 8120
-        },
-        "replay": "test flight",
-        "recording": false
+        }
     },
     "telemetry_data": {
         "altitude": {
