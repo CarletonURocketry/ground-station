@@ -1,9 +1,10 @@
 {
-    "version": "0.3.0",
+    "version": "0.3.2",
     "org": "CU InSpace",
     "status": {
         "mission": "test flight",
         "recording": false,
+        "recording_epoch": -1,
         "serial": {
             "available_ports": ["COM1", "test"]
         },
@@ -60,6 +61,7 @@
         }
     },
     "replay": {
+        "status": "stopped",
         "mission_list": [""]
     }
 }
