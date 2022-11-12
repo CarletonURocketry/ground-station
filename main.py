@@ -27,6 +27,10 @@ serial_connected_port = ShareableList([""])
 serial_ports = ShareableList([""] * 8)
 
 
+class ShutdownException(Exception):
+    pass
+
+
 def main():
     printCURocket("Not a missile", "Lethal", "POWERED ASCENT")
 
@@ -59,7 +63,15 @@ def main():
     while True:
         # WS Commands have been sent to main process for handling
         while not ws_commands.empty():
-            parse_ws_command(ws_commands.get())
+            try:
+                parse_ws_command(ws_commands.get())
+            except ShutdownException:
+                print("Backend shutting down........")
+                serial.terminate()
+                telemetry.terminate()
+                websocket.terminate()
+                print("Good bye.")
+                exit(0)
 
 
 def parse_ws_command(ws_cmd: str):
@@ -73,11 +85,13 @@ def parse_ws_command(ws_cmd: str):
         elif ws_cmd[0] == "update":
             ws_cmd = ["telemetry"] + ws_cmd
 
-        match ws_cmd[0]:
+        match ws_cmd[0].lower():
             case "serial":
                 serial_ws_commands.put(ws_cmd)
             case "telemetry":
                 telemetry_ws_commands.put(ws_cmd)
+            case "shutdown":
+                raise ShutdownException
             case _:
                 print("WS: Invalid command type")
 

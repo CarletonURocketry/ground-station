@@ -173,7 +173,7 @@ class Telemetry(Process):
                 self.status_data["recording_epoch"] = recording_epoch
                 self.status_data["mission"] = mission_name
                 self.replay_missions_list = self.generate_replay_mission_list()
-            else:
+            elif ws_cmd[2] == "start":
                 print("RECORDING HAS ALREADY STARTED. TRY STOPPING FIRST")
 
             if ws_cmd[2] == "stop":
@@ -185,13 +185,13 @@ class Telemetry(Process):
         except IndexError:
             print("Telemetry: Error parsing ws command")
 
-    def parse_rn2483_payload(self, data: str) -> tuple | None:
+    def parse_rn2483_payload(self, data: str):
 
         # Extract the packet header
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
 
         if length <= 24:  # If this packet nothing more than just the header
-            return call_sign, length, version, srs_addr, packet_num
+            print(call_sign, length, version, srs_addr, packet_num)
 
         blocks = data[24:]  # Remove the packet header
 
