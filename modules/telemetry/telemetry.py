@@ -4,11 +4,11 @@
 #
 # Authors:
 # Thomas Selwyn (Devil)
-import os
-import struct
 import time
 from datetime import datetime
-
+from struct import unpack
+from time import sleep
+from pathlib import Path
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 from multiprocessing import Queue, Process, Value
 from multiprocessing.shared_memory import ShareableList
@@ -25,20 +25,17 @@ def shareable_to_list(shareable_list, empty_padding=True) -> list:
         if empty_padding:
             new_list = ' '.join(new_list).split()
 
-
     except TypeError:
-        print(f"UH OH SPAGHETTI OH {new_list}")
+        print(f"{new_list}")
 
     return new_list
 
 
 class Telemetry(Process):
     def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
-                 serial_ws_commands: Queue, radio_payloads: Queue,
+                 radio_payloads: Queue,
                  telemetry_json_output: Queue, telemetry_ws_commands: Queue):
         super().__init__()
-
-        self.serial_ws_commands = serial_ws_commands
 
         self.radio_payloads = radio_payloads
         self.telemetry_json_output = telemetry_json_output
@@ -50,9 +47,11 @@ class Telemetry(Process):
         self.serial_connected_port = serial_connected_port
 
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
-        self.telemetry_last_mission_time_sent = -1
         self.telemetry_data = {}
         self.status_data = {
+            "mission": "A mission that does not exist",
+            "recording": False,
+            "recording_epoch": -1,
             "serial": {
                 "available_ports": [""]
             },
@@ -63,16 +62,20 @@ class Telemetry(Process):
             "rocket": {
                 "call_sign": "Not a missile",
                 "status": {
-                    "status_code": 2,
-                    "status_name": "POWERED ASCENT"
+                    "status_code": 0,
+                    "status_name": "IDLE"
                 },
                 "last_mission_time": -1
             }}
 
-        curr_dir = os.path.dirname(os.path.abspath(__file__))
-        log_path = os.path.join(curr_dir, '../../data_log.txt')
-        self.log = open(log_path, 'w')
-        self.log.write(f"Payloads from mission at {datetime.now()}\n")
+        # Mission Path
+        self.missions_dir = Path.cwd().joinpath("missions")
+        self.missions_dir.mkdir(parents=True, exist_ok=True)
+        self.mission_path = None
+
+        # Replay System
+        self.replay_status = ""
+        self.replay_missions_list = self.generate_replay_mission_list()
 
         self.run()
 
@@ -89,19 +92,29 @@ class Telemetry(Process):
 
             if bool(self.serial_connected.value) != bool(self.status_data["rn2483_radio"]["connected"]):
                 self.telemetry_json_output.put(self.generate_websocket_response())
-            time.sleep(.05)
+            sleep(.1)
 
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.3.0", "org": "CU InSpace", "status": self.generate_status_data(),
-                "telemetry_data": self.generate_telemetry_data(telemetry_keys)}
+        return {"version": "0.3.2", "org": "CU InSpace", "status": self.generate_status_data(),
+                "telemetry_data": self.generate_telemetry_data(telemetry_keys),
+                "replay": self.generate_replay_response()}
+
+    def generate_replay_response(self):
+        return {"status": self.replay_status,
+                "mission_list": self.replay_missions_list}
+
+    def generate_replay_mission_list(self):
+        return [name.stem for name in self.missions_dir.glob("*.mission") if name.is_file()]
 
     def generate_status_data(self):
         self.status_data["rn2483_radio"]["connected"] = bool(self.serial_connected.value)
         self.status_data["rn2483_radio"]["connected_port"] = self.serial_connected_port[0]
         self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports)
 
-
-        return {"serial": self.status_data["serial"],
+        return {"mission": self.status_data["mission"],
+                "recording": self.status_data["recording"],
+                "recording_epoch": self.status_data["recording_epoch"],
+                "serial": self.status_data["serial"],
                 "rn2483_radio": self.status_data["rn2483_radio"],
                 "rocket": self.status_data["rocket"]}
 
@@ -116,25 +129,80 @@ class Telemetry(Process):
 
         return telemetry_data_block
 
-
     def parse_ws_commands(self, ws_cmd):
-        if ws_cmd[1] == "update":
-            self.telemetry_json_output.put(self.generate_websocket_response())
+        try:
+            if ws_cmd[1] == "update":
+                self.telemetry_json_output.put(self.generate_websocket_response())
+            if ws_cmd[1] == "replay":
+                self.parse_replay_ws_cmd(ws_cmd)
+            if ws_cmd[1] == "record":
+                self.parse_record_ws_cmd(ws_cmd)
 
-    def parse_rn2483_payload(self, data: str) -> tuple | None:
-        self.log.write(data + "\n")
-        self.log.flush()
+        except IndexError:
+            print("Telemetry: Error parsing ws command")
+
+    def parse_replay_ws_cmd(self, ws_cmd):
+        try:
+            match ws_cmd[2]:
+                case "play":
+                    print("REPLAY PLAY")
+                    self.replay_status = "playing"
+                case "pause":
+                    print("REPLAY PAUSE")
+                    self.replay_status = "paused"
+                case "stop":
+                    print("REPLAY STOP")
+                    self.replay_status = ""
+
+        except IndexError:
+            print("Telemetry: Error parsing ws command")
+
+    def parse_record_ws_cmd(self, ws_cmd):
+        try:
+            if ws_cmd[2] == "start" and not self.status_data["recording"]:
+                print("RECORDING START")
+
+                recording_epoch = int(time.time() * 1000)
+
+                mission_name = datetime.now().strftime("%Y_%b_%d_%H_%M_%S") if len(ws_cmd) <= 2 else " ".join(
+                    ws_cmd[3:])
+                self.mission_path = self.get_filepath_for_proposed_name(mission_name)
+                self.mission_path.write_text(f"{recording_epoch},{mission_name}\n")
+
+                self.status_data["recording"] = True
+                self.status_data["recording_epoch"] = recording_epoch
+                self.status_data["mission"] = mission_name
+                self.replay_missions_list = self.generate_replay_mission_list()
+            elif ws_cmd[2] == "start":
+                print("RECORDING HAS ALREADY STARTED. TRY STOPPING FIRST")
+
+            if ws_cmd[2] == "stop":
+                print("RECORDING STOP")
+                self.status_data["recording"] = False
+                self.status_data["recording_epoch"] = -1
+                self.status_data["mission"] = ""
+
+        except IndexError:
+            print("Telemetry: Error parsing ws command")
+
+    def parse_rn2483_payload(self, data: str):
 
         # Extract the packet header
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
 
         if length <= 24:  # If this packet nothing more than just the header
-            return call_sign, length, version, srs_addr, packet_num
+            print(call_sign, length, version, srs_addr, packet_num)
 
         blocks = data[24:]  # Remove the packet header
 
+        if self.status_data["recording"]:
+            offset = int(time.time() * 1000) - self.status_data["recording_epoch"]
+            with open(f'{self.mission_path}', 'a') as mission:
+                mission.write(f"{offset},{data}\n")
+
         print("-----" * 20)
         print(f'Rocket - {bytes.fromhex(call_sign).decode("utf-8")} - sent you a packet:')
+
         # Parse through all blocks
         # TODO Catch type&subtype 0 and do a signal report.
         #  self.serial_input.put('radio get snr')
@@ -151,7 +219,9 @@ class Telemetry(Process):
             payload = bytes.fromhex(blocks[8: 8 + block_len])
 
             block_contents = DataBlock.parse(DataBlockSubtype(block_subtype), payload)
-            self.status_data["rocket"]["last_mission_time"] = block_contents.mission_time
+            if block_contents.mission_time > self.status_data["rocket"]["last_mission_time"]:
+                self.status_data["rocket"]["last_mission_time"] = block_contents.mission_time
+
             self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_contents)
 
             print(block_contents)
@@ -160,8 +230,20 @@ class Telemetry(Process):
             blocks = blocks[8 + block_len:]
         print("-----" * 20)
 
-        self.telemetry_last_mission_time_sent = self.status_data["rocket"]["last_mission_time"]
         self.telemetry_json_output.put(self.generate_websocket_response())
+
+    def get_filepath_for_proposed_name(self, mission_name) -> Path:
+        self.missions_dir.mkdir(parents=True, exist_ok=True)
+
+        missions_filepath = self.missions_dir.joinpath(f"{mission_name}.mission")
+
+        if missions_filepath.is_file():
+            for i in range(1, 50):
+                proposed_filepath = self.missions_dir.joinpath(f"{mission_name}_{i}.mission")
+                if not proposed_filepath.is_file():
+                    return proposed_filepath
+
+        return missions_filepath
 
 
 def _parse_packet_header(header) -> tuple:
@@ -200,7 +282,7 @@ def _parse_block_header(header) -> tuple:
     destination_addr: int
     """
     OG_header = header
-    header = struct.unpack('<I', bytes.fromhex(header))
+    header = unpack('<I', bytes.fromhex(header))
 
     block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
     crypto_signature = ((header[0] >> 5) & 0x1)

@@ -27,26 +27,30 @@ serial_connected_port = ShareableList([""])
 serial_ports = ShareableList([""] * 8)
 
 
+class ShutdownException(Exception):
+    pass
+
+
 def main():
     printCURocket("Not a missile", "Lethal", "POWERED ASCENT")
 
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
     # Outputs information in hexadecimal payload format to rn2483_radio_payloads
-    Serial_Controller = Process(target=SerialManager,
-                                args=(serial_connected, serial_connected_port, serial_ports,
-                                      serial_ws_commands, rn2483_radio_input, rn2483_radio_payloads))
-    Serial_Controller.start()
-    print("Serial Controller started")
+    serial = Process(target=SerialManager,
+                     args=(serial_connected, serial_connected_port, serial_ports,
+                           serial_ws_commands, rn2483_radio_input, rn2483_radio_payloads))
+    serial.start()
+    print(f"{'Serial':.<14} started")
 
     # Initialize Telemetry to parse radio packets, keep history and to log everything
     # Incoming information comes from rn2483_radio_payloads in payload format
     # Outputs information to telemetry_json_output in friendly json for UI
     telemetry = Process(target=Telemetry,
-                        args=(serial_connected, serial_connected_port, serial_ports, serial_ws_commands,
+                        args=(serial_connected, serial_connected_port, serial_ports,
                               rn2483_radio_payloads, telemetry_json_output, telemetry_ws_commands), daemon=True)
     telemetry.start()
-    print("Telemetry started")
+    print(f"{'Telemetry':.<14} started")
 
     # Initialize Tornado websocket for UI communication
     # This is PURELY a pass through of data for connectivity. No format conversion is done here.
@@ -54,33 +58,45 @@ def main():
     # Outputs information to connected websocket clients
     websocket = Process(target=WebSocketHandler, args=(telemetry_json_output, ws_commands), daemon=True)
     websocket.start()
-    print("WebSocket started")
+    print(f"{'WebSocket':.<14} started")
 
     while True:
-        # WS Commands get sent to main process for handling to distribute to which process should handle it.
+        # WS Commands have been sent to main process for handling
         while not ws_commands.empty():
-            parse_ws_command(ws_commands.get())
+            try:
+                parse_ws_command(ws_commands.get())
+            except ShutdownException:
+                print("Backend shutting down........")
+                serial.terminate()
+                telemetry.terminate()
+                websocket.terminate()
+                print("Good bye.")
+                exit(0)
 
 
 def parse_ws_command(ws_cmd: str):
     # Remove special characters
     ws_cmd = sub(r"[^0-9a-zA-Z_\s]+", "", ws_cmd).split(" ")
 
-    # WebSocket Command Aliases
-    if ws_cmd[0] == "connect" or ws_cmd[0] == "disconnect":
-        ws_cmd = ["serial", "rn2483_radio"] + ws_cmd
-    elif ws_cmd[0] == "update":
-        ws_cmd = ["telemetry"] + ws_cmd
+    try:
+        # WebSocket Command Aliases
+        if ws_cmd[0] == "connect" or ws_cmd[0] == "disconnect":
+            ws_cmd = ["serial", "rn2483_radio"] + ws_cmd
+        elif ws_cmd[0] == "update":
+            ws_cmd = ["telemetry"] + ws_cmd
 
-    if ws_cmd[0] == "telemetry":
-        print(f"WSCommand Telemetry: {ws_cmd}")
-        telemetry_ws_commands.put(ws_cmd)
-    elif ws_cmd[0] == "serial":
-        print(f"WSCommand Serial: {ws_cmd}")
-        serial_ws_commands.put(ws_cmd)
+        match ws_cmd[0].lower():
+            case "serial":
+                serial_ws_commands.put(ws_cmd)
+            case "telemetry":
+                telemetry_ws_commands.put(ws_cmd)
+            case "shutdown":
+                raise ShutdownException
+            case _:
+                print("WS: Invalid command type")
 
-    else:
-        print(f"Unknown command {ws_cmd}")
+    except IndexError:
+        print("WS: Error parsing command")
 
 
 if __name__ == '__main__':

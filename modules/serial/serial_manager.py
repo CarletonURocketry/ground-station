@@ -1,19 +1,16 @@
-#
-#
+# The unfortunate manager of serial ports
+# Handles connections, specifying what serial port a radio should use and spawning the serial processes
 #
 # Authors:
 # Thomas Selwyn (Devil)
 import glob
 import threading
 import sys
-
 import time
 from multiprocessing import Process, Queue, Value
 from multiprocessing.shared_memory import ShareableList
-
 from serial import Serial, SerialException
 from modules.serial.serial_rn2483_radio import SerialRN2483Radio
-
 from modules.serial.serial_rn2483_emulator import SerialRN2483Emulator
 
 
@@ -25,8 +22,8 @@ class SerialManager(Process):
         self.serial_ports = serial_ports
         self.serial_connected = serial_connected
         self.serial_connected_port = serial_connected_port
-        self.serial_ws_commands = serial_ws_commands
 
+        self.serial_ws_commands = serial_ws_commands
         self.rn2483_radio_input = rn2483_radio_input
         self.rn2483_radio_payloads = rn2483_radio_payloads
 
@@ -38,19 +35,21 @@ class SerialManager(Process):
         while True:
             time.sleep(.1)
 
-            ports = find_serial_ports()
-            ports.append("test")
-            for i in range(len(self.serial_ports)):
-                self.serial_ports[i] = "" if i > len(ports) - 1 else str(ports[i])
+            self.update_serial_ports()
 
             while not self.serial_ws_commands.empty():
                 ws_cmd = self.serial_ws_commands.get()
+                self.parse_ws_command(ws_cmd)
 
-                match ws_cmd[1]:
-                    case "rn2483_radio":
-                        self.parse_rn2483_radio_ws(ws_cmd)
-                    case _:
-                        print("Serial: Invalid device type.")
+    def parse_ws_command(self, ws_cmd):
+        try:
+            match ws_cmd[1]:
+                case "rn2483_radio":
+                    self.parse_rn2483_radio_ws(ws_cmd)
+                case _:
+                    print("Serial: Invalid device type.")
+        except IndexError:
+            print("Serial: Error parsing ws command")
 
     def parse_rn2483_radio_ws(self, ws_cmd):
         try:
@@ -69,53 +68,60 @@ class SerialManager(Process):
                                                     args=(self.serial_connected, self.serial_connected_port,
                                                           self.serial_ports, self.rn2483_radio_payloads),
                                                     daemon=True)
-
+                    self.serial_connected_port[0] = ws_cmd[3]
                     self.rn2483_radio.start()
                     time.sleep(.1)
                 else:
                     print(f"Serial: Already connected.")
 
             if ws_cmd[2] == "disconnect":
-                if self.serial_connected.value:
+                if self.rn2483_radio is not None:
                     if self.serial_connected_port[0] == "test":
                         print("Serial: RN2483 Payload Emulator terminating")
                     else:
-                        print(f"Serial: RN2483 Radio on port {self.serial_connected_port[0]} terminating")
+                        print(f"Serial: RN2483 Radio on port {'N/A' if self.serial_connected_port[0] == '' else self.serial_connected_port[0]} terminating")
 
                     self.serial_connected.value = False
                     self.serial_connected_port[0] = ""
                     self.rn2483_radio.terminate()
+                    self.rn2483_radio = None
                 else:
-                    print("Serial: Already disconnected.")
+                    print("Serial: RN2483 Radio already disconnected.")
         except IndexError:
             print("Serial: Not enough arguments.")
 
+    def update_serial_ports(self) -> list[str]:
+        """ Finds and updates serial ports on device
 
-def find_serial_ports() -> list[str]:
-    """ Lists serial port names
+            :raises EnvironmentError:
+                On unsupported or unknown platforms
+            :returns:
+                A list of the serial ports available on the system
+        """
+        com_ports = [""]
 
-        :raises EnvironmentError:
-            On unsupported or unknown platforms
-        :returns:
-            A list of the serial ports available on the system
-    """
+        if sys.platform.startswith('win'):
+            com_ports = ['COM%s' % (i + 1) for i in range(256)]
+        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+            com_ports = glob.glob('/dev/tty[A-Za-z]*')
+        elif sys.platform.startswith('darwin'):
+            com_ports = glob.glob('/dev/tty.*')
 
-    if sys.platform.startswith('win'):
-        com_ports = ['COM%s' % (i + 1) for i in range(256)]
-    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        com_ports = glob.glob('/dev/tty[A-Za-z]*')
-    elif sys.platform.startswith('darwin'):
-        com_ports = glob.glob('/dev/tty.*')
-    else:
-        raise EnvironmentError('Unsupported platform')
+        tested_com_ports = []
 
-    # Checks ports if they are potential COM ports
-    results = []
-    for test_port in com_ports:
-        try:
-            s = Serial(test_port)
-            s.close()
-            results.append(test_port)
-        except (OSError, SerialException):
-            pass
-    return results
+        # Checks ports if they are potential COM ports
+        for test_port in com_ports:
+            try:
+                if test_port != self.serial_connected_port[0]:
+                    ser = Serial(test_port)
+                    ser.close()
+                    tested_com_ports.append(test_port)
+            except (OSError, SerialException):
+                pass
+
+        tested_com_ports = tested_com_ports + ["test"]
+
+        for i in range(len(self.serial_ports)):
+            self.serial_ports[i] = "" if i > len(tested_com_ports) - 1 else str(tested_com_ports[i])
+
+        return tested_com_ports
