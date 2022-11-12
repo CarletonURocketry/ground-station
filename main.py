@@ -23,8 +23,8 @@ serial_ws_commands = Queue()
 telemetry_ws_commands = Queue()
 
 serial_connected = Value('i', 0)
-serial_connected_port = ShareableList([""])
-serial_ports = ShareableList([""] * 8)
+serial_connected_port = ShareableList(["" * 256])
+serial_ports = ShareableList(["" * 256] * 8)
 
 
 class ShutdownException(Exception):

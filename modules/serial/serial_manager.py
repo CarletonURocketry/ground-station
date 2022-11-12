@@ -33,10 +33,6 @@ class SerialManager(Process):
 
     def run(self):
         while True:
-            time.sleep(.1)
-
-            self.update_serial_ports()
-
             while not self.serial_ws_commands.empty():
                 ws_cmd = self.serial_ws_commands.get()
                 self.parse_ws_command(ws_cmd)
@@ -46,6 +42,8 @@ class SerialManager(Process):
             match ws_cmd[1]:
                 case "rn2483_radio":
                     self.parse_rn2483_radio_ws(ws_cmd)
+                case "update":
+                    self.update_serial_ports()
                 case _:
                     print("Serial: Invalid device type.")
         except IndexError:
@@ -103,9 +101,11 @@ class SerialManager(Process):
         if sys.platform.startswith('win'):
             com_ports = ['COM%s' % (i + 1) for i in range(256)]
         elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-            com_ports = glob.glob('/dev/tty[A-Za-z]*')
+            # '/dev/tty[A-Za-z]*'
+            com_ports = glob.glob('/dev/ttyUSB*')
         elif sys.platform.startswith('darwin'):
             com_ports = glob.glob('/dev/tty.*')
+
 
         tested_com_ports = []
 
