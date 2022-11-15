@@ -35,6 +35,10 @@ class DataBlockSubtype(IntEnum):
 
 
 class DataBlock(ABC):
+
+    def __init__(self):
+        self.mission_time = None
+
     @property
     @abstractmethod
     def length(self):
@@ -71,7 +75,10 @@ class DataBlock(ABC):
             case DataBlockSubtype.GNSS:
                 return GNSSLocationBlock.from_payload(payload)
             case DataBlockSubtype.GNSS_META:
+                #print("GNSS META")
                 return GNSSMetadataBlock.from_payload(payload)
+
+                #return None
             case DataBlockSubtype.MPU9250_IMU:
                 return MPU9250IMUDataBlock.from_payload(payload)
             case DataBlockSubtype.KX134_1211_ACCEL:
@@ -81,12 +88,16 @@ class DataBlock(ABC):
 
         raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype}")
 
+    def __iter__(self):
+        yield ""
+
 
 #
 #   Debug Message
 #
 class DebugMessageDataBlock(DataBlock):
     def __init__(self, mission_time, debug_msg):
+        super().__init__()
         self.mission_time = mission_time
         self.debug_msg = debug_msg
 
@@ -122,6 +133,7 @@ class DebugMessageDataBlock(DataBlock):
 
 class StartupMessageDataBlock(DataBlock):
     def __init__(self, mission_time, startup_msg):
+        super().__init__()
         self.mission_time = mission_time
         self.msg = startup_msg
 
@@ -232,8 +244,9 @@ class DeploymentState(IntEnum):
 
 
 class StatusDataBlock(DataBlock):
-    def __init__(self, mission_time, kx134_state, alt_state, imu_state, sd_state,
-                 deployment_state, sd_blocks_recorded, sd_checkouts_missed):
+    def __init__(self, mission_time, kx134_state, alt_state, imu_state, sd_state, deployment_state, sd_blocks_recorded,
+                 sd_checkouts_missed):
+        super().__init__()
         self.mission_time = mission_time
         self.kx134_state = kx134_state
         self.alt_state = alt_state
@@ -535,25 +548,25 @@ class GNSSLocationBlock(DataBlock):
 
     def __str__(self):
         return (f"{self.type_desc()} -> time: {self.mission_time}, position: "
-                f"{GNSSLocationBlock.coord_to_str(self.latitude)} "
-                f"{GNSSLocationBlock.coord_to_str(self.longitude, ew=True)}, utc time: "
+                f"{(self.latitude/600000)} "
+                f"{(self.longitude/600000)}, utc time: "
                 f"{self.utc_time}, altitude: {self.altitude} m, speed: {self.speed} knots, "
                 f"course: {self.course}°, pdop: {self.pdop}, hdop: {self.hdop}, vdop: "
                 f"{self.vdop}, sats in use: {self.sats}, type: {self.fix_type.name}")
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "position", {"latitude": GNSSLocationBlock.coord_to_str(self.latitude),
-                           "longitude": GNSSLocationBlock.coord_to_str(self.longitude, ew=True)}
+        yield "position", {"latitude": str((self.latitude/600000)),
+                           "longitude": str((self.longitude/600000))}
         yield "utc_time", self.utc_time
         yield "altitude", self.altitude
-        yield "speed", self.speed
-        yield "course", self.course
-        yield "pdop", self.pdop
-        yield "hdop", self.hdop
-        yield "vdop", self.vdop
-        yield "sats in use", self.sats
-        yield "type", self.fix_type.name
+        yield "speed", str(self.speed)
+        yield "course", str(self.course)
+        yield "pdop", str(self.pdop)
+        yield "hdop", str(self.hdop)
+        yield "vdop", str(self.vdop)
+        yield "sats in use", str(self.sats)
+        yield "type", str(self.fix_type.name)
 
 
 #
@@ -651,10 +664,10 @@ class GNSSMetadataBlock(DataBlock):
             if parts[1] & (1 << i):
                 glonass_sats_in_use.add(i + GNSSSatInfo.GLONASS_SV_OFFSET)
 
-        sats_in_view = list()
+        sats_in_view = set()
         offset = 12
         while offset < len(payload):
-            sats_in_view.append(GNSSSatInfo.from_bytes(payload[offset:offset + 4]))
+            sats_in_view.add(str(GNSSSatInfo.from_bytes(payload[offset:offset + 4])))
             offset += 4
 
         return GNSSMetadataBlock(parts[0], gps_sats_in_use, glonass_sats_in_use, sats_in_view)
@@ -686,9 +699,10 @@ class GNSSMetadataBlock(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "gps_sats_in_use", self.gps_sats_in_use
-        yield "glonass_sats_in_use", self.glonass_sats_in_use
-        yield "sats_in_view", self.sats_in_view
+        yield "gps_sats_in_use", list(self.gps_sats_in_use)
+        yield "glonass_sats_in_use", list(self.glonass_sats_in_use)
+        # THIS GIVES SO MUCH INFO
+        #yield "sats_in_view", list(self.sats_in_view)
 
 
 #

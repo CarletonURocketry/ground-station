@@ -23,8 +23,8 @@ serial_ws_commands = Queue()
 telemetry_ws_commands = Queue()
 
 serial_connected = Value('i', 0)
-serial_connected_port = ShareableList(["" * 256])
-serial_ports = ShareableList(["" * 256] * 8)
+serial_connected_port = ShareableList([" " * 256])
+serial_ports = ShareableList([" " * 256] * 8)
 
 
 class ShutdownException(Exception):
@@ -48,7 +48,7 @@ def main():
     # Outputs information to telemetry_json_output in friendly json for UI
     telemetry = Process(target=Telemetry,
                         args=(serial_connected, serial_connected_port, serial_ports,
-                              rn2483_radio_payloads, telemetry_json_output, telemetry_ws_commands), daemon=True)
+                              rn2483_radio_payloads, telemetry_json_output, telemetry_ws_commands))
     telemetry.start()
     print(f"{'Telemetry':.<14} started")
 
@@ -76,7 +76,7 @@ def main():
 
 def parse_ws_command(ws_cmd: str):
     # Remove special characters
-    ws_cmd = sub(r"[^0-9a-zA-Z_\s]+", "", ws_cmd).split(" ")
+    ws_cmd = sub(r"[^0-9a-zA-Z_./\s]+", "", ws_cmd).split(" ")
 
     try:
         # WebSocket Command Aliases

@@ -29,6 +29,9 @@ class SerialManager(Process):
 
         self.rn2483_radio = None
 
+        # Immediately find serial ports
+        self.serial_ports = self.update_serial_ports()
+
         self.run()
 
     def run(self):
