@@ -72,24 +72,36 @@ class Telemetry(Process):
             while not self.telemetry_ws_commands.empty():
                 self.parse_ws_commands(self.telemetry_ws_commands.get())
 
-            match self.status_data["mission"]["type"]:
+            match self.status_data["mission"]["state"]:
                 case 0:
                     # LIVE DATA FROM RADIO
                     while not self.radio_payloads.empty():
                         self.parse_rn2483_payload(self.radio_payloads.get())
-
                 case 1:
                     # RECORDED DATA FROM REPLAY SYSTEM
                     while not self.replay_output.empty():
                         block_type, block_subtype, block_data = self.replay_output.get()
                         self.parse_replay_payload(block_type, block_subtype, block_data)
+                case 2:
+                    # TEST DATA FROM FAKE RADIO
+                    while not self.radio_payloads.empty():
+                        self.parse_rn2483_payload(self.radio_payloads.get())
 
-            # TEMP Serial port change detected :)
-            if len(shareable_to_list(self.serial_ports, True)) != len(self.status_data["serial"]["available_ports"]):
-                self.update_websocket()
 
             if bool(self.serial_connected.value) != bool(self.status_data["rn2483_radio"]["connected"]):
+
+                match self.serial_connected_port[0]:
+                    case "test":
+                        self.status_data["mission"]["state"] = 2
+                    case "":
+                        self.status_data["mission"]["state"] = -1
+                    case _:
+                        self.status_data["mission"]["state"] = 0
+
+
+
                 self.update_websocket()
+
             sleep(.1)
 
     def update_websocket(self):
@@ -129,7 +141,7 @@ class Telemetry(Process):
     def parse_ws_commands(self, ws_cmd):
         try:
             if ws_cmd[1] == "update":
-                self.telemetry_json_output.put(self.generate_websocket_response())
+                self.update_websocket()
             if ws_cmd[1] == "replay":
                 self.parse_replay_ws_cmd(ws_cmd)
             if ws_cmd[1] == "record":
@@ -153,7 +165,7 @@ class Telemetry(Process):
                                                   args=(self.replay_output, self.replay_input, replay_mission_filepath))
                             self.replay.start()
                         self.replay_data["status"] = "playing"
-                        self.status_data["mission"]["type"] = 1
+                        self.status_data["mission"]["state"] = 1
                         print(f"REPLAY {mission_name} PLAYING")
                     else:
                         print(f"REPLAY {mission_name} DOES NOT EXIST")
@@ -166,8 +178,8 @@ class Telemetry(Process):
                 case "speed":
                     print(f"REPLAY SPEED {ws_cmd[3]}")
 
-                    self.replay_data["speed"] = 0 if float(ws_cmd[3]) < 0 else float(ws_cmd[3])
-                    if self.replay_data["speed"] == 0:
+                    self.replay_data["speed"] = 0.0 if float(ws_cmd[3]) < 0 else float(ws_cmd[3])
+                    if self.replay_data["speed"] == 0.0:
                         self.replay_data["status"] = "paused"
                 case "stop":
                     print("REPLAY STOP")
@@ -187,7 +199,7 @@ class Telemetry(Process):
             "mission": {
                 "name": "",
                 "epoch": -1,
-                "type": -1,
+                "state": -1,
                 "recording": False
             },
             "serial": {
@@ -200,8 +212,8 @@ class Telemetry(Process):
             "rocket": {
                 "call_sign": "Not a missile",
                 "status": {
-                    "status_code": 0,
-                    "status_name": "IDLE"
+                    "code": 0,
+                    "state": "IDLE"
                 },
                 "last_mission_time": -1
             }
@@ -250,7 +262,7 @@ class Telemetry(Process):
 
         self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_contents)
 
-        # print(block_contents)
+        print(block_contents)
 
         self.update_websocket()
 
@@ -282,7 +294,7 @@ class Telemetry(Process):
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
             payload = bytes.fromhex(blocks[8: 8 + block_len])
 
-            if self.status_data["recording"]:
+            if self.status_data["mission"]["recording"]:
                 # offset = int(time.time() * 1000) - self.status_data["recording_epoch"]
                 with open(f'{self.mission_path}', 'a') as mission:
                     mission.write(f"{block_type},{block_subtype},{payload.hex()}\n")

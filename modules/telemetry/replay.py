@@ -13,7 +13,7 @@ from pathlib import Path
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 
 
-class TelemetryReplay(Process):
+class TelemetryReplay:
     def __init__(self, replay_payloads: Queue, replay_input: Queue, replay_path: Path):
         super().__init__()
 

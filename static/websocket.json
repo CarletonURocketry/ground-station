@@ -5,7 +5,7 @@
         "mission": {
             "name": "test flight",
             "epoch": -1,
-            "type": 0,
+            "state": 0,
             "recording": false
         },
         "serial": {
@@ -18,8 +18,8 @@
         "rocket": {
             "call_sign": "Not a missile",
             "status": {
-                "status_code": 2,
-                "status_name": "POWERED ASCENT"
+                "code": 2,
+                "state": "POWERED ASCENT"
             },
             "last_mission_time": 8120
         }
@@ -47,25 +47,26 @@
             }
         },
         "gnss": {
-            "mission_time": 8120,
+            "mission_time": 169012,
             "position": {
                 "latitude": "45.385273194259014",
                 "longitude": "-75.69838116342798"
             },
+            "utc_time": 1668434486,
+            "altitude": 142.619,
+            "sats_in_use": 14,
             "speed": 0,
-            "type": "GPS"
-
+            "type": "FIX_3D"
         },
         "gnss_meta": {
-            "gnss_sat_type": "gps",
-            "gps_sats_in_view": 3,
-            "glonass_sats_in_view": 2,
-            "sats_in_view": 5
+            "mission_time": 169012,
+            "gps_sats_in_use": [2, 5, 10, 13, 15, 18, 23, 24, 27],
+            "glonass_sats_in_use": [67, 70, 75, 78, 80, 83, 88, 89, 92]
         }
     },
     "replay": {
         "status": "",
         "speed": 1.0,
-        "mission_list": [""]
+        "mission_list": ["Devil The Rocket"]
     }
 }

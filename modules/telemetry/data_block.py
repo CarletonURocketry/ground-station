@@ -560,12 +560,12 @@ class GNSSLocationBlock(DataBlock):
                            "longitude": str((self.longitude/600000))}
         yield "utc_time", self.utc_time
         yield "altitude", self.altitude
-        yield "speed", str(self.speed)
+        yield "speed", self.speed
         yield "course", str(self.course)
         yield "pdop", str(self.pdop)
         yield "hdop", str(self.hdop)
-        yield "vdop", str(self.vdop)
-        yield "sats in use", str(self.sats)
+        yield "vdop", self.vdop
+        yield "sats_in_use", self.sats
         yield "type", str(self.fix_type.name)
 
 
