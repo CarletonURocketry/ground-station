@@ -102,7 +102,7 @@ class Telemetry(Process):
 
                 self.update_websocket()
 
-            sleep(.1)
+            sleep(.8)
 
     def update_websocket(self):
         self.telemetry_json_output.put(self.generate_websocket_response())
