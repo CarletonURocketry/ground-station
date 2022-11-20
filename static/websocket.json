@@ -1,5 +1,5 @@
 {
-    "version": "0.4.1",
+    "version": "0.4.2",
     "org": "CU InSpace",
     "status": {
         "mission": {
@@ -21,7 +21,7 @@
             "altimeter_state": -1,
             "imu_state": -1,
             "sd_driver_state": -1,
-            "deployment_state": 2,
+            "deployment_state": -1,
             "blocks_recorded": -1,
             "checkouts_missed": -1,
             "mission_time": 5000,

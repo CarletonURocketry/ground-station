@@ -64,6 +64,7 @@ class Telemetry(Process):
 
         self.reset_data()
 
+        self.update_websocket()
         self.run()
 
     def run(self):
@@ -94,17 +95,54 @@ class Telemetry(Process):
                     case _:
                         self.status_data["mission"]["state"] = 0
 
-
-
                 self.update_websocket()
 
-            sleep(.8)
+            sleep(0.2)
 
     def update_websocket(self):
         self.telemetry_json_output.put(self.generate_websocket_response())
 
+    def reset_data(self):
+
+        self.status_data = {
+            "mission": {
+                "name": "",
+                "epoch": -1,
+                "state": -1,
+                "recording": False
+            },
+            "serial": {
+                "available_ports": [""]
+            },
+            "rn2483_radio": {
+                "connected": False,
+                "connected_port": ""
+            },
+            "rocket": {
+                "call_sign": "Missile",
+                "kx134_state": -1,
+                "altimeter_state": -1,
+                "imu_state": -1,
+                "sd_driver_state": -1,
+                "deployment_state": -1,
+                "blocks_recorded": -1,
+                "checkouts_missed": -1,
+                "mission_time": -1,
+                "last_mission_time": -1
+            }
+        }
+        self.telemetry_data = {}
+        self.replay_data = {
+            "status": "",
+            "speed": 1.0,
+            "mission_list": self.generate_replay_mission_list()
+        }
+
+        self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports, True)
+
+
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.4.1", "org": "CU InSpace",
+        return {"version": "0.4.2", "org": "CU InSpace",
                 "status": self.generate_status_data(),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
                 "replay": self.generate_replay_response()}
@@ -191,43 +229,6 @@ class Telemetry(Process):
 
         except IndexError:
             print("Telemetry: Error parsing ws command")
-
-    def reset_data(self):
-        self.telemetry_data = {}
-        self.status_data = {
-            "mission": {
-                "name": "",
-                "epoch": -1,
-                "state": -1,
-                "recording": False
-            },
-            "serial": {
-                "available_ports": [""]
-            },
-            "rn2483_radio": {
-                "connected": False,
-                "connected_port": ""
-            },
-            "rocket": {
-                "call_sign": "Missile",
-                "kx134_state": -1,
-                "altimeter_state": -1,
-                "imu_state": -1,
-                "sd_driver_state": -1,
-                "deployment_state": 2,
-                "blocks_recorded": -1,
-                "checkouts_missed": -1,
-                "mission_time": -1,
-                "last_mission_time": -1
-            }
-        }
-        self.replay_data = {
-            "status": "",
-            "speed": 1.0,
-            "mission_list": self.generate_replay_mission_list()
-        }
-
-        self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports, True)
 
     def parse_record_ws_cmd(self, ws_cmd):
         try:
