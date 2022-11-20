@@ -76,7 +76,7 @@ def main():
 
 def parse_ws_command(ws_cmd: str):
     # Remove special characters
-    ws_cmd = sub(r"[^0-9a-zA-Z_./\s]+", "", ws_cmd).split(" ")
+    ws_cmd = sub(r"[^0-9a-zA-Z_./\s-]+", "", ws_cmd).split(" ")
 
     try:
         # WebSocket Command Aliases
@@ -94,6 +94,7 @@ def parse_ws_command(ws_cmd: str):
                 raise ShutdownException
             case _:
                 print("WS: Invalid command type")
+                print(ws_cmd)
 
     except IndexError:
         print("WS: Error parsing command")

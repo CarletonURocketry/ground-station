@@ -311,7 +311,7 @@ class StatusDataBlock(DataBlock):
                            self.sd_checkouts_missed)
 
     def __str__(self):
-        return (f"{self.type_desc()} -> mission_time: {self.mission_time}, kx_134 state: "
+        return (f"{self.type_desc()} -> mission_time: {self.mission_time}, kx134 state: "
                 f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
                 f"IMU state: {str(self.imu_state)}, SD driver state: {str(self.sd_state)}, "
                 f"deployment state: {str(self.deployment_state)}, blocks recorded: "
@@ -319,7 +319,7 @@ class StatusDataBlock(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "kx_134", self.kx134_state
+        yield "kx134_state", self.kx134_state
         yield "altimeter_state", self.alt_state
         yield "imu_state", self.imu_state
         yield "sd_driver_state", self.sd_state

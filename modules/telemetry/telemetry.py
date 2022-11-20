@@ -9,7 +9,7 @@ import time
 from struct import unpack
 from time import sleep, time
 from pathlib import Path
-from modules.telemetry.data_block import DataBlock, DataBlockSubtype
+from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock
 from modules.telemetry.replay import TelemetryReplay
 from multiprocessing import Queue, Process, Value
 from multiprocessing.shared_memory import ShareableList
@@ -73,19 +73,15 @@ class Telemetry(Process):
                 self.parse_ws_commands(self.telemetry_ws_commands.get())
 
             match self.status_data["mission"]["state"]:
-                case 0:
-                    # LIVE DATA FROM RADIO
+                case 0 | 2:
+                    # RADIO PAYLOADS
                     while not self.radio_payloads.empty():
                         self.parse_rn2483_payload(self.radio_payloads.get())
                 case 1:
-                    # RECORDED DATA FROM REPLAY SYSTEM
+                    # REPLAY SYSTEM
                     while not self.replay_output.empty():
                         block_type, block_subtype, block_data = self.replay_output.get()
                         self.parse_replay_payload(block_type, block_subtype, block_data)
-                case 2:
-                    # TEST DATA FROM FAKE RADIO
-                    while not self.radio_payloads.empty():
-                        self.parse_rn2483_payload(self.radio_payloads.get())
 
 
             if bool(self.serial_connected.value) != bool(self.status_data["rn2483_radio"]["connected"]):
@@ -108,7 +104,8 @@ class Telemetry(Process):
         self.telemetry_json_output.put(self.generate_websocket_response())
 
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.4.0", "org": "CU InSpace", "status": self.generate_status_data(),
+        return {"version": "0.4.1", "org": "CU InSpace",
+                "status": self.generate_status_data(),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
                 "replay": self.generate_replay_response()}
 
@@ -181,6 +178,8 @@ class Telemetry(Process):
                     self.replay_data["speed"] = 0.0 if float(ws_cmd[3]) < 0 else float(ws_cmd[3])
                     if self.replay_data["speed"] == 0.0:
                         self.replay_data["status"] = "paused"
+                    else:
+                        self.replay_data["status"] = "playing"
                 case "stop":
                     print("REPLAY STOP")
                     self.replay.terminate()
@@ -210,11 +209,15 @@ class Telemetry(Process):
                 "connected_port": ""
             },
             "rocket": {
-                "call_sign": "Not a missile",
-                "status": {
-                    "code": 0,
-                    "state": "IDLE"
-                },
+                "call_sign": "Missile",
+                "kx134_state": -1,
+                "altimeter_state": -1,
+                "imu_state": -1,
+                "sd_driver_state": -1,
+                "deployment_state": 2,
+                "blocks_recorded": -1,
+                "checkouts_missed": -1,
+                "mission_time": -1,
                 "last_mission_time": -1
             }
         }
@@ -255,12 +258,15 @@ class Telemetry(Process):
         except IndexError:
             print("Telemetry: Error parsing ws command")
 
-    def parse_replay_payload(self, block_type: int, block_subtype: int, block_contents: DataBlock):
+    def parse_replay_payload(self, block_type: int, block_subtype: int, block_contents):
 
         if block_contents.mission_time > self.status_data["rocket"]["last_mission_time"]:
             self.status_data["rocket"]["last_mission_time"] = block_contents.mission_time
 
-        self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_contents)
+        if DataBlockSubtype(block_subtype) == DataBlockSubtype.STATUS:
+            self.parse_status(block_contents)
+        else:
+            self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_contents)
 
         print(block_contents)
 
@@ -312,6 +318,16 @@ class Telemetry(Process):
         print("-----" * 20)
 
         self.telemetry_json_output.put(self.generate_websocket_response())
+
+    def parse_status(self, data: StatusDataBlock):
+        self.status_data["rocket"]["mission_time"] = data.mission_time
+        self.status_data["rocket"]["kx134_state"] = data.kx134_state
+        self.status_data["rocket"]["altimeter_state"] = data.alt_state
+        self.status_data["rocket"]["imu_state"] = data.imu_state
+        self.status_data["rocket"]["sd_driver_state"] = data.sd_state
+        self.status_data["rocket"]["deployment_state"] = data.deployment_state
+        self.status_data["rocket"]["blocks_recorded"] = data.sd_blocks_recorded
+        self.status_data["rocket"]["checkouts_missed"] = data.sd_checkouts_missed
 
     def get_filepath_for_proposed_name(self, mission_name) -> Path:
         self.missions_dir.mkdir(parents=True, exist_ok=True)
