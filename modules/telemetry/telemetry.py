@@ -9,7 +9,7 @@ import time
 from struct import unpack
 from time import sleep, time
 from pathlib import Path
-from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock
+from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState
 from modules.telemetry.replay import TelemetryReplay
 from multiprocessing import Queue, Process, Value
 from multiprocessing.shared_memory import ShareableList
@@ -78,12 +78,13 @@ class Telemetry(Process):
                     # RADIO PAYLOADS
                     while not self.radio_payloads.empty():
                         self.parse_rn2483_payload(self.radio_payloads.get())
+
+                    break
                 case 1:
                     # REPLAY SYSTEM
                     while not self.replay_output.empty():
                         block_type, block_subtype, block_data = self.replay_output.get()
                         self.parse_replay_payload(block_type, block_subtype, block_data)
-
 
             if bool(self.serial_connected.value) != bool(self.status_data["rn2483_radio"]["connected"]):
 
@@ -125,6 +126,7 @@ class Telemetry(Process):
                 "imu_state": -1,
                 "sd_driver_state": -1,
                 "deployment_state": -1,
+                "deployment_state_text": "",
                 "blocks_recorded": -1,
                 "checkouts_missed": -1,
                 "mission_time": -1,
@@ -139,7 +141,6 @@ class Telemetry(Process):
         }
 
         self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports, True)
-
 
     def generate_websocket_response(self, telemetry_keys="all"):
         return {"version": "0.4.2", "org": "CU InSpace",
@@ -218,6 +219,8 @@ class Telemetry(Process):
                         self.replay_data["status"] = "paused"
                     else:
                         self.replay_data["status"] = "playing"
+                case "update":
+                    self.replay_data["mission_list"] = self.generate_replay_mission_list()
                 case "stop":
                     print("REPLAY STOP")
                     self.replay.terminate()
@@ -327,6 +330,7 @@ class Telemetry(Process):
         self.status_data["rocket"]["imu_state"] = data.imu_state
         self.status_data["rocket"]["sd_driver_state"] = data.sd_state
         self.status_data["rocket"]["deployment_state"] = data.deployment_state
+        self.status_data["rocket"]["deployment_state_text"] = str(DeploymentState(data.deployment_state))
         self.status_data["rocket"]["blocks_recorded"] = data.sd_blocks_recorded
         self.status_data["rocket"]["checkouts_missed"] = data.sd_checkouts_missed
 

@@ -109,7 +109,6 @@ class SerialManager(Process):
         elif sys.platform.startswith('darwin'):
             com_ports = glob.glob('/dev/tty.*')
 
-
         tested_com_ports = []
 
         # Checks ports if they are potential COM ports
