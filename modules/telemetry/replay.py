@@ -46,7 +46,7 @@ class TelemetryReplay:
 
                         replay_data = (block_type, block_subtype, block_data)
                         self.replay_payloads.put(replay_data)
-                        sleep(0.8)
+                        sleep(0.2)
 
                 index = index + 1
 
