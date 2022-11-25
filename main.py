@@ -32,7 +32,7 @@ class ShutdownException(Exception):
 
 
 def main():
-    printCURocket("Not a missile", "Lethal", "POWERED ASCENT")
+    printCURocket("It was Avionics’ Fault", "0.4.2-DEV", "Thomas Selwyn (Devil)")
 
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
@@ -41,7 +41,7 @@ def main():
                      args=(serial_connected, serial_connected_port, serial_ports,
                            serial_ws_commands, rn2483_radio_input, rn2483_radio_payloads))
     serial.start()
-    print(f"{'Serial':.<14} started")
+    print(f"{'Serial':.<15} started")
 
     # Initialize Telemetry to parse radio packets, keep history and to log everything
     # Incoming information comes from rn2483_radio_payloads in payload format
@@ -50,7 +50,7 @@ def main():
                         args=(serial_connected, serial_connected_port, serial_ports,
                               rn2483_radio_payloads, telemetry_json_output, telemetry_ws_commands))
     telemetry.start()
-    print(f"{'Telemetry':.<14} started")
+    print(f"{'Telemetry':.<15} started")
 
     # Initialize Tornado websocket for UI communication
     # This is PURELY a pass through of data for connectivity. No format conversion is done here.
@@ -58,7 +58,7 @@ def main():
     # Outputs information to connected websocket clients
     websocket = Process(target=WebSocketHandler, args=(telemetry_json_output, ws_commands), daemon=True)
     websocket.start()
-    print(f"{'WebSocket':.<14} started")
+    print(f"{'WebSocket':.<15} started")
 
     while True:
         # WS Commands have been sent to main process for handling
