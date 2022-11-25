@@ -48,8 +48,8 @@ class Telemetry(Process):
         self.serial_connected_port = serial_connected_port
 
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
-        self.telemetry_data = {}
         self.status_data = {}
+        self.telemetry_data = {}
         self.replay_data = {}
 
         # Mission Path
@@ -213,16 +213,18 @@ class Telemetry(Process):
                     self.replay_data["status"] = "paused"
                 case "speed":
                     print(f"REPLAY SPEED {ws_cmd[3]}")
-
                     self.replay_data["speed"] = 0.0 if float(ws_cmd[3]) < 0 else float(ws_cmd[3])
                     if self.replay_data["speed"] == 0.0:
                         self.replay_data["status"] = "paused"
                     else:
                         self.replay_data["status"] = "playing"
+
+                    self.replay_input.put(f"speed {0.0 if float(ws_cmd[3]) < 0 else float(ws_cmd[3])}")
                 case "update":
                     self.replay_data["mission_list"] = self.generate_replay_mission_list()
                 case "stop":
                     print("REPLAY STOP")
+                    self.replay_output.empty()
                     self.replay.terminate()
                     self.replay = None
 
@@ -321,7 +323,7 @@ class Telemetry(Process):
             blocks = blocks[8 + block_len:]
         print("-----" * 20)
 
-        self.telemetry_json_output.put(self.generate_websocket_response())
+        self.update_websocket()
 
     def parse_status(self, data: StatusDataBlock):
         self.status_data["rocket"]["mission_time"] = data.mission_time
