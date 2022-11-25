@@ -75,10 +75,7 @@ class DataBlock(ABC):
             case DataBlockSubtype.GNSS:
                 return GNSSLocationBlock.from_payload(payload)
             case DataBlockSubtype.GNSS_META:
-                #print("GNSS META")
                 return GNSSMetadataBlock.from_payload(payload)
-
-                #return None
             case DataBlockSubtype.MPU9250_IMU:
                 return MPU9250IMUDataBlock.from_payload(payload)
             case DataBlockSubtype.KX134_1211_ACCEL:

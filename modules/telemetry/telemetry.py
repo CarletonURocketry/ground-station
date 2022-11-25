@@ -40,7 +40,6 @@ class Telemetry(Process):
 
         self.radio_payloads = radio_payloads
         self.telemetry_json_output = telemetry_json_output
-
         self.telemetry_ws_commands = telemetry_ws_commands
 
         self.serial_ports = serial_ports
@@ -62,31 +61,30 @@ class Telemetry(Process):
         self.replay_input = Queue()
         self.replay_output = Queue()
 
+        # Start Telemetry
         self.reset_data()
-
         self.update_websocket()
         self.run()
 
     def run(self):
         while True:
-
             while not self.telemetry_ws_commands.empty():
                 self.parse_ws_commands(self.telemetry_ws_commands.get())
 
             match self.status_data["mission"]["state"]:
-                case 0 | 2:
-                    # RADIO PAYLOADS
-                    while not self.radio_payloads.empty():
-                        self.parse_rn2483_payload(self.radio_payloads.get())
-
-                    break
                 case 1:
                     # REPLAY SYSTEM
                     while not self.replay_output.empty():
                         block_type, block_subtype, block_data = self.replay_output.get()
-                        self.parse_replay_payload(block_type, block_subtype, block_data)
+                        self.parse_rn2483_payload(block_type, block_subtype, block_data)
+                        self.update_websocket()
+                case _:
+                    # RADIO PAYLOADS
+                    while not self.radio_payloads.empty():
+                        self.parse_rn2483_transmission(self.radio_payloads.get())
 
             if bool(self.serial_connected.value) != bool(self.status_data["rn2483_radio"]["connected"]):
+                self.reset_data()
 
                 match self.serial_connected_port[0]:
                     case "test":
@@ -120,7 +118,7 @@ class Telemetry(Process):
                 "connected_port": ""
             },
             "rocket": {
-                "call_sign": "Missile",
+                # "call_sign": "Missile",
                 "kx134_state": -1,
                 "altimeter_state": -1,
                 "imu_state": -1,
@@ -177,6 +175,7 @@ class Telemetry(Process):
     def parse_ws_commands(self, ws_cmd):
         try:
             if ws_cmd[1] == "update":
+                self.replay_data["mission_list"] = self.generate_replay_mission_list()
                 self.update_websocket()
             if ws_cmd[1] == "replay":
                 self.parse_replay_ws_cmd(ws_cmd)
@@ -211,6 +210,7 @@ class Telemetry(Process):
 
                     self.replay_data["speed"] = 0
                     self.replay_data["status"] = "paused"
+                    self.replay_input.put(f"speed 0")
                 case "speed":
                     print(f"REPLAY SPEED {ws_cmd[3]}")
                     self.replay_data["speed"] = 0.0 if float(ws_cmd[3]) < 0 else float(ws_cmd[3])
@@ -220,8 +220,6 @@ class Telemetry(Process):
                         self.replay_data["status"] = "playing"
 
                     self.replay_input.put(f"speed {0.0 if float(ws_cmd[3]) < 0 else float(ws_cmd[3])}")
-                case "update":
-                    self.replay_data["mission_list"] = self.generate_replay_mission_list()
                 case "stop":
                     print("REPLAY STOP")
                     self.replay_output.empty()
@@ -237,7 +235,7 @@ class Telemetry(Process):
 
     def parse_record_ws_cmd(self, ws_cmd):
         try:
-            if ws_cmd[2] == "start" and not self.status_data["recording"]:
+            if ws_cmd[2] == "start" and not self.status_data["mission"]["recording"]:
                 print("RECORDING START")
 
                 recording_epoch = int(time())
@@ -264,7 +262,7 @@ class Telemetry(Process):
         except IndexError:
             print("Telemetry: Error parsing ws command")
 
-    def parse_replay_payload(self, block_type: int, block_subtype: int, block_contents):
+    def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents):
 
         if block_contents.mission_time > self.status_data["rocket"]["last_mission_time"]:
             self.status_data["rocket"]["last_mission_time"] = block_contents.mission_time
@@ -276,9 +274,7 @@ class Telemetry(Process):
 
         print(block_contents)
 
-        self.update_websocket()
-
-    def parse_rn2483_payload(self, data: str):
+    def parse_rn2483_transmission(self, data: str):
 
         # Extract the packet header
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
@@ -307,17 +303,11 @@ class Telemetry(Process):
             payload = bytes.fromhex(blocks[8: 8 + block_len])
 
             if self.status_data["mission"]["recording"]:
-                # offset = int(time.time() * 1000) - self.status_data["recording_epoch"]
                 with open(f'{self.mission_path}', 'a') as mission:
                     mission.write(f"{block_type},{block_subtype},{payload.hex()}\n")
 
-            block_contents = DataBlock.parse(DataBlockSubtype(block_subtype), payload)
-            if block_contents.mission_time > self.status_data["rocket"]["last_mission_time"]:
-                self.status_data["rocket"]["last_mission_time"] = block_contents.mission_time
-
-            self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_contents)
-
-            print(block_contents)
+            block_data = DataBlock.parse(DataBlockSubtype(block_subtype), payload)
+            self.parse_rn2483_payload(block_type, block_subtype, block_data)
 
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[8 + block_len:]

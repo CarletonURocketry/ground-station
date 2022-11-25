@@ -16,7 +16,6 @@
             "connected_port": ""
         },
         "rocket": {
-            "call_sign": "Missile",
             "kx134_state": -1,
             "altimeter_state": -1,
             "imu_state": -1,

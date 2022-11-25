@@ -7,7 +7,7 @@
 
 from time import time, sleep
 import csv
-from multiprocessing import Process, Queue
+from multiprocessing import Queue
 
 from pathlib import Path
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
