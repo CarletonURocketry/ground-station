@@ -330,6 +330,7 @@ class StatusDataBlock(DataBlock):
 #
 class AltitudeDataBlock(DataBlock):
     def __init__(self, mission_time, pressure, temperature, altitude):
+        super().__init__()
         self.mission_time = mission_time
         self.pressure = pressure
         self.temperature = temperature
@@ -373,6 +374,7 @@ class AltitudeDataBlock(DataBlock):
 #
 class AccelerationDataBlock(DataBlock):
     def __init__(self, mission_time, fsr, x, y, z):
+        super().__init__()
         self.mission_time = mission_time
         self.fsr = fsr
         self.x = x
@@ -423,6 +425,7 @@ class AccelerationDataBlock(DataBlock):
 #
 class AngularVelocityDataBlock(DataBlock):
     def __init__(self, mission_time, fsr, x, y, z):
+        super().__init__()
         self.mission_time = mission_time
         self.fsr = fsr
         self.x = x
@@ -479,8 +482,9 @@ class GNSSLocationFixType(IntEnum):
 
 
 class GNSSLocationBlock(DataBlock):
-    def __init__(self, mission_time, latitude, longitude, utc_time, altitude, speed, course, pdop,
-                 hdop, vdop, sats, fix_type):
+    def __init__(self, mission_time, latitude, longitude, utc_time, altitude, speed, course, pdop, hdop, vdop, sats,
+                 fix_type):
+        super().__init__()
         self.mission_time = mission_time
         self.latitude = latitude
         self.longitude = longitude
@@ -630,6 +634,7 @@ class GNSSSatInfo:
 
 class GNSSMetadataBlock(DataBlock):
     def __init__(self, mission_time, gps_sats_in_use, glonass_sats_in_use, sats_in_view):
+        super().__init__()
         self.mission_time = mission_time
         self.gps_sats_in_use = gps_sats_in_use
         self.glonass_sats_in_use = glonass_sats_in_use
@@ -651,20 +656,20 @@ class GNSSMetadataBlock(DataBlock):
     def from_payload(cls, payload):
         parts = struct.unpack("<III", payload[0:12])
 
-        gps_sats_in_use = set()
+        gps_sats_in_use = list()
         for i in range(32):
             if parts[1] & (1 << i):
-                gps_sats_in_use.add(i + GNSSSatInfo.GPS_SV_OFFSET)
+                gps_sats_in_use.append(i + GNSSSatInfo.GPS_SV_OFFSET)
 
-        glonass_sats_in_use = set()
+        glonass_sats_in_use = list()
         for i in range(32):
             if parts[1] & (1 << i):
-                glonass_sats_in_use.add(i + GNSSSatInfo.GLONASS_SV_OFFSET)
+                glonass_sats_in_use.append(i + GNSSSatInfo.GLONASS_SV_OFFSET)
 
-        sats_in_view = set()
+        sats_in_view = list()
         offset = 12
         while offset < len(payload):
-            sats_in_view.add(str(GNSSSatInfo.from_bytes(payload[offset:offset + 4])))
+            sats_in_view.append(dict(GNSSSatInfo.from_bytes(payload[offset:offset + 4])))
             offset += 4
 
         return GNSSMetadataBlock(parts[0], gps_sats_in_use, glonass_sats_in_use, sats_in_view)
@@ -698,12 +703,11 @@ class GNSSMetadataBlock(DataBlock):
         yield "mission_time", self.mission_time
         yield "gps_sats_in_use", list(self.gps_sats_in_use)
         yield "glonass_sats_in_use", list(self.glonass_sats_in_use)
-        # THIS GIVES SO MUCH INFO
-        #yield "sats_in_view", list(self.sats_in_view)
+        yield "sats_in_view", list(self.sats_in_view)
 
 
 #
-#   KX134-1211 Acceleromter Data
+#   KX134-1211 Accelerometer Data
 #
 class KX134ODR(IntEnum):
     ODR_781 = 0
@@ -785,6 +789,7 @@ class KX134AccelerometerDataBlock(DataBlock):
     TYPE_DESC = "KX134 Accelerometer Data"
 
     def __init__(self, mission_time, odr, accel_range, rolloff, resolution, samples):
+        super().__init__()
         self.mission_time = mission_time
         self.odr = odr
         self.accel_range = accel_range
@@ -1133,8 +1138,8 @@ class MPU9250Sample:
 class MPU9250IMUDataBlock(DataBlock):
     TYPE_DESC = "MPU9250 IMU Data"
 
-    def __init__(self, mission_time, ag_sample_rate, mag_sample_rate, accel_fsr,
-                 gyro_fsr, accel_bw, gyro_bw, samples):
+    def __init__(self, mission_time, ag_sample_rate, mag_sample_rate, accel_fsr, gyro_fsr, accel_bw, gyro_bw, samples):
+        super().__init__()
         self.mission_time = mission_time
         self.ag_sample_rate = ag_sample_rate
         self.mag_sample_rate = mag_sample_rate

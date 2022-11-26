@@ -39,7 +39,6 @@ class TelemetryReplay:
             if not self.replay_input.empty():
                 self.parseInputCommand(self.replay_input.get())
 
-
     def parseInputCommand(self, data):
         split = data.split(" ")
         match split[0]:
@@ -52,7 +51,6 @@ class TelemetryReplay:
         row = next(mission_reader)
 
         if mission_reader.line_num == 1:
-            print(f"FILE TYPE {row[0]}. MISSION EPOCH {row[1]}")
             self.mission_start = row[1]
         else:
             block_type, block_subtype, block_payload = int(row[0]), int(row[1]), bytes.fromhex(row[2])
@@ -69,11 +67,10 @@ class TelemetryReplay:
 
                 if self.total_offset < block_time:
                     next_block_wait = (block_time - self.total_offset) / self.speed
-                    print(f"Sleeping {int(next_block_wait)} milliseconds until next block is time")
+                    # print(f"Sleeping {int(next_block_wait)} milliseconds until next block is time")
                     sleep(next_block_wait / 1000)
 
                 self.outputReplay(block_type, block_subtype, block_data)
-
 
     def outputReplay(self, block_type, block_subtype, block_data):
         replay_data = (block_type, block_subtype, block_data)
