@@ -18,7 +18,7 @@ def printCURocket(rocket_name, version, author):
     |/   ( | )   \|
         ((   ))
        ((  :  ))            CU InSpace Avionics Ground Station
-       ((  :  ))            {f"Rocket": <10}{rocket_name}
-        ((   ))             {f"Version": <10}{version}
-          ( )               {f"Author": <10}{author}
+       ((  :  ))            {f"Rocket": <11}{rocket_name}
+        ((   ))             {f"Version": <11}{version}
+          ( )               {f"Author": <11}{author}
               """)

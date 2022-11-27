@@ -32,7 +32,7 @@ class ShutdownException(Exception):
 
 
 def main():
-    printCURocket("It was Avionics’ Fault", "0.4.2-DEV", "Thomas Selwyn (Devil)")
+    printCURocket("It was Avionics’ Fault", "0.4.3-DEV", "Thomas Selwyn (Devil)")
 
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
@@ -79,12 +79,6 @@ def parse_ws_command(ws_cmd: str):
     ws_cmd = sub(r"[^0-9a-zA-Z_./\s-]+", "", ws_cmd).split(" ")
 
     try:
-        # WebSocket Command Aliases
-        if ws_cmd[0] == "connect" or ws_cmd[0] == "disconnect":
-            ws_cmd = ["serial", "rn2483_radio"] + ws_cmd
-        elif ws_cmd[0] == "update":
-            ws_cmd = ["telemetry"] + ws_cmd
-
         match ws_cmd[0].lower():
             case "serial":
                 serial_ws_commands.put(ws_cmd)
@@ -93,8 +87,7 @@ def parse_ws_command(ws_cmd: str):
             case "shutdown":
                 raise ShutdownException
             case _:
-                print("WS: Invalid command type")
-                print(ws_cmd)
+                print(f"WS: Invalid command. {ws_cmd}")
 
     except IndexError:
         print("WS: Error parsing command")

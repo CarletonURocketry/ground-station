@@ -17,8 +17,6 @@
             var lat = document.getElementById("lat");
             var long = document.getElementById("long");
 
-
-
             ws = new WebSocket("ws://localhost:33845/websocket");
             ws.onopen = function(){
                 server_status.innerHTML = "<<< Server Connected";
