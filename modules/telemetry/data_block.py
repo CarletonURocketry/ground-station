@@ -34,6 +34,23 @@ class DataBlockSubtype(IntEnum):
     KX134_1211_ACCEL = 0x0b
 
 
+class DeviceAddress(IntEnum):
+    GROUND_STATION = 0x0,
+    ROCKET = 0x1,
+    MULTICAST = 0xF,
+
+    def __str__(self):
+        match self:
+            case DeviceAddress.GROUND_STATION:
+                return "GROUND STATION"
+            case DeviceAddress.ROCKET:
+                return "ROCKET"
+            case DeviceAddress.MULTICAST:
+                return "MULTICAST"
+            case _:
+                return "UNKNOWN"
+
+
 class DataBlock(ABC):
 
     def __init__(self):

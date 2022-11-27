@@ -9,7 +9,7 @@ import time
 from struct import unpack
 from time import sleep, time
 from pathlib import Path
-from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState
+from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState, DeviceAddress
 from modules.telemetry.replay import TelemetryReplay
 from multiprocessing import Queue, Process, Value
 from multiprocessing.shared_memory import ShareableList
@@ -309,7 +309,8 @@ class Telemetry(Process):
         blocks = data[24:]  # Remove the packet header
 
         print("-----" * 20)
-        print(f'Rocket - {bytes.fromhex(call_sign).decode("utf-8")} - sent you a packet:')
+        #print(f'{DeviceAddress(srs_addr)} - {call_sign} - sent you a packet:')
+        print(f"{call_sign} - sent you a packet")
 
         # Parse through all blocks
         while blocks != '':
@@ -328,7 +329,7 @@ class Telemetry(Process):
 
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[8 + block_len:]
-        print("-----" * 20)
+        print(f"-----" * 20)
 
     def parse_status(self, data: StatusDataBlock):
         self.status_data["rocket"]["mission_time"] = data.mission_time
@@ -359,14 +360,15 @@ def _parse_packet_header(header) -> tuple:
     """
     Returns the packet header string's informational components in a tuple.
 
+    call_sign: str
     length: int
     version: int
     src_addr: int
     packet_num: int
     """
 
-    # Extract call sign in hex
-    call_sign: str = header[0:12]
+    # Extract call sign in utf-8
+    call_sign: str = bytes.fromhex(header[0:12]).decode("utf-8")
 
     # Convert header from hex to binary
     header = bin(int(header, 16))
@@ -394,7 +396,7 @@ def _parse_block_header(header) -> tuple:
     header = unpack('<I', bytes.fromhex(header))
 
     block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
-    crypto_signature = ((header[0] >> 5) & 0x1)
+    crypto_signature = bool((header[0] >> 5) & 0x1)
     message_type = ((header[0] >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
     message_subtype = ((header[0] >> 10) & 0x3f)
     destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
