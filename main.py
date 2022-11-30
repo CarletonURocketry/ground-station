@@ -32,7 +32,7 @@ class ShutdownException(Exception):
 
 
 def main():
-    printCURocket("It was Avionics’ Fault", "0.4.3-DEV", "Thomas Selwyn (Devil)")
+    printCURocket("It was Avionics’ Fault", "0.4.4-DEV", "Thomas Selwyn (Devil)")
 
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART

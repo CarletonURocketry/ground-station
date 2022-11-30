@@ -9,7 +9,9 @@ import time
 from struct import unpack
 from time import sleep, time
 from pathlib import Path
-from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState, DeviceAddress
+
+from modules.telemetry.block import DeviceAddress, BlockTypes
+from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState
 from modules.telemetry.replay import TelemetryReplay
 from multiprocessing import Queue, Process, Value
 from multiprocessing.shared_memory import ShareableList
@@ -141,7 +143,7 @@ class Telemetry(Process):
         self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports, True)
 
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.4.3", "org": "CU InSpace",
+        return {"version": "0.4.4-DEV", "org": "CU InSpace",
                 "status": self.generate_status_data(),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
                 "replay": self.generate_replay_response()}
@@ -270,8 +272,8 @@ class Telemetry(Process):
         # Working with hex strings until this point.
         # Hex/Bytes Demarcation point
         block_contents = bytes.fromhex(block_contents)
-        match block_type:
-            case 0:
+        match BlockTypes(block_type):
+            case BlockTypes.CONTROL:
                 # CONTROL BLOCK DETECTED
                 # TODO Make a separate serial output just for signal data
                 print("CONTROL BLOCK")
@@ -279,10 +281,10 @@ class Telemetry(Process):
                 # snr = self._read_ser();
                 self.replay_input.put("radio get rssi")
                 # rssi = self._read_ser()
-            case 1:
+            case BlockTypes.COMMAND:
                 # COMMAND BLOCK DETECTED
                 print("Command block")
-            case 2:
+            case BlockTypes.DATA:
                 # DATA BLOCK DETECTED
                 block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
                 print(block_data)
