@@ -1,16 +1,16 @@
-def printCURocket(call_sign, version, status):
+def printCURocket(rocket_name, version, author):
     print(fr"""
            ^
           / \
          /___\
-        |=   =|
-        |     |
-        | C U |
-        | I N |
-        |Space|
-        |     |
-        |     |
-       /|##!##|\
+        |=   =|              |\___/|
+        |     |             /       \
+        | C U |             |    /\__/|
+        | I N |             ||\  <.><.>
+        |Space|             | _     > )
+        |     |             \   /----
+        |     |              |   -\/
+       /|##!##|\             /     \
       / |##!##| \
      /  |##!##|  \
     |  / ^ | ^ \  |
@@ -18,7 +18,7 @@ def printCURocket(call_sign, version, status):
     |/   ( | )   \|
         ((   ))
        ((  :  ))            CU InSpace Avionics Ground Station
-       ((  :  ))            Call sign  {call_sign}
-        ((   ))             Version    {version}
-          ( )               Status     {status}
+       ((  :  ))            {f"Rocket": <11}{rocket_name}
+        ((   ))             {f"Version": <11}{version}
+          ( )               {f"Author": <11}{author}
               """)

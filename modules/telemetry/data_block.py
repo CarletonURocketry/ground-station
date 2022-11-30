@@ -34,7 +34,28 @@ class DataBlockSubtype(IntEnum):
     KX134_1211_ACCEL = 0x0b
 
 
+class DeviceAddress(IntEnum):
+    GROUND_STATION = 0x0,
+    ROCKET = 0x1,
+    MULTICAST = 0xF,
+
+    def __str__(self):
+        match self:
+            case DeviceAddress.GROUND_STATION:
+                return "GROUND STATION"
+            case DeviceAddress.ROCKET:
+                return "ROCKET"
+            case DeviceAddress.MULTICAST:
+                return "MULTICAST"
+            case _:
+                return "UNKNOWN"
+
+
 class DataBlock(ABC):
+
+    def __init__(self):
+        self.mission_time = None
+
     @property
     @abstractmethod
     def length(self):
@@ -81,12 +102,19 @@ class DataBlock(ABC):
 
         raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype}")
 
+    def __str__(self):
+        return ""
+
+    def __iter__(self):
+        yield ""
+
 
 #
 #   Debug Message
 #
 class DebugMessageDataBlock(DataBlock):
     def __init__(self, mission_time, debug_msg):
+        super().__init__()
         self.mission_time = mission_time
         self.debug_msg = debug_msg
 
@@ -122,12 +150,13 @@ class DebugMessageDataBlock(DataBlock):
 
 class StartupMessageDataBlock(DataBlock):
     def __init__(self, mission_time, startup_msg):
+        super().__init__()
         self.mission_time = mission_time
-        self.msg = startup_msg
+        self.startup_msg = startup_msg
 
     @property
     def length(self):
-        return ((len(self.msg.encode('utf-8')) + 3) & ~0x3) + 4
+        return ((len(self.startup_msg.encode('utf-8')) + 3) & ~0x3) + 4
 
     @property
     def subtype(self):
@@ -143,16 +172,16 @@ class StartupMessageDataBlock(DataBlock):
         return StartupMessageDataBlock(mission_time, payload[4:].decode('utf-8'))
 
     def to_payload(self):
-        b = self.msg.encode('utf-8')
+        b = self.startup_msg.encode('utf-8')
         b = b + (b'\x00' * (((len(b) + 3) & ~0x3) - len(b)))
         return struct.pack("<I", self.mission_time) + b
 
     def __str__(self):
-        return f"{self.type_desc()} -> mission_time: {self.mission_time}, message: \"{self.msg}\""
+        return f"{self.type_desc()} -> mission_time: {self.mission_time}, message: \"{self.startup_msg}\""
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "message", self.msg
+        yield "message", self.startup_msg
 
 
 #
@@ -232,8 +261,9 @@ class DeploymentState(IntEnum):
 
 
 class StatusDataBlock(DataBlock):
-    def __init__(self, mission_time, kx134_state, alt_state, imu_state, sd_state,
-                 deployment_state, sd_blocks_recorded, sd_checkouts_missed):
+    def __init__(self, mission_time, kx134_state, alt_state, imu_state, sd_state, deployment_state, sd_blocks_recorded,
+                 sd_checkouts_missed):
+        super().__init__()
         self.mission_time = mission_time
         self.kx134_state = kx134_state
         self.alt_state = alt_state
@@ -298,7 +328,7 @@ class StatusDataBlock(DataBlock):
                            self.sd_checkouts_missed)
 
     def __str__(self):
-        return (f"{self.type_desc()} -> mission_time: {self.mission_time}, kx_134 state: "
+        return (f"{self.type_desc()} -> mission_time: {self.mission_time}, kx134 state: "
                 f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
                 f"IMU state: {str(self.imu_state)}, SD driver state: {str(self.sd_state)}, "
                 f"deployment state: {str(self.deployment_state)}, blocks recorded: "
@@ -306,7 +336,7 @@ class StatusDataBlock(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "kx_134", self.kx134_state
+        yield "kx134_state", self.kx134_state
         yield "altimeter_state", self.alt_state
         yield "imu_state", self.imu_state
         yield "sd_driver_state", self.sd_state
@@ -320,6 +350,7 @@ class StatusDataBlock(DataBlock):
 #
 class AltitudeDataBlock(DataBlock):
     def __init__(self, mission_time, pressure, temperature, altitude):
+        super().__init__()
         self.mission_time = mission_time
         self.pressure = pressure
         self.temperature = temperature
@@ -363,6 +394,7 @@ class AltitudeDataBlock(DataBlock):
 #
 class AccelerationDataBlock(DataBlock):
     def __init__(self, mission_time, fsr, x, y, z):
+        super().__init__()
         self.mission_time = mission_time
         self.fsr = fsr
         self.x = x
@@ -413,6 +445,7 @@ class AccelerationDataBlock(DataBlock):
 #
 class AngularVelocityDataBlock(DataBlock):
     def __init__(self, mission_time, fsr, x, y, z):
+        super().__init__()
         self.mission_time = mission_time
         self.fsr = fsr
         self.x = x
@@ -469,8 +502,9 @@ class GNSSLocationFixType(IntEnum):
 
 
 class GNSSLocationBlock(DataBlock):
-    def __init__(self, mission_time, latitude, longitude, utc_time, altitude, speed, course, pdop,
-                 hdop, vdop, sats, fix_type):
+    def __init__(self, mission_time, latitude, longitude, utc_time, altitude, speed, course, pdop, hdop, vdop, sats,
+                 fix_type):
+        super().__init__()
         self.mission_time = mission_time
         self.latitude = latitude
         self.longitude = longitude
@@ -535,16 +569,15 @@ class GNSSLocationBlock(DataBlock):
 
     def __str__(self):
         return (f"{self.type_desc()} -> time: {self.mission_time}, position: "
-                f"{GNSSLocationBlock.coord_to_str(self.latitude)} "
-                f"{GNSSLocationBlock.coord_to_str(self.longitude, ew=True)}, utc time: "
+                f"{(self.latitude / 600000)} {(self.longitude / 600000)}, utc time: "
                 f"{self.utc_time}, altitude: {self.altitude} m, speed: {self.speed} knots, "
                 f"course: {self.course}°, pdop: {self.pdop}, hdop: {self.hdop}, vdop: "
                 f"{self.vdop}, sats in use: {self.sats}, type: {self.fix_type.name}")
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "position", {"latitude": GNSSLocationBlock.coord_to_str(self.latitude),
-                           "longitude": GNSSLocationBlock.coord_to_str(self.longitude, ew=True)}
+        yield "position", {"latitude": (self.latitude / 600000),
+                           "longitude": (self.longitude / 600000)}
         yield "utc_time", self.utc_time
         yield "altitude", self.altitude
         yield "speed", self.speed
@@ -552,7 +585,7 @@ class GNSSLocationBlock(DataBlock):
         yield "pdop", self.pdop
         yield "hdop", self.hdop
         yield "vdop", self.vdop
-        yield "sats in use", self.sats
+        yield "sats_in_use", self.sats
         yield "type", self.fix_type.name
 
 
@@ -620,6 +653,7 @@ class GNSSSatInfo:
 
 class GNSSMetadataBlock(DataBlock):
     def __init__(self, mission_time, gps_sats_in_use, glonass_sats_in_use, sats_in_view):
+        super().__init__()
         self.mission_time = mission_time
         self.gps_sats_in_use = gps_sats_in_use
         self.glonass_sats_in_use = glonass_sats_in_use
@@ -641,15 +675,15 @@ class GNSSMetadataBlock(DataBlock):
     def from_payload(cls, payload):
         parts = struct.unpack("<III", payload[0:12])
 
-        gps_sats_in_use = set()
+        gps_sats_in_use = list()
         for i in range(32):
             if parts[1] & (1 << i):
-                gps_sats_in_use.add(i + GNSSSatInfo.GPS_SV_OFFSET)
+                gps_sats_in_use.append(i + GNSSSatInfo.GPS_SV_OFFSET)
 
-        glonass_sats_in_use = set()
+        glonass_sats_in_use = list()
         for i in range(32):
             if parts[1] & (1 << i):
-                glonass_sats_in_use.add(i + GNSSSatInfo.GLONASS_SV_OFFSET)
+                glonass_sats_in_use.append(i + GNSSSatInfo.GLONASS_SV_OFFSET)
 
         sats_in_view = list()
         offset = 12
@@ -681,18 +715,18 @@ class GNSSMetadataBlock(DataBlock):
              f"{self.gps_sats_in_use}, GLONASS sats in use: {self.glonass_sats_in_use}\nSats in "
              f"view:")
         for sat in self.sats_in_view:
-            s += f"\n\t{sat}"
+            s += f"\n\t{str(sat)} " if dict(sat)["snr"] != 0 else ""
         return s
 
     def __iter__(self):
         yield "mission_time", self.mission_time
         yield "gps_sats_in_use", self.gps_sats_in_use
         yield "glonass_sats_in_use", self.glonass_sats_in_use
-        yield "sats_in_view", self.sats_in_view
+        yield "sats_in_view", [dict(sat) for sat in self.sats_in_view if dict(sat)["snr"] != 0]
 
 
 #
-#   KX134-1211 Acceleromter Data
+#   KX134-1211 Accelerometer Data
 #
 class KX134ODR(IntEnum):
     ODR_781 = 0
@@ -729,8 +763,6 @@ class KX134Range(IntEnum):
     @property
     def acceleration(self):
         match self:
-            case KX134Range.ACCEL_8G:
-                return 8
             case KX134Range.ACCEL_8G:
                 return 8
             case KX134Range.ACCEL_16G:
@@ -774,6 +806,7 @@ class KX134AccelerometerDataBlock(DataBlock):
     TYPE_DESC = "KX134 Accelerometer Data"
 
     def __init__(self, mission_time, odr, accel_range, rolloff, resolution, samples):
+        super().__init__()
         self.mission_time = mission_time
         self.odr = odr
         self.accel_range = accel_range
@@ -1056,11 +1089,12 @@ class MPU9250MagResolution(IntEnum):
 
 
 class MPU9250Sample:
-    def __init__(self, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z, mag_x,
-                 mag_y, mag_z, mag_ovf, mag_res, temperature):
+    def __init__(self, accel_x, accel_y, accel_z, temperature, gyro_x, gyro_y, gyro_z, mag_x,
+                 mag_y, mag_z, mag_ovf, mag_res):
         self.accel_x = accel_x
         self.accel_y = accel_y
         self.accel_z = accel_z
+        self.temperature = temperature
         self.gyro_x = gyro_x
         self.gyro_y = gyro_y
         self.gyro_z = gyro_z
@@ -1069,7 +1103,6 @@ class MPU9250Sample:
         self.mag_z = mag_z
         self.mag_ovf = mag_ovf
         self.mag_res = mag_res
-        self.temperature = temperature
 
     @classmethod
     def from_bytes(cls, payload, accel_sense, gyro_sense):
@@ -1093,8 +1126,8 @@ class MPU9250Sample:
         mag_y = mag_parts[1] / mag_res.sensitivity
         mag_z = mag_parts[2] / mag_res.sensitivity
 
-        return MPU9250Sample(accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z,
-                             mag_x, mag_y, mag_z, mag_ovf, mag_res, temperature)
+        return MPU9250Sample(accel_x, accel_y, accel_z, temperature, gyro_x, gyro_y, gyro_z,
+                             mag_x, mag_y, mag_z, mag_ovf, mag_res)
 
     def to_bytes(self, accel_sense, gyro_sense):
         accel_x = int(self.accel_x * accel_sense)
@@ -1118,12 +1151,26 @@ class MPU9250Sample:
 
         return ag_bytes + mag_bytes
 
+    def __iter__(self):
+        yield "accel_x", self.accel_x
+        yield "accel_y", self.accel_y
+        yield "accel_z", self.accel_z
+        yield "temperature", self.temperature
+        yield "gyro_x", self.gyro_x
+        yield "gyro_y", self.gyro_y
+        yield "gyro_z", self.gyro_z
+        yield "mag_x", self.mag_x
+        yield "mag_y", self.mag_y
+        yield "mag_z", self.mag_z
+        yield "mag_ovf", self.mag_ovf
+        yield "mag_res", self.mag_res
+
 
 class MPU9250IMUDataBlock(DataBlock):
     TYPE_DESC = "MPU9250 IMU Data"
 
-    def __init__(self, mission_time, ag_sample_rate, mag_sample_rate, accel_fsr,
-                 gyro_fsr, accel_bw, gyro_bw, samples):
+    def __init__(self, mission_time, ag_sample_rate, mag_sample_rate, accel_fsr, gyro_fsr, accel_bw, gyro_bw, samples):
+        super().__init__()
         self.mission_time = mission_time
         self.ag_sample_rate = ag_sample_rate
         self.mag_sample_rate = mag_sample_rate

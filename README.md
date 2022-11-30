@@ -7,4 +7,6 @@ This program needs
 - pySerial
 - Tornado
 
+The ground station requires a minimum version of Python v3.10.
+
 This code follows MIT License. Please read the LICENSE file for more information.

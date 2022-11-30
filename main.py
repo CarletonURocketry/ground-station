@@ -23,8 +23,8 @@ serial_ws_commands = Queue()
 telemetry_ws_commands = Queue()
 
 serial_connected = Value('i', 0)
-serial_connected_port = ShareableList([""])
-serial_ports = ShareableList([""] * 8)
+serial_connected_port = ShareableList([" " * 256])
+serial_ports = ShareableList([" " * 256] * 8)
 
 
 class ShutdownException(Exception):
@@ -32,7 +32,7 @@ class ShutdownException(Exception):
 
 
 def main():
-    printCURocket("Not a missile", "Lethal", "POWERED ASCENT")
+    printCURocket("It was Avionics’ Fault", "0.4.3-DEV", "Thomas Selwyn (Devil)")
 
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
@@ -41,16 +41,16 @@ def main():
                      args=(serial_connected, serial_connected_port, serial_ports,
                            serial_ws_commands, rn2483_radio_input, rn2483_radio_payloads))
     serial.start()
-    print(f"{'Serial':.<14} started")
+    print(f"{'Serial':.<15} started")
 
     # Initialize Telemetry to parse radio packets, keep history and to log everything
     # Incoming information comes from rn2483_radio_payloads in payload format
     # Outputs information to telemetry_json_output in friendly json for UI
     telemetry = Process(target=Telemetry,
                         args=(serial_connected, serial_connected_port, serial_ports,
-                              rn2483_radio_payloads, telemetry_json_output, telemetry_ws_commands), daemon=True)
+                              rn2483_radio_payloads, telemetry_json_output, telemetry_ws_commands))
     telemetry.start()
-    print(f"{'Telemetry':.<14} started")
+    print(f"{'Telemetry':.<15} started")
 
     # Initialize Tornado websocket for UI communication
     # This is PURELY a pass through of data for connectivity. No format conversion is done here.
@@ -58,7 +58,7 @@ def main():
     # Outputs information to connected websocket clients
     websocket = Process(target=WebSocketHandler, args=(telemetry_json_output, ws_commands), daemon=True)
     websocket.start()
-    print(f"{'WebSocket':.<14} started")
+    print(f"{'WebSocket':.<15} started")
 
     while True:
         # WS Commands have been sent to main process for handling
@@ -76,15 +76,9 @@ def main():
 
 def parse_ws_command(ws_cmd: str):
     # Remove special characters
-    ws_cmd = sub(r"[^0-9a-zA-Z_\s]+", "", ws_cmd).split(" ")
+    ws_cmd = sub(r"[^0-9a-zA-Z_./\s-]+", "", ws_cmd).split(" ")
 
     try:
-        # WebSocket Command Aliases
-        if ws_cmd[0] == "connect" or ws_cmd[0] == "disconnect":
-            ws_cmd = ["serial", "rn2483_radio"] + ws_cmd
-        elif ws_cmd[0] == "update":
-            ws_cmd = ["telemetry"] + ws_cmd
-
         match ws_cmd[0].lower():
             case "serial":
                 serial_ws_commands.put(ws_cmd)
@@ -93,7 +87,7 @@ def parse_ws_command(ws_cmd: str):
             case "shutdown":
                 raise ShutdownException
             case _:
-                print("WS: Invalid command type")
+                print(f"WS: Invalid command. {ws_cmd}")
 
     except IndexError:
         print("WS: Error parsing command")

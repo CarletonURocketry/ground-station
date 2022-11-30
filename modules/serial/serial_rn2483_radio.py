@@ -127,7 +127,7 @@ class SerialRN2483Radio(Process):
         # set the frequency of the radio (Hz)
         self.set_freq(433050000)
 
-        # set the transmission power to 15 db (max POWARRRR)
+        # set the transmission power to 14 dBm
         self.set_pwr(14)
 
         # set the transmission spreading factor. The higher the spreading factor,

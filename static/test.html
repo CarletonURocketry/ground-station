@@ -12,22 +12,30 @@
             var temperature = document.getElementById("temperature");
             var rocket_status = document.getElementById("rocket_status");
             var server_status = document.getElementById("serverstatus");
+            var mission_time = document.getElementById("mission_time")
+            var speed = document.getElementById("speed");
+            var lat = document.getElementById("lat");
+            var long = document.getElementById("long");
 
             ws = new WebSocket("ws://localhost:33845/websocket");
             ws.onopen = function(){
                 server_status.innerHTML = "<<< Server Connected";
             };
             ws.onmessage = function(e){
-                updatedata = JSON.parse(e.data);
-                rocket_status.innerHTML = "Rocket Status " + updatedata.status.rocket.status.status_name
                 // Log all websocket data streams
                 // msglog.innerHTML = msglog.innerHTML + "<br><<< Received data: " + e.data
+
+                updatedata = JSON.parse(e.data);
                 msglog.innerHTML = "<br>>>> Received data: " + e.data;
 
+                rocket_status.innerHTML = "Rocket State " + updatedata.status.rocket.deployment_state_text
+                mission_time.innerHTML = "Time " + updatedata.status.rocket.last_mission_time + " ms";
+                speed.innerHTML = "Speed " + updatedata.telemetry_data.gnss.speed + " knots";
+                lat.innerHTML = "Lat " + updatedata.telemetry_data.gnss.position.latitude;
+                long.innerHTML = "Long " + updatedata.telemetry_data.gnss.position.longitude;
+                temperature.innerHTML = "Temp " + updatedata.telemetry_data.altitude.temperature.celsius + " *C";
+                altitude.innerHTML = "Altitude " + updatedata.telemetry_data.altitude.altitude.feet + " ft";
 
-                var ALT = updatedata.telemetry_data.altitude
-                altitude.innerHTML = "Altitude " + ALT.altitude.feet + " ft";
-                temperature.innerHTML = "Temp " + ALT.temperature.celsius + " *C";
 
 
             };
@@ -53,7 +61,11 @@
         <input type="text" name="message" value="" id="message">
         <input type="submit" name="submit" value="Send" id="submit">
     </form>
-    <div id="rocket_status">Rocket Status IDLE</div>
+    <div id="rocket_status">Rocket State IDLE</div>
+    <div id="mission_time">Time 0 ms </div>
+    <div id="speed">Speed 0 knots </div>
+    <div id="lat">Lat 0 </div>
+    <div id="long">Long 0 </div>
     <div id="temperature">Temp 0 *C </div>
     <div id="altitude">Altitude 000 ft</div>
     <div id="msglog"><br>>>> No data received</div>

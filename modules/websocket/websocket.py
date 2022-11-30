@@ -27,11 +27,12 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     def open(self):
         TornadoWSServer.clients.add(self)
+        self.send_message(self.last_msg_send)
         print(f"WebSocket: Client connected")
-        #print(self.request)
 
     def on_close(self):
         TornadoWSServer.clients.remove(self)
+        print(f"WebSocket: Client disconnected")
 
     def on_message(self, message):
         ws_commands_queue.put(message)
@@ -60,7 +61,7 @@ class WebSocketHandler(Process):
         ws_commands_queue = ws_commands
 
         # Default to test mode
-        ws_commands_queue.put("serial rn2483_radio connect test")
+        #ws_commands_queue.put("serial rn2483_radio connect test")
 
         self.startWSS()
 
