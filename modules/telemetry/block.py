@@ -45,7 +45,7 @@ class ControlBlockSubtype(IntEnum):
 
 
 class CommandBlockSubtype(IntEnum):
-    RESET_ROCKET_AVIONICS = 0x01
+    RESET_ROCKET_AVIONICS = 0x00
     REQUEST_TELEMETRY_DATA = 0x01
     DEPLOY_PARACHUTE = 0x02
     TARE_SENSORS = 0x03
