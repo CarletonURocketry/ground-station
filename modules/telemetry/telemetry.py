@@ -143,7 +143,7 @@ class Telemetry(Process):
         self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports, True)
 
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.4.4-DEV", "org": "CU InSpace",
+        return {"version": "0.4.4-DEV", "org": "CUInSpace",
                 "status": self.generate_status_data(),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
                 "replay": self.generate_replay_response()}
