@@ -37,16 +37,13 @@ class SerialRN2483Radio(Process):
             try:
                 # initiate the USB serial connection
                 print(f"RN2483 Radio: Connecting to {self.serial_port}")
+                # Settings matched to RN2483 Transceiver Data Sheet's default UART settings
                 self.ser = Serial(port=self.serial_port,
                                   timeout=1,
                                   baudrate=57600,
-                                  # number of bits per message
                                   bytesize=EIGHTBITS,
-                                  # set parity check: no parity
                                   parity=PARITY_NONE,
-                                  # number of stop bits
                                   stopbits=1,
-                                  # disable hardware (RTS/CTS) flow control
                                   rtscts=False)
                 print(f"RN2483 Radio: Connected to {self.serial_port}")
                 self.serial_connected.value = True
@@ -57,7 +54,9 @@ class SerialRN2483Radio(Process):
 
                 while True:
                     while not self.rn2483_radio_input.empty():
-                        print(self.rn2483_radio_input.get())
+                        self.write_to_rn2483_radio(self.rn2483_radio_input.get())
+                        self.set_rx_mode()
+                        # FUTURE TO DO LIMIT TO ONLY AFTER THE ENTIRE BATCH IS DONE.
                         # AFTER SENDING A COMMAND TO RADIO RECALL SET_RX_MODE()
 
                     self.check_for_transmissions()
@@ -127,8 +126,8 @@ class SerialRN2483Radio(Process):
         # set the frequency of the radio (Hz)
         self.set_freq(433050000)
 
-        # set the transmission power to 14 dBm
-        self.set_pwr(14)
+        # set the transmission power state to 15. (15th TX Power state is 13.6dBm on the 433 MHz band)
+        self.set_pwr(15)
 
         # set the transmission spreading factor. The higher the spreading factor,
         # the slower the transmissions (symbols are spread out more) and the better
@@ -234,10 +233,9 @@ class SerialRN2483Radio(Process):
             print('error setting modulation: either use fsk or lora')
 
     def set_pwr(self, pwr):
-        """ set power possible values between -3 and 14 db"""
-        # TODO: FIGURE OUT MAX POWER
+        """ set power state between -3 and 15. The 15th state has an output power of 14.1 dBm for the 868 MHz band
+         and 13.6dBm for the 433 MHz band. """
         if pwr in range(-3, 16):
-
             success = self.write_to_rn2483_radio(f"radio set pwr {pwr}")
             if success:
                 print("value power successfully set")
@@ -367,7 +365,6 @@ class SerialRN2483Radio(Process):
         # if radio has not been put into rx mode
         if not success:
             print('error putting radio into rx mode')
-            # self.ser.close()
 
     def check_for_transmissions(self):
         """checks for new transmissions on the line"""
