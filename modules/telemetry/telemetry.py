@@ -204,6 +204,9 @@ class Telemetry(Process):
                                 self.replay = Process(target=TelemetryReplay,
                                                       args=(self.replay_output, self.replay_input,
                                                             replay_mission_filepath))
+                                # DO NOT REMOVE (SHITTY SOLUTION)
+                                while not self.replay_output.empty():
+                                    x = self.replay_output.get()
                                 self.replay.start()
                             self.replay_data["status"] = "playing"
                             self.status_data["mission"]["state"] = 1
