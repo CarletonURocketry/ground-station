@@ -9,6 +9,7 @@ import time
 from struct import unpack
 from time import sleep, time
 from pathlib import Path
+from modules.telemetry.constants import *
 
 from modules.telemetry.block import DeviceAddress, BlockTypes
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState
@@ -74,7 +75,7 @@ class Telemetry(Process):
                 self.parse_ws_commands(self.telemetry_ws_commands.get())
 
             match self.status_data["mission"]["state"]:
-                case 1:
+                case [REPLAY_STATE]:
                     # REPLAY SYSTEM
                     while not self.replay_output.empty():
                         block_type, block_subtype, block_data = self.replay_output.get()
@@ -143,7 +144,7 @@ class Telemetry(Process):
         self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports, True)
 
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.4.4-DEV", "org": "CUInSpace",
+        return {"version": VERSION, "org": ORG,
                 "status": self.generate_status_data(),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
                 "replay": self.generate_replay_response()}
@@ -154,7 +155,7 @@ class Telemetry(Process):
                 "mission_list": self.replay_data["mission_list"]}
 
     def generate_replay_mission_list(self):
-        return [name.stem for name in self.missions_dir.glob("*.mission") if name.is_file()]
+        return [name.stem for name in self.missions_dir.glob(f"*{MISSION_EXTENSION}") if name.is_file()]
 
     def generate_status_data(self):
         self.status_data["rn2483_radio"]["connected"] = bool(self.serial_connected.value)
@@ -187,60 +188,54 @@ class Telemetry(Process):
         except IndexError:
             print("Telemetry: Error parsing ws command")
 
+    def replay_set_speed(self, speed: float):
+        # Set replay system's playback speed
+
+        speed = 0.0 if speed < 0 else speed
+
+        if speed == 0.0:
+            self.replay_data["status"] = "paused"
+        else:
+            self.replay_data["status"] = "playing"
+
+        self.replay_input.put(f"speed {speed}")
+
     def parse_replay_ws_cmd(self, ws_cmd):
-        try:
-            match ws_cmd[2]:
-                case "play":
-                    if len(ws_cmd) == 3:
-                        self.replay_data["status"] = "playing"
-                        self.replay_input.put("speed 1")
-                    elif len(ws_cmd) > 3:
-                        mission_name = ' '.join(ws_cmd[3:])
-                        if mission_name in self.replay_data["mission_list"]:
-                            self.status_data["mission"]["name"] = mission_name
+        replay_cmd = ws_cmd[2]
+        if replay_cmd == "play" and len(ws_cmd) > 3:
+            mission_name = ' '.join(ws_cmd[3:])
+            if mission_name in self.replay_data["mission_list"]:
+                self.status_data["mission"]["name"] = mission_name
 
-                            replay_mission_filepath = self.missions_dir.joinpath(f"{mission_name}.mission")
-                            if self.replay is None:
-                                self.replay = Process(target=TelemetryReplay,
-                                                      args=(self.replay_output, self.replay_input,
-                                                            replay_mission_filepath))
-                                # DO NOT REMOVE (SHITTY SOLUTION)
-                                while not self.replay_output.empty():
-                                    x = self.replay_output.get()
-                                self.replay.start()
-                            self.replay_data["status"] = "playing"
-                            self.status_data["mission"]["state"] = 1
-                            print(f"REPLAY {mission_name} PLAYING")
-                        else:
-                            print(f"REPLAY {mission_name} DOES NOT EXIST")
+                replay_mission_filepath = self.missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
+                if self.replay is None:
+                    self.replay = Process(target=TelemetryReplay,
+                                          args=(self.replay_output, self.replay_input,
+                                                replay_mission_filepath))
+                    self.replay.start()
+                self.replay_set_speed(speed=1)
+                self.status_data["mission"]["state"] = 1
+                print(f"REPLAY {mission_name} PLAYING")
+            else:
+                print(f"REPLAY {mission_name} DOES NOT EXIST")
+        elif replay_cmd == "play" and len(ws_cmd) == 3:
+            print("REPLAY PLAY")
+            self.replay_set_speed(speed=1)
+        elif replay_cmd == "pause":
+            print("REPLAY PAUSE")
+            self.replay_set_speed(speed=0)
+        elif replay_cmd == "speed":
+            print(f"REPLAY SPEED {ws_cmd[3]}")
+            self.replay_set_speed(speed=ws_cmd[3])
+        elif replay_cmd == "stop":
+            print("REPLAY STOP")
+            self.replay.terminate()
+            self.replay = None
 
-                case "pause":
-                    print("REPLAY PAUSE")
+            self.reset_data()
+            self.replay_output.empty()
 
-                    self.replay_data["speed"] = 0
-                    self.replay_data["status"] = "paused"
-                    self.replay_input.put(f"speed 0")
-                case "speed":
-                    print(f"REPLAY SPEED {ws_cmd[3]}")
-                    self.replay_data["speed"] = 0.0 if float(ws_cmd[3]) < 0 else float(ws_cmd[3])
-                    if self.replay_data["speed"] == 0.0:
-                        self.replay_data["status"] = "paused"
-                    else:
-                        self.replay_data["status"] = "playing"
-
-                    self.replay_input.put(f"speed {0.0 if float(ws_cmd[3]) < 0 else float(ws_cmd[3])}")
-                case "stop":
-                    print("REPLAY STOP")
-                    self.replay_output.empty()
-                    self.replay.terminate()
-                    self.replay = None
-
-                    self.reset_data()
-
-            self.update_websocket()
-
-        except IndexError:
-            print("Telemetry: Error parsing ws command")
+        self.update_websocket()
 
     def parse_record_ws_cmd(self, ws_cmd):
         try:
@@ -314,7 +309,7 @@ class Telemetry(Process):
         blocks = data[24:]  # Remove the packet header
 
         print("-----" * 20)
-        #print(f'{DeviceAddress(srs_addr)} - {call_sign} - sent you a packet:')
+        # print(f'{DeviceAddress(srs_addr)} - {call_sign} - sent you a packet:')
         print(f"{call_sign} - sent you a packet")
 
         # Parse through all blocks
