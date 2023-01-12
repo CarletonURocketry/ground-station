@@ -4,7 +4,6 @@
 # Authors:
 # Thomas Selwyn (Devil)
 import glob
-import threading
 import sys
 import time
 from multiprocessing import Process, Queue, Value
@@ -16,12 +15,13 @@ from modules.serial.serial_rn2483_emulator import SerialRN2483Emulator
 
 class SerialManager(Process):
     def __init__(self, serial_connected: Value, serial_connected_port: ShareableList, serial_ports: ShareableList,
-                 serial_ws_commands: Queue, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue):
+                 serial_ws_commands: Queue, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, serial_status: Queue):
         super().__init__()
 
         self.serial_ports = serial_ports
         self.serial_connected = serial_connected
         self.serial_connected_port = serial_connected_port
+        self.serial_status = serial_status
 
         self.serial_ws_commands = serial_ws_commands
         self.rn2483_radio_input = rn2483_radio_input
@@ -42,9 +42,9 @@ class SerialManager(Process):
 
     def parse_ws_command(self, ws_cmd):
         try:
-            match ws_cmd[1]:
+            match ws_cmd[0]:
                 case "rn2483_radio":
-                    self.parse_rn2483_radio_ws(ws_cmd)
+                    self.parse_rn2483_radio_ws(ws_cmd[1:])
                 case "update":
                     self.update_serial_ports()
                 case _:
@@ -54,28 +54,29 @@ class SerialManager(Process):
 
     def parse_rn2483_radio_ws(self, ws_cmd):
         try:
-            if ws_cmd[2] == "connect":
+            if ws_cmd[0] == "connect":
                 if not self.serial_connected.value:
-                    if ws_cmd[3] != "test":
+                    if ws_cmd[1] != "test":
                         self.rn2483_radio = Process(target=SerialRN2483Radio, args=(self.serial_connected,
                                                                                     self.serial_connected_port,
                                                                                     self.serial_ports,
                                                                                     self.rn2483_radio_input,
                                                                                     self.rn2483_radio_payloads,
-                                                                                    ws_cmd[3]),
+                                                                                    ws_cmd[1]),
                                                     daemon=True)
                     else:
                         self.rn2483_radio = Process(target=SerialRN2483Emulator,
                                                     args=(self.serial_connected, self.serial_connected_port,
                                                           self.serial_ports, self.rn2483_radio_payloads),
                                                     daemon=True)
-                    self.serial_connected_port[0] = ws_cmd[3]
+                    self.serial_connected_port[0] = ws_cmd[1]
+                    self.serial_status.put(f"connected_rn2483_port {ws_cmd[1]}")
                     self.rn2483_radio.start()
                     time.sleep(.1)
                 else:
                     print(f"Serial: Already connected.")
 
-            if ws_cmd[2] == "disconnect":
+            if ws_cmd[0] == "disconnect":
                 if self.rn2483_radio is not None:
                     if self.serial_connected_port[0] == "test":
                         print("Serial: RN2483 Payload Emulator terminating")
@@ -84,6 +85,8 @@ class SerialManager(Process):
 
                     self.serial_connected.value = False
                     self.serial_connected_port[0] = ""
+                    self.serial_status.put(f"connected_rn2483 False")
+                    self.serial_status.put(f"connected_rn2483_port N/A")
                     self.rn2483_radio.terminate()
                     self.rn2483_radio = None
                 else:
