@@ -47,9 +47,8 @@ def main():
     # Initialize Telemetry to parse radio packets, keep history and to log everything
     # Incoming information comes from rn2483_radio_payloads in payload format
     # Outputs information to telemetry_json_output in friendly json for UI
-    telemetry = Process(target=Telemetry, args=(serial_connected, serial_connected_port, serial_ports,
-                                                rn2483_radio_payloads, telemetry_json_output, telemetry_ws_commands,
-                                                serial_status))
+    telemetry = Process(target=Telemetry, args=(serial_connected, serial_connected_port, serial_status,
+                                                rn2483_radio_payloads, telemetry_json_output, telemetry_ws_commands))
     telemetry.start()
     print(f"{'Telemetry':.<15} started")
 
