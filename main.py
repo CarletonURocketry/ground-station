@@ -24,7 +24,6 @@ telemetry_ws_commands = Queue()
 
 serial_connected = Value('i', 0)
 serial_connected_port = ShareableList([" " * 256])
-serial_ports = ShareableList([" " * 256] * 8)
 serial_status = Queue()
 
 
@@ -38,9 +37,8 @@ def main():
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
     # Outputs information in hexadecimal payload format to rn2483_radio_payloads
-    serial = Process(target=SerialManager, args=(serial_connected, serial_connected_port, serial_ports,
-                                                 serial_ws_commands, rn2483_radio_input, rn2483_radio_payloads,
-                                                 serial_status))
+    serial = Process(target=SerialManager, args=(serial_connected, serial_connected_port, serial_status,
+                                                 serial_ws_commands, rn2483_radio_input, rn2483_radio_payloads))
     serial.start()
     print(f"{'Serial':.<15} started")
 

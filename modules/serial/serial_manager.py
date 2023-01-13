@@ -14,11 +14,11 @@ from modules.serial.serial_rn2483_emulator import SerialRN2483Emulator
 
 
 class SerialManager(Process):
-    def __init__(self, serial_connected: Value, serial_connected_port: ShareableList, serial_ports: ShareableList,
-                 serial_ws_commands: Queue, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, serial_status: Queue):
+    def __init__(self, serial_connected: Value, serial_connected_port: ShareableList, serial_status: Queue,
+                 serial_ws_commands: Queue, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue):
         super().__init__()
 
-        self.serial_ports = serial_ports
+        self.serial_ports = []
         self.serial_connected = serial_connected
         self.serial_connected_port = serial_connected_port
         self.serial_status = serial_status
