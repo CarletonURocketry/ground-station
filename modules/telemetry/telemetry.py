@@ -4,20 +4,29 @@
 #
 # Authors:
 # Thomas Selwyn (Devil)
-import time
+# Matteo Golin (linguini1)
 
+# Imports
+import time
 from struct import unpack
 from time import sleep, time
 from pathlib import Path
-from modules.telemetry.constants import *
+from multiprocessing import Queue, Process, Value
+from multiprocessing.shared_memory import ShareableList
 
 from modules.telemetry.block import DeviceAddress, BlockTypes
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState
 from modules.telemetry.replay import TelemetryReplay
-from multiprocessing import Queue, Process, Value
-from multiprocessing.shared_memory import ShareableList
+import modules.websocket.commands as wsc
+
+# Constants
+ORG: str = "CUInSpace"
+VERSION: str = "0.4.4-DEV"
+REPLAY_STATE: int = 1
+MISSION_EXTENSION: str = ".mission"
 
 
+# Classes
 class Telemetry(Process):
     def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
                  radio_payloads: Queue, telemetry_json_output: Queue, telemetry_ws_commands: Queue,
@@ -56,6 +65,14 @@ class Telemetry(Process):
     def run(self):
         while True:
             while not self.telemetry_ws_commands.empty():
+                
+                # Parse websocket command into an enum
+                commands: str = self.telemetry_ws_commands.get()
+                commands: list[str] = commands.split()
+                command = wsc.parse(commands, wsc.WebsocketCommand)
+                parameters = commands
+                self.execute_command(command, parameters)
+
                 self.parse_ws_commands(self.telemetry_ws_commands.get())
 
             while not self.serial_status.empty():
@@ -86,9 +103,6 @@ class Telemetry(Process):
                     case _:
                         self.status_data["mission"]["state"] = 0
                 self.update_websocket()
-
-
-
 
             sleep(0.2)
 
@@ -182,7 +196,14 @@ class Telemetry(Process):
 
         return telemetry_data_block
 
+    def execute_command(self, command: wsc.Enum, parameters: list[str]) -> None:
+        
+        """Executes the passed websocket command."""
+
+        pass
+
     def parse_ws_commands(self, ws_cmd):
+
         try:
             if ws_cmd[0] == "update":
                 self.replay_data["mission_list"] = self.generate_replay_mission_list()

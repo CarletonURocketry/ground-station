@@ -34,7 +34,7 @@ class ReplayCommand(StrEnum):
     STOP: str = "stop replay"
 
 
-class TelemetryCommand(Enum):
+class WebsocketCommand(Enum):
 
     """Contains the structure for the telemetry commands."""
 
@@ -46,24 +46,19 @@ class TelemetryCommand(Enum):
 # Parsing functions
 def parse(websocket_command: list[str], enum: EnumType) -> Enum:
 
-    """Parses the websocket command into the command structure."""
+    """
+    Returns the websocket command as the matching command enum variable. Any remaining parameters will be left
+    inside the websocket_command list parameter.
+    """
 
-    command = websocket_command.pop(0)  # Get the highest level command
+    sub_command = websocket_command.pop(0)  # Get the highest level command
 
     try:
-        next_enum = enum[command.upper()]
-        print(next_enum)
+        next_enum = enum[sub_command.upper()]
     except KeyError:
-        raise WebsocketCommandNotFound(command)
+        raise WebsocketCommandNotFound(sub_command)
 
-    if websocket_command:
+    if websocket_command and type(next_enum.value) is not str:
         return parse(websocket_command, enum=next_enum.value)
     else:
         return next_enum
-
-
-if __name__ == '__main__':
-
-    commands = "replay play".split()
-    command = parse(commands, TelemetryCommand)
-
