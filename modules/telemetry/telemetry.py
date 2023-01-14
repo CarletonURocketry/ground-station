@@ -18,7 +18,6 @@ from multiprocessing import Queue, Process, Value
 from multiprocessing.shared_memory import ShareableList
 
 
-
 class Telemetry(Process):
     def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
                  radio_payloads: Queue, telemetry_json_output: Queue, telemetry_ws_commands: Queue,
@@ -150,7 +149,6 @@ class Telemetry(Process):
         }
 
         self.status_data["serial"]["available_ports"] = self.shareable_to_list()
-
 
     def generate_websocket_response(self, telemetry_keys="all"):
         return {"version": VERSION, "org": ORG,
