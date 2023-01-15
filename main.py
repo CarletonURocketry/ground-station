@@ -3,7 +3,7 @@
 #
 # Authors:
 # Thomas Selwyn (Devil)
-import multiprocessing
+
 from multiprocessing import Process, Queue
 
 from modules.misc.messages import printCURocket

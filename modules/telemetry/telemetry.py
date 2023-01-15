@@ -6,11 +6,11 @@
 # Thomas Selwyn (Devil)
 from signal import signal, SIGTERM
 from struct import unpack
-from time import sleep, time
+from time import time
 from pathlib import Path
 
 from modules.telemetry.block import DeviceAddress, BlockTypes
-from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState
+from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState, MPU9250Sample
 from modules.telemetry.replay import TelemetryReplay
 from multiprocessing import Queue, Process, active_children
 import ast
@@ -103,7 +103,6 @@ class Telemetry(Process):
                     while not self.radio_payloads.empty():
                         self.parse_rn2483_transmission(self.radio_payloads.get())
                         self.update_websocket()
-            sleep(0.2)
 
     def update_websocket(self):
         self.telemetry_json_output.put(self.generate_websocket_response())
@@ -286,11 +285,25 @@ class Telemetry(Process):
                 if block_data.mission_time > self.status_data["rocket"]["last_mission_time"]:
                     self.status_data["rocket"]["last_mission_time"] = block_data.mission_time
 
-                # Move status telemetry block to the status key instead of under telemetry
-                if DataBlockSubtype(block_subtype) == DataBlockSubtype.STATUS:
-                    self.parse_status(block_data)
-                else:
-                    self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
+                # Switch statement to treat different blocks separately
+                match DataBlockSubtype(block_subtype):
+                    case DataBlockSubtype.STATUS:
+                        self.parse_status(block_data)
+                    case DataBlockSubtype.MPU9250_IMU:
+                        #print(block_data)
+                        accel, temp, gyro = parse_mpu9250_samples(block_data.samples)
+                        #print("AVG ACCEL", accel[0], accel[1], accel[2], "AVG TEMP", temp, "AVG GYRO", gyro[0], gyro[1], gyro[2])
+                        self.telemetry_data["mpu9250_data"] = {"mission_time": block_data.mission_time,
+                                                               "accel_x": {"ms2": accel[0]},
+                                                               "accel_y": {"ms2": accel[1]},
+                                                               "accel_z": {"ms2": accel[2]},
+                                                               "temperature": {"celsius": temp},
+                                                               "gyro_x": gyro[0],
+                                                               "gyro_y": gyro[1],
+                                                               "gyro_z": gyro[2]}
+                        self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
+                    case _:
+                        self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
             case _:
                 print("Unknown block type")
 
@@ -350,6 +363,28 @@ class Telemetry(Process):
                     return proposed_filepath
 
         return missions_filepath
+
+
+def parse_mpu9250_samples(data_samples: [MPU9250Sample]) -> tuple:
+    """
+    Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp and gyro.
+    """
+    sample_size = len(data_samples)
+    accel = [0, 0, 0]
+    temp = 0
+    gyro = [0, 0, 0]
+    for sam in data_samples:
+        accel[0] += sam.accel_x / sample_size
+        accel[1] += sam.accel_y / sample_size
+        accel[2] += sam.accel_z / sample_size
+
+        temp += sam.temperature / sample_size
+
+        gyro[0] = sam.gyro_x / sample_size
+        gyro[1] = sam.gyro_y / sample_size
+        gyro[2] = sam.gyro_z / sample_size
+
+    return accel, temp, gyro
 
 
 def _parse_packet_header(header) -> tuple:

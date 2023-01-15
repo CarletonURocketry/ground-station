@@ -42,12 +42,27 @@
                 "fahrenheit": "54"
             }
         },
-        "acceleration_data": {
-            "mission_time": 8120,
-            "acceleration": {
-                "ms2": "40",
-                "fts2": "131"
-            }
+        "mpu9250_data": {
+            "mission_time": 7660,
+            "accel_x": {
+                "ms2": "-0.08789062500000001",
+                "fts2": "0"
+            },
+            "accel_y": {
+                "ms2": "-0.09985351562499999",
+                "fts2": "0"
+            },
+            "accel_z": {
+                "ms2": "0.8688151041666667",
+                "fts2": "0"
+            },
+            "temperature": {
+                "celsius": "24.81775700934579",
+                "fahrenheit": "0"
+            },
+            "gyro_x": "0.091552734375",
+            "gyro_y": "-0.050862630208333336",
+            "gyro_z": "0.040690104166666664"
         },
         "gnss": {
             "mission_time": 169012,
