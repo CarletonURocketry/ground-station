@@ -177,7 +177,7 @@ class Telemetry(Process):
 
     def generate_websocket_response(self, telemetry_keys="all"):
         return {"version": VERSION, "org": ORG,
-                "status": self.generate_status_data(),
+                "status": dict(self.generate_status_data()),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
                 "replay": self.generate_replay_response()}
 

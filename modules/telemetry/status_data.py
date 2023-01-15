@@ -4,12 +4,11 @@ __author__ = "Matteo Golin"
 # Imports
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any, Protocol, Self
+from typing import Self
+import json
 
-import data_block as dblock
+import modules.telemetry.data_block as dblock
 
-# Constants
-JSON = dict[str, Any]
 
 # Helper classes
 class MissionState(IntEnum):
@@ -22,15 +21,6 @@ class MissionState(IntEnum):
     TEST: int = 2
 
 
-class Serializable(Protocol):
-
-    """A class which can be converted to JSON."""
-
-    def to_json(self) -> JSON:
-        """Returns the JSON representation of the class."""
-        ...
-
-
 # Status packet classes
 @dataclass
 class SerialData:
@@ -38,11 +28,8 @@ class SerialData:
     """The serial data packet for the telemetry process."""
     available_ports: list[str] = field(default_factory=list)
 
-    def to_json(self) -> JSON:
-
-        return {
-            "available_ports": self.available_ports
-        }
+    def __iter__(self):
+        yield "available_ports", self.available_ports
 
 
 @dataclass
@@ -53,12 +40,9 @@ class RN2483RadioData:
     connected: bool = False
     connected_port: str = ""
     
-    def to_json(self) -> JSON:
-
-        return {
-            "connected": self.connected,
-            "connected_port": self.connected_port
-        }
+    def __iter__(self):
+        yield "connected", self.connected,
+        yield "connected_port", self.connected_port
 
 
 @dataclass
@@ -71,14 +55,11 @@ class MissionData:
     state: MissionState = MissionState.DNE
     recording: bool = False
 
-    def to_json(self) -> JSON:
-
-        return {
-            "name": self.name,
-            "epoch": self.epoch,
-            "state": self.state.value,
-            "recording": self.recording
-        }
+    def __iter__(self):
+        yield "name", self.name,
+        yield "epoch", self.epoch,
+        yield "state", self.state.value,
+        yield "recording", self.recording
 
 
 @dataclass
@@ -112,20 +93,18 @@ class RocketData:
             checkouts_missed=data.sd_checkouts_missed
         )
 
-    def to_json(self) -> JSON:
+    def __iter__(self):
 
-        return {
-            "kx134_state": self.kx134_state,
-            "altimeter_state": self.altimeter_state,
-            "imu_state": self.imu_state,
-            "sd_driver_state": self.sd_driver_state,
-            "deployment_state": self.deployment_state.value,
-            "deployment_state_text": str(self.deployment_state),
-            "blocks_recorded": self.blocks_recorded,
-            "checkouts_missed": self.checkouts_missed,
-            "mission_time": self.mission_time,
-            "last_mission_time": self.last_mission_time,
-        }
+        yield "kx134_state", self.kx134_state,
+        yield "altimeter_state", self.altimeter_state,
+        yield "imu_state", self.imu_state,
+        yield "sd_driver_state", self.sd_driver_state,
+        yield "deployment_state", self.deployment_state.value,
+        yield "deployment_state_text", str(self.deployment_state),
+        yield "blocks_recorded", self.blocks_recorded,
+        yield "checkouts_missed", self.checkouts_missed,
+        yield "mission_time", self.mission_time,
+        yield "last_mission_time", self.last_mission_time,
 
 
 @dataclass
@@ -138,16 +117,14 @@ class StatusData:
     rn3483_radio: RN2483RadioData = field(default_factory=RN2483RadioData)
     rocket: RocketData = field(default_factory=RocketData)
 
-    def to_json(self) -> JSON:
+    def __iter__(self):
 
-        return {
-            "mission": self.mission.to_json(),
-            "serial": self.serial.to_json(),
-            "rn3483_radio": self.rn3483_radio.to_json(),
-            "rocket": self.rocket.to_json(),
-        }
+        yield "mission", dict(self.mission),
+        yield "serial", dict(self.serial),
+        yield "rn3483_radio", dict(self.rn3483_radio),
+        yield "rocket", dict(self.rocket),
 
 
 if __name__ == '__main__':
     rocket = RocketData()
-    print(rocket.to_json())
+    print(dict(rocket))
