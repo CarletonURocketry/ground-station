@@ -36,12 +36,21 @@ def mission_path(mission_name: str) -> Path:
 
 
 # Classes
-class MissionNotFound(Exception):
+class MissionNotFoundError(Exception):
 
     """Raised when the desired mission is not found."""
     def __init__(self, mission_name: str):
         self.mission_name = mission_name
         self.message = f"The mission recording '{mission_name}' does not exist."
+        super().__init__(self.message)
+
+
+class AlreadyRecordingError(Exception):
+
+    """Raised if the telemetry process is already recording when instructed to record."""
+
+    def __init__(self):
+        self.message: str = "Recording is already in progress."
         super().__init__(self.message)
 
 
@@ -282,7 +291,34 @@ class Telemetry(Process):
             print(f"REPLAY {mission_name} PLAYING")
             return
 
-        raise MissionNotFound(mission_name)
+        raise MissionNotFoundError(mission_name)
+
+    def start_recording(self, mission_name: str, recording_epoch: int) -> None:
+
+        """Starts recording the current mission."""
+
+        if self.status_data["mission"]["recording"]:
+            raise AlreadyRecordingError
+
+        print("RECORDING START")
+
+        self.mission_path = self.get_filepath_for_proposed_name(mission_name)
+        self.mission_path.write_text(f"{1},{recording_epoch}\n")
+
+        self.status_data["mission"]["name"] = mission_name
+        self.status_data["mission"]["epoch"] = recording_epoch
+        self.status_data["mission"]["recording"] = True
+
+        self.replay_data["mission_list"] = self.generate_replay_mission_list()
+
+    def stop_recording(self) -> None:
+
+        """Stops the current recording."""
+
+        print("RECORDING STOP")
+        self.status_data["mission"]["name"] = ""
+        self.status_data["mission"]["epoch"] = -1
+        self.status_data["mission"]["recording"] = False
 
     def parse_replay_ws_cmd(self, ws_cmd):
 
@@ -291,7 +327,7 @@ class Telemetry(Process):
             mission_name = ' '.join(ws_cmd[1:])
             try:
                 self.play_mission(mission_name)
-            except MissionNotFound as e:
+            except MissionNotFoundError as e:
                 print(e.message)
 
         # Simple stuff
@@ -310,31 +346,21 @@ class Telemetry(Process):
         self.update_websocket()
 
     def parse_record_ws_cmd(self, ws_cmd):
+
         record_cmd = ws_cmd[0]
-        try:
-            if record_cmd == "start" and not self.status_data["mission"]["recording"]:
-                print("RECORDING START")
-                recording_epoch = int(time())
-                mission_name = str(recording_epoch) if len(ws_cmd) <= 1 else " ".join(ws_cmd[1:])
 
-                self.mission_path = self.get_filepath_for_proposed_name(mission_name)
-                self.mission_path.write_text(f"{1},{recording_epoch}\n")
+        if record_cmd == "start":
 
-                self.status_data["mission"]["name"] = mission_name
-                self.status_data["mission"]["epoch"] = recording_epoch
-                self.status_data["mission"]["recording"] = True
+            recording_epoch = int(time())
+            mission_name = str(recording_epoch) if len(ws_cmd) <= 1 else " ".join(ws_cmd[1:])
 
-                self.replay_data["mission_list"] = self.generate_replay_mission_list()
-            elif record_cmd == "start":
-                print("RECORDING HAS ALREADY STARTED. TRY STOPPING FIRST")
-            if record_cmd == "stop":
-                print("RECORDING STOP")
-                self.status_data["mission"]["name"] = ""
-                self.status_data["mission"]["epoch"] = -1
-                self.status_data["mission"]["recording"] = False
+            try:
+                self.start_recording(mission_name, recording_epoch)
+            except AlreadyRecordingError as e:
+                print(e.message)
 
-        except IndexError:
-            print("Telemetry: Error parsing ws command")
+        elif record_cmd == "stop":
+            self.stop_recording()
 
     def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents):
         # Working with hex strings until this point.
