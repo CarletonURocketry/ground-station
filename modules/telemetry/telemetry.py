@@ -168,7 +168,7 @@ class Telemetry(Process):
         return {"version": VERSION, "org": ORG,
                 "status": dict(self.generate_status_data()),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
-                "replay": dict(self.replay)}
+                "replay": dict(self.replay_data)}
 
     def generate_status_data(self):
         self.status_data.rn3483_radio.connected = bool(self.serial_connected.value)
@@ -214,9 +214,9 @@ class Telemetry(Process):
         speed = 0.0 if speed < 0 else speed
 
         if speed == 0.0:
-            self.replay_data.status = "paused"
+            self.replay_data.status = jsp.ReplayState.PAUSED
         else:
-            self.replay_data.status = "playing"
+            self.replay_data.status = jsp.ReplayState.PLAYING
 
         self.replay_input.put(f"speed {speed}")
 

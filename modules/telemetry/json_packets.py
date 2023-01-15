@@ -3,7 +3,7 @@ __author__ = "Matteo Golin"
 
 # Imports
 from dataclasses import dataclass, field
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 from typing import Self
 from pathlib import Path
 
@@ -23,6 +23,15 @@ class MissionState(IntEnum):
     LIVE: int = 0
     RECORDED: int = 1
     TEST: int = 2
+
+
+class ReplayState(StrEnum):
+
+    """Represents the state of the mission being currently replayed."""
+
+    DNE: str = ""
+    PAUSED: str = "paused"
+    PLAYING: str = "playing"
 
 
 # Status packet classes
@@ -134,7 +143,7 @@ class StatusData:
 class ReplayData:
     """The replay data packet for the telemetry process."""
 
-    status: str = ""
+    status: ReplayState = ReplayState.DNE
     speed: float = 1.0
     mission_list: list[str] = field(default_factory=list)
 
@@ -149,7 +158,7 @@ class ReplayData:
 
     def __iter__(self):
 
-        yield "status", self.status
+        yield "status", self.status.value
         yield "speed", self.speed,
         yield "mission_list", self.mission_list
 
