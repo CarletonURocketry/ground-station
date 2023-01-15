@@ -12,7 +12,7 @@ class WebsocketCommandNotFound(Exception):
 
     def __init__(self, command: str):
         self.command = command
-        self.message = f"The websocket command {command} does not exist.."
+        self.message = f"The websocket command {command} does not exist."
         super().__init__(self.message)
 
 
