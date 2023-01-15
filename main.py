@@ -4,24 +4,25 @@
 # Authors:
 # Thomas Selwyn (Devil)
 
-from multiprocessing import Process, Queue, Value
-from multiprocessing.shared_memory import ShareableList
+from multiprocessing import Process, Queue
 
 from modules.misc.messages import printCURocket
 from modules.serial.serial_manager import SerialManager
 from modules.telemetry.telemetry import Telemetry
 from modules.websocket.websocket import WebSocketHandler
-from modules.telemetry.constants import VERSION
 from re import sub
+
+serial_status = Queue()
+
+ws_commands = Queue()
+serial_ws_commands = Queue()
+telemetry_ws_commands = Queue()
 
 rn2483_radio_input = Queue()
 rn2483_radio_payloads = Queue()
 telemetry_json_output = Queue()
 
-ws_commands = Queue()
-serial_ws_commands = Queue()
-telemetry_ws_commands = Queue()
-serial_status = Queue()
+VERSION: str = "0.4.4-DEV"
 
 
 class ShutdownException(Exception):

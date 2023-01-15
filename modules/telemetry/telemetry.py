@@ -4,18 +4,21 @@
 #
 # Authors:
 # Thomas Selwyn (Devil)
-import time
 
 from struct import unpack
 from time import sleep, time
 from pathlib import Path
-from modules.telemetry.constants import *
 
 from modules.telemetry.block import DeviceAddress, BlockTypes
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState
 from modules.telemetry.replay import TelemetryReplay
 from multiprocessing import Queue, Process
 import ast
+
+ORG: str = "CUInSpace"
+VERSION: str = "0.4.4-DEV"
+REPLAY_STATE: int = 1
+MISSION_EXTENSION: str = ".mission"
 
 
 class Telemetry(Process):

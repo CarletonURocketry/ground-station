@@ -6,10 +6,8 @@
 # Thomas Selwyn (Devil)
 # Zacchaeus Liang
 
-import queue
 import time
 from multiprocessing import Queue, Process
-
 from serial import Serial, SerialException, EIGHTBITS, PARITY_NONE
 
 

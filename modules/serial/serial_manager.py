@@ -3,9 +3,9 @@
 #
 # Authors:
 # Thomas Selwyn (Devil)
+
 import glob
 import sys
-import time
 from multiprocessing import Process, Queue
 from serial import Serial, SerialException
 from modules.serial.serial_rn2483_radio import SerialRN2483Radio
@@ -47,7 +47,7 @@ class SerialManager(Process):
                 case _:
                     print("Serial: Invalid device type.")
         except IndexError:
-            print("Serial: Error parsing ws command",ws_cmd)
+            print("Serial: Error parsing ws command")
 
     def parse_rn2483_radio_ws(self, ws_cmd):
         radio_ws_cmd = ws_cmd[0]
@@ -65,7 +65,6 @@ class SerialManager(Process):
                                             args=(self.serial_status, self.rn2483_radio_payloads),
                                             daemon=True)
             self.rn2483_radio.start()
-            time.sleep(1)
         elif radio_ws_cmd == "connect":
             print(f"Serial: Already connected.")
         elif radio_ws_cmd == "disconnect" and self.rn2483_radio is not None:
