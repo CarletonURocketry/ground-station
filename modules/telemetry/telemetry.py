@@ -27,12 +27,18 @@ MISSION_EXTENSION: str = ".mission"
 
 
 # Helper functions
-def mission_path(mission_name: str) -> Path:
+def mission_path(mission_name: str, missions_dir: Path) -> Path:
 
     """Returns the path to the mission file with the matching mission name."""
 
-    missions_dir = Path.cwd().joinpath("missions")
     return missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
+
+
+def get_mission_list(missions_dir: Path) -> list[str]:
+
+    """Returns a list of the available mission recordings in the missions directory."""
+
+    return [name.stem for name in missions_dir.glob(f"*{MISSION_EXTENSION}") if name.is_file()]
 
 
 # Classes
@@ -132,7 +138,11 @@ class Telemetry(Process):
 
             sleep(0.2)
 
-    def update_websocket(self):
+    def update_websocket(self) -> None:
+
+        """Updates the mission replay list and puts the latest packet on the JSON output process."""
+
+        self.replay_data["mission_list"] = get_mission_list(self.missions_dir)
         self.telemetry_json_output.put(self.generate_websocket_response())
 
     def shareable_to_list(self, empty_padding=True) -> list:
@@ -185,7 +195,7 @@ class Telemetry(Process):
         self.replay_data = {
             "status": "",
             "speed": 1.0,
-            "mission_list": self.generate_replay_mission_list()
+            "mission_list": get_mission_list(self.missions_dir)
         }
 
         self.status_data["serial"]["available_ports"] = self.shareable_to_list()
@@ -200,9 +210,6 @@ class Telemetry(Process):
         return {"status": self.replay_data["status"],
                 "speed": self.replay_data["speed"],
                 "mission_list": self.replay_data["mission_list"]}
-
-    def generate_replay_mission_list(self):
-        return [name.stem for name in self.missions_dir.glob(f"*{MISSION_EXTENSION}") if name.is_file()]
 
     def generate_status_data(self):
         self.status_data["rn2483_radio"]["connected"] = bool(self.serial_connected.value)
@@ -232,7 +239,6 @@ class Telemetry(Process):
 
         try:
             if ws_cmd[0] == "update":
-                self.replay_data["mission_list"] = self.generate_replay_mission_list()
                 self.update_websocket()
             if ws_cmd[0] == "replay":
                 self.parse_replay_ws_cmd(ws_cmd[1:])
@@ -273,7 +279,7 @@ class Telemetry(Process):
 
         if mission_name in self.replay_data["mission_list"]:
             self.status_data["mission"]["name"] = mission_name
-            replay_mission_filepath = mission_path(mission_name)
+            replay_mission_filepath = mission_path(mission_name, self.missions_dir)
 
             if self.replay is None:
                 self.replay = Process(
@@ -309,7 +315,7 @@ class Telemetry(Process):
         self.status_data["mission"]["epoch"] = recording_epoch
         self.status_data["mission"]["recording"] = True
 
-        self.replay_data["mission_list"] = self.generate_replay_mission_list()
+        self.replay_data["mission_list"] = get_mission_list(self.missions_dir)
 
     def stop_recording(self) -> None:
 
