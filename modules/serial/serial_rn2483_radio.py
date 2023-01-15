@@ -42,8 +42,8 @@ class SerialRN2483Radio(Process):
                                   stopbits=1,
                                   rtscts=False)
                 print(f"RN2483 Radio: Connected to {self.serial_port}")
-                self.serial_connected.value = True
-                self.serial_connected_port[0] = self.serial_port
+                self.serial_status.put(f"rn2483_connected True")
+                self.serial_status.put(f"rn2483_port {self.serial_port}")
 
                 self.init_rn2483_radio()
                 self.set_rx_mode()
@@ -58,8 +58,8 @@ class SerialRN2483Radio(Process):
                     self.check_for_transmissions()
 
             except SerialException:
-                self.serial_connected.value = False
-                self.serial_connected_port[0] = ""
+                self.serial_status.put(f"rn2483_connected False")
+                self.serial_status.put(f"rn2483_port null")
                 print("RN2483 Radio: Error communicating with serial device.")
                 time.sleep(3)
 
