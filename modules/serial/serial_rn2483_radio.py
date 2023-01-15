@@ -8,21 +8,17 @@
 
 import queue
 import time
-from multiprocessing import Queue, Process, Value
-from multiprocessing.shared_memory import ShareableList
+from multiprocessing import Queue, Process
 
 from serial import Serial, SerialException, EIGHTBITS, PARITY_NONE
 
 
 class SerialRN2483Radio(Process):
 
-    def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
-                 rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, serial_port: str):
+    def __init__(self, serial_status: Queue, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, serial_port: str):
         Process.__init__(self)
 
-        self.serial_connected = serial_connected
-        self.serial_connected_port = serial_connected_port
-        self.serial_ports = serial_ports
+        self.serial_status = serial_status
 
         self.rn2483_radio_input = rn2483_radio_input
         self.rn2483_radio_payloads = rn2483_radio_payloads

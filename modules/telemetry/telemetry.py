@@ -14,21 +14,19 @@ from modules.telemetry.constants import *
 from modules.telemetry.block import DeviceAddress, BlockTypes
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState
 from modules.telemetry.replay import TelemetryReplay
-from multiprocessing import Queue, Process, Value
+from multiprocessing import Queue, Process
 import ast
 
 
 class Telemetry(Process):
-    def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_status: Queue,
-                 radio_payloads: Queue, telemetry_json_output: Queue, telemetry_ws_commands: Queue):
+    def __init__(self, serial_status: Queue, radio_payloads: Queue,
+                 telemetry_json_output: Queue, telemetry_ws_commands: Queue):
         super().__init__()
 
         self.radio_payloads = radio_payloads
         self.telemetry_json_output = telemetry_json_output
         self.telemetry_ws_commands = telemetry_ws_commands
 
-        self.serial_connected = serial_connected
-        self.serial_connected_port = serial_connected_port
         self.serial_status = serial_status
         self.serial_ports = []
 
@@ -59,9 +57,25 @@ class Telemetry(Process):
 
             while not self.serial_status.empty():
                 x = self.serial_status.get().split(" ", maxsplit=1)
-                if x[0] == "serial_ports":
-                    self.serial_ports = ast.literal_eval(x[1])
-                    print(self.serial_ports)
+
+                match x[0]:
+                    case "serial_ports":
+                        self.serial_ports = ast.literal_eval(x[1])
+                        self.status_data["serial"]["available_ports"] = self.serial_ports
+                    case "rn2483_connected":
+                        self.status_data["rn2483_radio"]["connected"] = bool(x[1])
+                    case "rn2483_port":
+                        self.reset_data()
+                        self.status_data["rn2483_radio"]["connected_port"] = x[1]
+
+                        match self.status_data["rn2483_radio"]["connected_port"]:
+                            case "test":
+                                self.status_data["mission"]["state"] = 2
+                            case "":
+                                self.status_data["mission"]["state"] = -1
+                            case _:
+                                self.status_data["mission"]["state"] = 0
+
                 self.update_websocket()
 
             match self.status_data["mission"]["state"]:
@@ -77,19 +91,6 @@ class Telemetry(Process):
                     while not self.radio_payloads.empty():
                         self.parse_rn2483_transmission(self.radio_payloads.get())
                         self.update_websocket()
-
-            if bool(self.serial_connected.value) != bool(self.status_data["rn2483_radio"]["connected"]):
-                self.reset_data()
-
-                match self.serial_connected_port[0]:
-                    case "test":
-                        self.status_data["mission"]["state"] = 2
-                    case "":
-                        self.status_data["mission"]["state"] = -1
-                    case _:
-                        self.status_data["mission"]["state"] = 0
-                self.update_websocket()
-
             sleep(0.2)
 
     def update_websocket(self):
@@ -104,7 +105,7 @@ class Telemetry(Process):
                 "recording": False
             },
             "serial": {
-                "available_ports": [""]
+                "available_ports": self.serial_ports
             },
             "rn2483_radio": {
                 "connected": False,
@@ -132,12 +133,10 @@ class Telemetry(Process):
             "mission_list": self.generate_replay_mission_list()
         }
 
-        self.generate_status_data()
-
 
     def generate_websocket_response(self, telemetry_keys="all"):
         return {"version": VERSION, "org": ORG,
-                "status": self.generate_status_data(),
+                "status": self.status_data,
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
                 "replay": self.generate_replay_response()}
 
@@ -149,12 +148,6 @@ class Telemetry(Process):
     def generate_replay_mission_list(self):
         return [name.stem for name in self.missions_dir.glob(f"*{MISSION_EXTENSION}") if name.is_file()]
 
-    def generate_status_data(self):
-        self.status_data["rn2483_radio"]["connected"] = bool(self.serial_connected.value)
-        self.status_data["rn2483_radio"]["connected_port"] = self.serial_connected_port[0]
-        self.status_data["serial"]["available_ports"] = self.serial_ports
-
-        return self.status_data
 
     def generate_telemetry_data(self, keys_to_send="all"):
         if keys_to_send == "all":
