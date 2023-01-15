@@ -5,9 +5,13 @@ __author__ = "Matteo Golin"
 from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Self
-import json
+from pathlib import Path
 
 import modules.telemetry.data_block as dblock
+
+# Constants
+MISSION_EXTENSION: str = ".mission"
+MISSIONS_DIR: str = "missions"
 
 
 # Helper classes
@@ -123,6 +127,31 @@ class StatusData:
         yield "serial", dict(self.serial),
         yield "rn3483_radio", dict(self.rn3483_radio),
         yield "rocket", dict(self.rocket),
+
+
+# Replay packet class
+@dataclass
+class ReplayData:
+    """The replay data packet for the telemetry process."""
+
+    status: str = ""
+    speed: float = 1.0
+    mission_list: list[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        self.update_mission_list()  # Update the mission list on creation
+
+    def update_mission_list(self):
+        """Gets the available mission recordings from the mission folder."""
+
+        missions_dir = Path.cwd().joinpath(MISSIONS_DIR)
+        self.mission_list = [name.stem for name in missions_dir.glob(f"*{MISSION_EXTENSION}") if name.is_file()]
+
+    def __iter__(self):
+
+        yield "status", self.status
+        yield "speed", self.speed,
+        yield "mission_list", self.mission_list
 
 
 if __name__ == '__main__':
