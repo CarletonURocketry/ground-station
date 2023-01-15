@@ -17,8 +17,8 @@ from multiprocessing.shared_memory import ShareableList
 from modules.telemetry.block import BlockTypes
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 from modules.telemetry.replay import TelemetryReplay
-from modules.telemetry.status_data import MissionState, StatusData, MissionData, RocketData
 
+import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
 
 # Constants
@@ -34,13 +34,6 @@ def mission_path(mission_name: str, missions_dir: Path) -> Path:
     """Returns the path to the mission file with the matching mission name."""
 
     return missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
-
-
-def get_mission_list(missions_dir: Path) -> list[str]:
-
-    """Returns a list of the available mission recordings in the missions directory."""
-
-    return [name.stem for name in missions_dir.glob(f"*{MISSION_EXTENSION}") if name.is_file()]
 
 
 # Errors
@@ -79,9 +72,9 @@ class Telemetry(Process):
         self.serial_status = serial_status
 
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
-        self.status_data: StatusData = StatusData()
+        self.status_data: jsp.StatusData = jsp.StatusData()
         self.telemetry_data = {}
-        self.replay_data = {}
+        self.replay_data = jsp.ReplayData()
 
         # Mission Path
         self.missions_dir = Path.cwd().joinpath("missions")
@@ -114,7 +107,7 @@ class Telemetry(Process):
                 print(self.serial_status.get())
 
             match self.status_data.mission.state:
-                case MissionState.RECORDED:
+                case jsp.MissionState.RECORDED:
                     # REPLAY SYSTEM
                     while not self.replay_output.empty():
                         block_type, block_subtype, block_data = self.replay_output.get()
@@ -131,11 +124,11 @@ class Telemetry(Process):
 
                 match self.serial_connected_port[0]:
                     case "test":
-                        self.status_data.mission.state = MissionState.TEST
+                        self.status_data.mission.state = jsp.MissionState.TEST
                     case "":
-                        self.status_data.mission.state = MissionState.DNE
+                        self.status_data.mission.state = jsp.MissionState.DNE
                     case _:
-                        self.status_data.mission.state = MissionState.LIVE
+                        self.status_data.mission.state = jsp.MissionState.LIVE
                 self.update_websocket()
 
             sleep(0.2)
@@ -144,7 +137,7 @@ class Telemetry(Process):
 
         """Updates the mission replay list and puts the latest packet on the JSON output process."""
 
-        self.replay_data["mission_list"] = get_mission_list(self.missions_dir)
+        self.replay_data.update_mission_list()
         self.telemetry_json_output.put(self.generate_websocket_response())
 
     def shareable_to_list(self, empty_padding=True) -> list:
@@ -165,13 +158,9 @@ class Telemetry(Process):
         return new_list
 
     def reset_data(self):
-        self.status_data = StatusData()
+        self.status_data = jsp.StatusData()
         self.telemetry_data = {}
-        self.replay_data = {
-            "status": "",
-            "speed": 1.0,
-            "mission_list": get_mission_list(self.missions_dir)
-        }
+        self.replay_data = jsp.ReplayData()
 
         self.status_data.serial.available_ports = self.shareable_to_list()
 
@@ -179,12 +168,7 @@ class Telemetry(Process):
         return {"version": VERSION, "org": ORG,
                 "status": dict(self.generate_status_data()),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
-                "replay": self.generate_replay_response()}
-
-    def generate_replay_response(self):
-        return {"status": self.replay_data["status"],
-                "speed": self.replay_data["speed"],
-                "mission_list": self.replay_data["mission_list"]}
+                "replay": dict(self.replay)}
 
     def generate_status_data(self):
         self.status_data.rn3483_radio.connected = bool(self.serial_connected.value)
@@ -230,9 +214,9 @@ class Telemetry(Process):
         speed = 0.0 if speed < 0 else speed
 
         if speed == 0.0:
-            self.replay_data["status"] = "paused"
+            self.replay_data.status = "paused"
         else:
-            self.replay_data["status"] = "playing"
+            self.replay_data.status = "playing"
 
         self.replay_input.put(f"speed {speed}")
 
@@ -252,7 +236,7 @@ class Telemetry(Process):
 
         """Plays the desired mission recording."""
 
-        if mission_name in self.replay_data["mission_list"]:
+        if mission_name in self.replay_data.mission_list:
             self.status_data.mission.name = mission_name
             replay_mission_filepath = mission_path(mission_name, self.missions_dir)
 
@@ -268,7 +252,7 @@ class Telemetry(Process):
                 self.replay.start()
 
             self.replay_set_speed(speed=1)
-            self.status_data.mission.state = MissionState.RECORDED
+            self.status_data.mission.state = jsp.MissionState.RECORDED
             print(f"REPLAY {mission_name} PLAYING")
             return
 
@@ -290,14 +274,14 @@ class Telemetry(Process):
         self.status_data.mission.epoch = recording_epoch
         self.status_data.mission.recording = True
 
-        self.replay_data["mission_list"] = get_mission_list(self.missions_dir)
+        self.replay_data.update_mission_list()
 
     def stop_recording(self) -> None:
 
         """Stops the current recording."""
 
         print("RECORDING STOP")
-        self.status_data.mission = MissionData(state=self.status_data.mission.state)
+        self.status_data.mission = jsp.MissionData(state=self.status_data.mission.state)
 
     def parse_replay_ws_cmd(self, ws_cmd):
 
@@ -367,7 +351,7 @@ class Telemetry(Process):
 
                 # Move status telemetry block to the status key instead of under telemetry
                 if DataBlockSubtype(block_subtype) == DataBlockSubtype.STATUS:
-                    self.status_data.rocket = RocketData.from_data_block(block_data)
+                    self.status_data.rocket = jsp.RocketData.from_data_block(block_data)
                 else:
                     self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
             case _:
