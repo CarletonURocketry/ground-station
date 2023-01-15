@@ -4,14 +4,12 @@ __author__ = "Matteo Golin"
 # Imports
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any, Protocol
+from typing import Any, Protocol, Self
+
+import data_block as dblock
 
 # Constants
 JSON = dict[str, Any]
-DEPLOYMENT_STATE_TEXT = {
-    -1: ""
-}
-
 
 # Helper classes
 class MissionState(IntEnum):
@@ -21,7 +19,7 @@ class MissionState(IntEnum):
     DNE: int = -1
     LIVE: int = 0
     RECORDED: int = 1
-    FAKE: int = 2
+    TEST: int = 2
 
 
 class Serializable(Protocol):
@@ -92,11 +90,27 @@ class RocketData:
     altimeter_state: int = -1
     imu_state: int = -1
     sd_driver_state: int = -1
-    deployment_state: int = -1
+    deployment_state: dblock.DeploymentState = dblock.DeploymentState.DEPLOYMENT_STATE_DNE
     blocks_recorded: int = -1
     checkouts_missed: int = -1
     mission_time: int = -1
     last_mission_time: int = -1
+
+    @classmethod
+    def from_data_block(cls, data: dblock.StatusDataBlock) -> Self:
+
+        """Creates a rocket data packet from a StatusDataBlock class."""
+
+        return cls(
+            mission_time=data.mission_time,
+            kx134_state=data.kx134_state,
+            altimeter_state=data.alt_state,
+            imu_state=data.imu_state,
+            sd_driver_state=data.sd_state,
+            deployment_state=data.deployment_state,
+            blocks_recorded=data.sd_blocks_recorded,
+            checkouts_missed=data.sd_checkouts_missed
+        )
 
     def to_json(self) -> JSON:
 
@@ -105,7 +119,8 @@ class RocketData:
             "altimeter_state": self.altimeter_state,
             "imu_state": self.imu_state,
             "sd_driver_state": self.sd_driver_state,
-            "deployment_state": self.deployment_state,
+            "deployment_state": self.deployment_state.value,
+            "deployment_state_text": str(self.deployment_state),
             "blocks_recorded": self.blocks_recorded,
             "checkouts_missed": self.checkouts_missed,
             "mission_time": self.mission_time,
@@ -134,6 +149,5 @@ class StatusData:
 
 
 if __name__ == '__main__':
-    mission = MissionData()
-    print(mission.to_json())
-
+    rocket = RocketData()
+    print(rocket.to_json())
