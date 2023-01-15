@@ -22,7 +22,7 @@ rn2483_radio_input = Queue()
 rn2483_radio_payloads = Queue()
 telemetry_json_output = Queue()
 
-VERSION: str = "0.4.4-DEV"
+VERSION: str = "0.4.5-DEV"
 
 
 class ShutdownException(Exception):

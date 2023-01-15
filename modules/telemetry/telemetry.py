@@ -16,7 +16,7 @@ from multiprocessing import Queue, Process, active_children
 import ast
 
 ORG: str = "CUInSpace"
-VERSION: str = "0.4.4-DEV"
+VERSION: str = "0.4.5-DEV"
 REPLAY_STATE: int = 1
 MISSION_EXTENSION: str = ".mission"
 
@@ -53,6 +53,7 @@ class Telemetry(Process):
         self.replay = None
         self.replay_input = Queue()
         self.replay_output = Queue()
+        self.replay_last_played_speed = 1
 
         # Handle program closing to ensure no orphan processes
         signal(SIGTERM, shutdown_sequence)
@@ -196,6 +197,7 @@ class Telemetry(Process):
         else:
             self.replay_data["status"] = "playing"
 
+        self.replay_data["speed"] = speed
         self.replay_input.put(f"speed {speed}")
 
     def parse_replay_ws_cmd(self, ws_cmd):
@@ -219,9 +221,10 @@ class Telemetry(Process):
                 print(f"REPLAY {mission_name} DOES NOT EXIST")
         elif replay_cmd == "play":
             print("REPLAY PLAY")
-            self.replay_set_speed(speed=1)
+            self.replay_set_speed(speed=self.replay_last_played_speed)
         elif replay_cmd == "pause":
             print("REPLAY PAUSE")
+            self.replay_last_played_speed = self.replay_data["speed"]
             self.replay_set_speed(speed=0)
         elif replay_cmd == "speed":
             print(f"REPLAY SPEED {cmd_data[0]}")
