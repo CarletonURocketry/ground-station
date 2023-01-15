@@ -26,6 +26,7 @@ ORG: str = "CUInSpace"
 VERSION: str = "0.4.4-DEV"
 REPLAY_STATE: int = 1
 MISSION_EXTENSION: str = ".mission"
+FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
 
 # Helper functions
@@ -34,6 +35,18 @@ def mission_path(mission_name: str, missions_dir: Path) -> Path:
     """Returns the path to the mission file with the matching mission name."""
 
     return missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
+
+
+def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Path:
+
+    missions_filepath = missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
+    file_suffix = 1
+
+    while missions_filepath.is_file() and file_suffix < FILE_CREATION_ATTEMPT_LIMIT:
+        missions_filepath = missions_dir.joinpath(f"{mission_name}_{file_suffix}{MISSION_EXTENSION}")
+        file_suffix += 1
+
+    return missions_filepath
 
 
 # Errors
@@ -267,7 +280,7 @@ class Telemetry(Process):
 
         print("RECORDING START")
 
-        self.mission_path = self.get_filepath_for_proposed_name(mission_name)
+        self.mission_path = get_filepath_for_proposed_name(mission_name, self.missions_dir)
         self.mission_path.write_text(f"{1},{recording_epoch}\n")
 
         self.status_data.mission.name = mission_name
@@ -389,19 +402,6 @@ class Telemetry(Process):
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[8 + block_len:]
         print(f"-----" * 20)
-
-    def get_filepath_for_proposed_name(self, mission_name) -> Path:
-        self.missions_dir.mkdir(parents=True, exist_ok=True)
-
-        missions_filepath = self.missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
-
-        if missions_filepath.is_file():
-            for i in range(1, 50):
-                proposed_filepath = self.missions_dir.joinpath(f"{mission_name}_{i}{MISSION_EXTENSION}")
-                if not proposed_filepath.is_file():
-                    return proposed_filepath
-
-        return missions_filepath
 
 
 def _parse_packet_header(header) -> tuple:
