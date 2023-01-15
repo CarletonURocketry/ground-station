@@ -229,7 +229,8 @@ class Telemetry(Process):
             self.replay_set_speed(speed=cmd_data[0])
         elif replay_cmd == "stop":
             print("REPLAY STOP")
-            self.replay.terminate()
+            if self.replay is not None:
+                self.replay.terminate()
             self.replay = None
 
             self.reset_data()
