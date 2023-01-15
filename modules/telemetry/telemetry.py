@@ -4,7 +4,7 @@
 #
 # Authors:
 # Thomas Selwyn (Devil)
-
+from signal import signal, SIGTERM
 from struct import unpack
 from time import sleep, time
 from pathlib import Path
@@ -12,13 +12,18 @@ from pathlib import Path
 from modules.telemetry.block import DeviceAddress, BlockTypes
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState
 from modules.telemetry.replay import TelemetryReplay
-from multiprocessing import Queue, Process
+from multiprocessing import Queue, Process, active_children
 import ast
 
 ORG: str = "CUInSpace"
 VERSION: str = "0.4.4-DEV"
 REPLAY_STATE: int = 1
 MISSION_EXTENSION: str = ".mission"
+
+
+def shutdown_sequence():
+    for child in active_children():
+        child.terminate()
 
 
 class Telemetry(Process):
@@ -47,6 +52,9 @@ class Telemetry(Process):
         self.replay = None
         self.replay_input = Queue()
         self.replay_output = Queue()
+
+        # Handle program closing to ensure no orphan processes
+        signal(SIGTERM, shutdown_sequence())
 
         # Start Telemetry
         self.reset_data()
@@ -82,7 +90,7 @@ class Telemetry(Process):
                 self.update_websocket()
 
             match self.status_data["mission"]["state"]:
-                #case [REPLAY_STATE]:
+                # case [REPLAY_STATE]:
                 case 1:
                     # REPLAY SYSTEM
                     while not self.replay_output.empty():
@@ -136,7 +144,6 @@ class Telemetry(Process):
             "mission_list": self.generate_replay_mission_list()
         }
 
-
     def generate_websocket_response(self, telemetry_keys="all"):
         return {"version": VERSION, "org": ORG,
                 "status": self.status_data,
@@ -150,7 +157,6 @@ class Telemetry(Process):
 
     def generate_replay_mission_list(self):
         return [name.stem for name in self.missions_dir.glob(f"*{MISSION_EXTENSION}") if name.is_file()]
-
 
     def generate_telemetry_data(self, keys_to_send="all"):
         if keys_to_send == "all":

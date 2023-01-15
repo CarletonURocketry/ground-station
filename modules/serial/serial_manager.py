@@ -6,10 +6,16 @@
 
 import glob
 import sys
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, active_children
 from serial import Serial, SerialException
 from modules.serial.serial_rn2483_radio import SerialRN2483Radio
 from modules.serial.serial_rn2483_emulator import SerialRN2483Emulator
+from signal import signal, SIGTERM
+
+
+def shutdown_sequence():
+    for child in active_children():
+        child.terminate()
 
 
 class SerialManager(Process):
@@ -28,6 +34,9 @@ class SerialManager(Process):
 
         # Immediately find serial ports
         self.update_serial_ports()
+
+        # Handle program closing to ensure no orphan processes
+        signal(SIGTERM, shutdown_sequence())
 
         self.run()
 
