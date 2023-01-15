@@ -197,12 +197,13 @@ class SDCardStatus(IntEnum):
 
 
 class DeploymentState(IntEnum):
-    DEPLOYMENT_STATE_IDLE = 0x0,
-    DEPLOYMENT_STATE_ARMED = 0x1,
-    DEPLOYMENT_STATE_POWERED_ASCENT = 0x2,
-    DEPLOYMENT_STATE_COASTING_ASCENT = 0x3,
-    DEPLOYMENT_STATE_DEPLOYING = 0x4,
-    DEPLOYMENT_STATE_DESCENT = 0x5,
+    DEPLOYMENT_STATE_DNE = -1
+    DEPLOYMENT_STATE_IDLE = 0x0
+    DEPLOYMENT_STATE_ARMED = 0x1
+    DEPLOYMENT_STATE_POWERED_ASCENT = 0x2
+    DEPLOYMENT_STATE_COASTING_ASCENT = 0x3
+    DEPLOYMENT_STATE_DEPLOYING = 0x4
+    DEPLOYMENT_STATE_DESCENT = 0x5
     DEPLOYMENT_STATE_RECOVERY = 0x6
 
     def __str__(self):
@@ -221,6 +222,8 @@ class DeploymentState(IntEnum):
                 return "descent"
             case DeploymentState.DEPLOYMENT_STATE_RECOVERY:
                 return "recovery"
+            case DeploymentState.DEPLOYMENT_STATE_DNE:
+                return ""
             case _:
                 return "unknown"
 
