@@ -24,6 +24,7 @@ MISSION_EXTENSION: str = ".mission"
 def shutdown_sequence():
     for child in active_children():
         child.terminate()
+    exit(0)
 
 
 class Telemetry(Process):
@@ -54,7 +55,7 @@ class Telemetry(Process):
         self.replay_output = Queue()
 
         # Handle program closing to ensure no orphan processes
-        signal(SIGTERM, shutdown_sequence())
+        signal(SIGTERM, shutdown_sequence)
 
         # Start Telemetry
         self.reset_data()

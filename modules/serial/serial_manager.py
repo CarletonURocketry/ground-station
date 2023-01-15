@@ -16,6 +16,7 @@ from signal import signal, SIGTERM
 def shutdown_sequence():
     for child in active_children():
         child.terminate()
+    exit(0)
 
 
 class SerialManager(Process):
@@ -36,7 +37,7 @@ class SerialManager(Process):
         self.update_serial_ports()
 
         # Handle program closing to ensure no orphan processes
-        signal(SIGTERM, shutdown_sequence())
+        signal(SIGTERM, shutdown_sequence)
 
         self.run()
 
