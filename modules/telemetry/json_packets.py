@@ -48,7 +48,7 @@ class SerialData:
 @dataclass
 class RN2483RadioData:
 
-    """The RN3483 radio data packet for the telemetry process."""
+    """The RN2483 radio data packet for the telemetry process."""
 
     connected: bool = False
     connected_port: str = ""
@@ -127,14 +127,14 @@ class StatusData:
 
     mission: MissionData = field(default_factory=MissionData)
     serial: SerialData = field(default_factory=SerialData)
-    rn3483_radio: RN2483RadioData = field(default_factory=RN2483RadioData)
+    rn2483_radio: RN2483RadioData = field(default_factory=RN2483RadioData)
     rocket: RocketData = field(default_factory=RocketData)
 
     def __iter__(self):
 
         yield "mission", dict(self.mission),
         yield "serial", dict(self.serial),
-        yield "rn3483_radio", dict(self.rn3483_radio),
+        yield "rn2483_radio", dict(self.rn2483_radio),
         yield "rocket", dict(self.rocket),
 
 
