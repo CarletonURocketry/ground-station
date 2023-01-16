@@ -13,7 +13,9 @@
         },
         "rn2483_radio": {
             "connected": false,
-            "connected_port": ""
+            "connected_port": "",
+            "snr": 0,
+            "rssi": 0
         },
         "rocket": {
             "kx134_state": -1,

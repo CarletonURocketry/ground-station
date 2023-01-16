@@ -28,13 +28,15 @@ def shutdown_sequence():
 
 
 class Telemetry(Process):
-    def __init__(self, serial_status: Queue, radio_payloads: Queue,
-                 telemetry_json_output: Queue, telemetry_ws_commands: Queue):
+    def __init__(self, serial_status: Queue, radio_payloads: Queue, rn2483_radio_input: Queue,
+                 radio_signal_report: Queue, telemetry_json_output: Queue, telemetry_ws_commands: Queue):
         super().__init__()
 
         self.radio_payloads = radio_payloads
         self.telemetry_json_output = telemetry_json_output
         self.telemetry_ws_commands = telemetry_ws_commands
+        self.rn2483_radio_input = rn2483_radio_input
+        self.radio_signal_report = radio_signal_report
 
         self.serial_status = serial_status
         self.serial_ports = []
@@ -67,6 +69,9 @@ class Telemetry(Process):
         while True:
             while not self.telemetry_ws_commands.empty():
                 self.parse_ws_commands(self.telemetry_ws_commands.get())
+
+            while not self.radio_signal_report.empty():
+                print("SIGNAL DATA", self.radio_signal_report.get())
 
             while not self.serial_status.empty():
                 x = self.serial_status.get().split(" ", maxsplit=1)
@@ -271,12 +276,11 @@ class Telemetry(Process):
         match BlockTypes(block_type):
             case BlockTypes.CONTROL:
                 # CONTROL BLOCK DETECTED
-                # TODO Make a separate serial output just for signal data
                 print("CONTROL BLOCK")
-                self.replay_input.put("radio get snr")
-                # snr = self._read_ser();
-                self.replay_input.put("radio get rssi")
-                # rssi = self._read_ser()
+                # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
+                self.rn2483_radio_input.put("radio get snr")
+                self.rn2483_radio_input.put("radio get rssi")
+
             case BlockTypes.COMMAND:
                 # COMMAND BLOCK DETECTED
                 print("Command block")

@@ -12,12 +12,13 @@ from datetime import datetime
 
 
 class SerialRN2483Emulator(Process):
-    def __init__(self, serial_status: Queue, rn2483_radio_payloads: Queue):
+    def __init__(self, serial_status: Queue, radio_signal_report: Queue, rn2483_radio_payloads: Queue):
         super().__init__()
 
         self.serial_status = serial_status
 
         self.rn2483_radio_payloads = rn2483_radio_payloads
+        self.radio_signal_report = radio_signal_report
 
         # Emulation Variables
         self.altitude = 0
@@ -30,7 +31,8 @@ class SerialRN2483Emulator(Process):
     def run(self):
         self.serial_status.put(f"rn2483_connected True")
         self.serial_status.put(f"rn2483_port test")
-
+        self.radio_signal_report.put("snr 30")
+        #self.radio_signal_report.put("rssi -55")
         while True:
             self.tester()
             time.sleep(random.uniform(0, 2000) / 1000)

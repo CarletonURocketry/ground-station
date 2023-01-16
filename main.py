@@ -18,6 +18,7 @@ ws_commands = Queue()
 serial_ws_commands = Queue()
 telemetry_ws_commands = Queue()
 
+radio_signal_report = Queue()
 rn2483_radio_input = Queue()
 rn2483_radio_payloads = Queue()
 telemetry_json_output = Queue()
@@ -35,7 +36,7 @@ def main():
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
     # Outputs information in hexadecimal payload format to rn2483_radio_payloads
-    serial = Process(target=SerialManager, args=(serial_status, serial_ws_commands,
+    serial = Process(target=SerialManager, args=(serial_status, serial_ws_commands, radio_signal_report,
                                                  rn2483_radio_input, rn2483_radio_payloads))
     serial.start()
     print(f"{'Serial':.<15} started")
@@ -43,8 +44,8 @@ def main():
     # Initialize Telemetry to parse radio packets, keep history and to log everything
     # Incoming information comes from rn2483_radio_payloads in payload format
     # Outputs information to telemetry_json_output in friendly json for UI
-    telemetry = Process(target=Telemetry, args=(serial_status, rn2483_radio_payloads,
-                                                telemetry_json_output, telemetry_ws_commands))
+    telemetry = Process(target=Telemetry, args=(serial_status, rn2483_radio_payloads, rn2483_radio_input,
+                                                radio_signal_report, telemetry_json_output, telemetry_ws_commands))
     telemetry.start()
     print(f"{'Telemetry':.<15} started")
 

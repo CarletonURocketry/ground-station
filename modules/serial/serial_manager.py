@@ -20,17 +20,18 @@ def shutdown_sequence():
 
 
 class SerialManager(Process):
-    def __init__(self, serial_status: Queue,
-                 serial_ws_commands: Queue, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue):
+    def __init__(self, serial_status: Queue, serial_ws_commands: Queue,  radio_signal_report: Queue,
+                 rn2483_radio_input: Queue, rn2483_radio_payloads: Queue):
         super().__init__()
 
         self.serial_status = serial_status
         self.serial_ports = []
-
         self.serial_ws_commands = serial_ws_commands
+
+        self.radio_signal_report = radio_signal_report
+
         self.rn2483_radio_input = rn2483_radio_input
         self.rn2483_radio_payloads = rn2483_radio_payloads
-
         self.rn2483_radio = None
 
         # Immediately find serial ports
@@ -66,13 +67,14 @@ class SerialManager(Process):
             proposed_serial_port = ws_cmd[1]
             if proposed_serial_port != "test":
                 self.rn2483_radio = Process(target=SerialRN2483Radio, args=(self.serial_status,
+                                                                            self.radio_signal_report,
                                                                             self.rn2483_radio_input,
                                                                             self.rn2483_radio_payloads,
                                                                             proposed_serial_port),
                                             daemon=True)
             else:
                 self.rn2483_radio = Process(target=SerialRN2483Emulator,
-                                            args=(self.serial_status, self.rn2483_radio_payloads),
+                                            args=(self.serial_status, self.radio_signal_report, self.rn2483_radio_payloads),
                                             daemon=True)
             self.rn2483_radio.start()
         elif radio_ws_cmd == "connect":
