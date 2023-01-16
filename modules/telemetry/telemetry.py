@@ -107,14 +107,11 @@ class Telemetry(Process):
     def run(self):
         while True:
             while not self.telemetry_ws_commands.empty():
-                
                 # Parse websocket command into an enum
                 commands: list[str] = self.telemetry_ws_commands.get()
                 command = wsc.parse(commands, wsc.WebsocketCommand)
-                parameters = commands
+                parameters = commands  # Remaining items in the commands list are parameters
                 self.execute_command(command, parameters)
-
-                self.parse_ws_commands(self.telemetry_ws_commands.get())
 
             while not self.serial_status.empty():
                 print(self.serial_status.get())
@@ -205,22 +202,41 @@ class Telemetry(Process):
         
         """Executes the passed websocket command."""
 
-        pass
-
-    def parse_ws_commands(self, ws_cmd):
-
-        try:
-            if ws_cmd[0] == "update":
+        match command:
+            case wsc.WebsocketCommand.UPDATE:
                 self.update_websocket()
-            if ws_cmd[0] == "replay":
-                self.parse_replay_ws_cmd(ws_cmd[1:])
-            if ws_cmd[0] == "record":
-                self.parse_record_ws_cmd(ws_cmd[1:])
 
-        except IndexError:
-            print("Telemetry: Error parsing ws command")
+            # Replay commands
+            case wsc.WebsocketCommand.REPLAY.PLAY:
+                mission_name = " ".join(parameters)
+                try:
+                    self.play_mission(mission_name)
+                except MissionNotFoundError as e:
+                    print(e.message)
+                else:
+                    self.update_websocket()
+            case wsc.WebsocketCommand.REPLAY.STOP:
+                self.stop_replay()
+                self.update_websocket()
+            case wsc.WebsocketCommand.REPLAY.PAUSE:
+                self.set_replay_speed(0.0)
+                self.update_websocket()
+            case wsc.WebsocketCommand.REPLAY.SPEED:
+                self.set_replay_speed(int(parameters[0]))
+                self.update_websocket()
 
-    def replay_set_speed(self, speed: float):
+            # Record commands
+            case wsc.WebsocketCommand.RECORD.STOP:
+                self.stop_recording()
+            case wsc.WebsocketCommand.RECORD.START:
+                # If there is no mission name, use the default
+                mission_name = None if not parameters else " ".join(parameters)
+                try:
+                    self.start_recording(mission_name)
+                except AlreadyRecordingError as e:
+                    print(e.message)
+
+    def set_replay_speed(self, speed: float):
 
         """Set the playback speed of the replay system."""
 
@@ -228,9 +244,8 @@ class Telemetry(Process):
 
         if speed == 0.0:
             self.replay_data.status = jsp.ReplayState.PAUSED
-        else:
-            self.replay_data.status = jsp.ReplayState.PLAYING
 
+        self.replay_data.status = jsp.ReplayState.PLAYING
         self.replay_input.put(f"speed {speed}")
 
     def stop_replay(self) -> None:
@@ -249,37 +264,38 @@ class Telemetry(Process):
 
         """Plays the desired mission recording."""
 
-        if mission_name in self.replay_data.mission_list:
-            self.status_data.mission.name = mission_name
-            replay_mission_filepath = mission_path(mission_name, self.missions_dir)
+        if mission_name not in self.replay_data.mission_list:
+            raise MissionNotFoundError(mission_name)
 
-            if self.replay is None:
-                self.replay = Process(
-                    target=TelemetryReplay,
-                    args=(
-                        self.replay_output,
-                        self.replay_input,
-                        replay_mission_filepath
-                    )
+        self.status_data.mission.name = mission_name
+        replay_mission_filepath = mission_path(mission_name, self.missions_dir)
+
+        if self.replay is None:
+            self.replay = Process(
+                target=TelemetryReplay,
+                args=(
+                    self.replay_output,
+                    self.replay_input,
+                    replay_mission_filepath
                 )
-                self.replay.start()
+            )
+            self.replay.start()
 
-            self.replay_set_speed(speed=1)
-            self.status_data.mission.state = jsp.MissionState.RECORDED
-            print(f"REPLAY {mission_name} PLAYING")
-            return
+        self.set_replay_speed(speed=1)
+        self.status_data.mission.state = jsp.MissionState.RECORDED
+        print(f"REPLAY {mission_name} PLAYING")
 
-        raise MissionNotFoundError(mission_name)
+    def start_recording(self, mission_name: str = None) -> None:
 
-    def start_recording(self, mission_name: str, recording_epoch: int) -> None:
-
-        """Starts recording the current mission."""
+        """Starts recording the current mission. If no mission name is give, the recording epoch is used."""
 
         if self.status_data.mission.recording:
             raise AlreadyRecordingError
 
         print("RECORDING START")
 
+        recording_epoch = int(time())
+        mission_name = str(recording_epoch) if not mission_name else mission_name
         self.mission_path = get_filepath_for_proposed_name(mission_name, self.missions_dir)
         self.mission_path.write_text(f"{1},{recording_epoch}\n")
 
@@ -295,48 +311,6 @@ class Telemetry(Process):
 
         print("RECORDING STOP")
         self.status_data.mission = jsp.MissionData(state=self.status_data.mission.state)
-
-    def parse_replay_ws_cmd(self, ws_cmd):
-
-        replay_cmd = ws_cmd[0]
-        if replay_cmd == "play" and len(ws_cmd) > 1:
-            mission_name = ' '.join(ws_cmd[1:])
-            try:
-                self.play_mission(mission_name)
-            except MissionNotFoundError as e:
-                print(e.message)
-
-        # Simple stuff
-        elif replay_cmd == "play" and len(ws_cmd) == 1:
-            print("REPLAY PLAY")
-            self.replay_set_speed(speed=1)
-        elif replay_cmd == "pause":
-            print("REPLAY PAUSE")
-            self.replay_set_speed(speed=0)
-        elif replay_cmd == "speed":
-            print(f"REPLAY SPEED {ws_cmd[1]}")
-            self.replay_set_speed(speed=ws_cmd[1])
-        elif replay_cmd == "stop":
-            self.stop_replay()
-
-        self.update_websocket()
-
-    def parse_record_ws_cmd(self, ws_cmd):
-
-        record_cmd = ws_cmd[0]
-
-        if record_cmd == "start":
-
-            recording_epoch = int(time())
-            mission_name = str(recording_epoch) if len(ws_cmd) <= 1 else " ".join(ws_cmd[1:])
-
-            try:
-                self.start_recording(mission_name, recording_epoch)
-            except AlreadyRecordingError as e:
-                print(e.message)
-
-        elif record_cmd == "stop":
-            self.stop_recording()
 
     def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents):
         # Working with hex strings until this point.
