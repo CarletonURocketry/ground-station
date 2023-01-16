@@ -208,7 +208,7 @@ class Telemetry(Process):
                 self.update_websocket()
 
             # Replay commands
-            case wsc.WebsocketCommand.REPLAY.PLAY:
+            case wsc.WebsocketCommand.REPLAY.value.PLAY:
                 mission_name = " ".join(parameters)
                 try:
                     self.play_mission(mission_name)
@@ -216,21 +216,21 @@ class Telemetry(Process):
                     print(e.message)
                 else:
                     self.update_websocket()
-            case wsc.WebsocketCommand.REPLAY.STOP:
+            case wsc.WebsocketCommand.REPLAY.value.STOP:
                 self.stop_replay()
                 self.update_websocket()
-            case wsc.WebsocketCommand.REPLAY.PAUSE:
+            case wsc.WebsocketCommand.REPLAY.value.PAUSE:
                 self.replay_last_played_speed = self.replay_data.speed
                 self.set_replay_speed(0.0)
                 self.update_websocket()
-            case wsc.WebsocketCommand.REPLAY.SPEED:
+            case wsc.WebsocketCommand.REPLAY.value.SPEED:
                 self.set_replay_speed(int(parameters[0]))
                 self.update_websocket()
 
             # Record commands
-            case wsc.WebsocketCommand.RECORD.STOP:
+            case wsc.WebsocketCommand.RECORD.value.STOP:
                 self.stop_recording()
-            case wsc.WebsocketCommand.RECORD.START:
+            case wsc.WebsocketCommand.RECORD.value.START:
                 # If there is no mission name, use the default
                 mission_name = None if not parameters else " ".join(parameters)
                 try:
