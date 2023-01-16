@@ -13,7 +13,6 @@ from modules.websocket.websocket import WebSocketHandler
 from re import sub
 
 serial_status = Queue()
-
 ws_commands = Queue()
 serial_ws_commands = Queue()
 telemetry_ws_commands = Queue()
