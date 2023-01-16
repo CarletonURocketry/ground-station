@@ -3,6 +3,7 @@ __author__ = "Matteo Golin"
 
 # Imports
 from enum import StrEnum, Enum, EnumType
+import enum
 
 
 # Classes
@@ -16,31 +17,27 @@ class WebsocketCommandNotFound(Exception):
         super().__init__(self.message)
 
 
-class RecordCommand(StrEnum):
-
-    """Contains the structure for the record subcommands."""
-
-    START: str = "start recording"
-    STOP: str = "stop recording"
-
-
-class ReplayCommand(StrEnum):
-
-    """Contains the structure for the replay subcommands."""
-
-    PLAY: str = "play replay"
-    PAUSE: str = "pause replay"
-    SPEED: str = "speed replay"
-    STOP: str = "stop replay"
-
-
 class WebsocketCommand(Enum):
 
     """Contains the structure for the telemetry commands."""
 
     UPDATE: str = "update"
-    REPLAY: ReplayCommand = ReplayCommand
-    RECORD: RecordCommand = RecordCommand
+
+    @enum.member
+    class REPLAY(StrEnum):
+        """Contains the structure for the replay subcommands."""
+
+        PLAY: str = "play replay"
+        PAUSE: str = "pause replay"
+        SPEED: str = "speed replay"
+        STOP: str = "stop replay"
+
+    @enum.member
+    class RECORD(StrEnum):
+        """Contains the structure for the record subcommands."""
+
+        START: str = "start recording"
+        STOP: str = "stop recording"
 
 
 # Parsing functions
@@ -61,4 +58,4 @@ def parse(websocket_command: list[str], enum: EnumType) -> Enum:
     if websocket_command and type(next_enum.value) is not str:
         return parse(websocket_command, enum=next_enum.value)
     else:
-        return
+        return next_enum
