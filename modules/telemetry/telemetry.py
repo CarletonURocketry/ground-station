@@ -126,7 +126,10 @@ class Telemetry(Process):
                 commands: list[str] = self.telemetry_ws_commands.get()
                 command = wsc.parse(commands, wsc.WebsocketCommand)
                 parameters = commands  # Remaining items in the commands list are parameters
-                self.execute_command(command, parameters)
+                try:
+                    self.execute_command(command, parameters)
+                except AttributeError as e:
+                    print(e)
 
             while not self.radio_signal_report.empty():
                 print("SIGNAL DATA", self.radio_signal_report.get())
@@ -139,12 +142,12 @@ class Telemetry(Process):
                         self.serial_ports = literal_eval(x[1])
                         self.status_data.serial.available_ports = self.serial_ports
                     case "rn2483_connected":
-                        self.status_data.rn3483_radio.connected = bool(x[1])
+                        self.status_data.rn2483_radio.connected = bool(x[1])
                     case "rn2483_port":
                         self.reset_data()
-                        self.status_data.rn3483_radio.connected_port = x[1]
+                        self.status_data.rn2483_radio.connected_port = x[1]
 
-                        match self.status_data.rn3483_radio.connected_port:
+                        match self.status_data.rn2483_radio.connected_port:
                             case "test":
                                 self.status_data.mission.state = jsp.MissionState.TEST
                             case "":
@@ -170,11 +173,8 @@ class Telemetry(Process):
 
     def update_websocket(self) -> None:
 
-        """Updates the mission replay list and puts the latest packet on the JSON output process."""
+        """Updates the websocket with the latest packet using the JSON output process."""
 
-        self.replay_data.update_mission_list()
-
-    def update_websocket(self):
         self.telemetry_json_output.put(self.generate_websocket_response())
 
     def reset_data(self):
@@ -205,6 +205,7 @@ class Telemetry(Process):
 
         match command:
             case wsc.WebsocketCommand.UPDATE:
+                self.replay_data.update_mission_list()
                 self.update_websocket()
 
             # Replay commands
@@ -217,6 +218,7 @@ class Telemetry(Process):
                 else:
                     self.update_websocket()
             case wsc.WebsocketCommand.REPLAY.value.STOP:
+                self.replay_last_played_speed = self.replay_data.speed
                 self.stop_replay()
                 self.update_websocket()
             case wsc.WebsocketCommand.REPLAY.value.PAUSE:
@@ -239,7 +241,6 @@ class Telemetry(Process):
                     print(e.message)
 
 
-
     def set_replay_speed(self, speed: float):
         """Set the playback speed of the replay system."""
         try:
@@ -259,10 +260,13 @@ class Telemetry(Process):
         """Stops the replay."""
 
         print("REPLAY STOP")
-        self.replay.terminate()
+
+        if self.replay is not None:
+            self.replay.join()
         self.replay = None
 
         self.reset_data()
+        # Empty replay output
         while not self.replay_output.empty():
             self.replay_output.get()
 
@@ -316,7 +320,9 @@ class Telemetry(Process):
         """Stops the current recording."""
 
         print("RECORDING STOP")
+        self.status_data.mission.recording = False
         self.status_data.mission = jsp.MissionData(state=self.status_data.mission.state)
+
 
     def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents):
         # Working with hex strings until this point.
