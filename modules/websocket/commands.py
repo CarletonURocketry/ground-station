@@ -58,8 +58,3 @@ def parse(websocket_command: list[str], enum: EnumType) -> Enum:
         return parse(websocket_command, enum=next_enum.value)
     else:
         return next_enum
-
-if __name__ == '__main__':
-
-    params = ["replay", "play", "hello"]
-    command = parse(params, WebsocketCommand)
