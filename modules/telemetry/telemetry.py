@@ -21,6 +21,10 @@ from modules.telemetry.replay import TelemetryReplay
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
 
+# Types
+BlockHeader = tuple[int, bool, int, int, int]
+PacketHeader = tuple[str, int, int, int, int]
+
 # Constants
 ORG: str = "CUInSpace"
 VERSION: str = "0.4.4-DEV"
@@ -378,7 +382,7 @@ class Telemetry(Process):
         print(f"-----" * 20)
 
 
-def _parse_packet_header(header) -> tuple:
+def _parse_packet_header(header: str) -> PacketHeader:
     """
     Returns the packet header string's informational components in a tuple.
 
@@ -404,7 +408,7 @@ def _parse_packet_header(header) -> tuple:
     return call_sign, length, version, src_addr, packet_num
 
 
-def _parse_block_header(header) -> tuple:
+def _parse_block_header(header: str) -> BlockHeader:
     """
     Parses a block header string into its information components and returns them in a tuple.
 
@@ -414,7 +418,6 @@ def _parse_block_header(header) -> tuple:
     message_subtype: int
     destination_addr: int
     """
-
     header = unpack('<I', bytes.fromhex(header))
 
     block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
