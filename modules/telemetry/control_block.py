@@ -42,7 +42,6 @@ class ControlBlock(ABC):
                 print("")
             case ControlBlockSubtype.COMMAND_NONCE_REQUEST:
                 print("")
-
             case ControlBlockSubtype.COMMAND_NONCE:
                 print("")
             case ControlBlockSubtype.BEACON:

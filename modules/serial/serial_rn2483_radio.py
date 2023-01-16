@@ -6,24 +6,18 @@
 # Thomas Selwyn (Devil)
 # Zacchaeus Liang
 
-import queue
 import time
-from multiprocessing import Queue, Process, Value
-from multiprocessing.shared_memory import ShareableList
-
+from multiprocessing import Queue, Process
 from serial import Serial, SerialException, EIGHTBITS, PARITY_NONE
 
 
 class SerialRN2483Radio(Process):
 
-    def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
-                 rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, serial_port: str):
+    def __init__(self, serial_status: Queue, radio_signal_report: Queue, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, serial_port: str):
         Process.__init__(self)
 
-        self.serial_connected = serial_connected
-        self.serial_connected_port = serial_connected_port
-        self.serial_ports = serial_ports
-
+        self.serial_status = serial_status
+        self.radio_signal_report = radio_signal_report
         self.rn2483_radio_input = rn2483_radio_input
         self.rn2483_radio_payloads = rn2483_radio_payloads
 
@@ -46,8 +40,8 @@ class SerialRN2483Radio(Process):
                                   stopbits=1,
                                   rtscts=False)
                 print(f"RN2483 Radio: Connected to {self.serial_port}")
-                self.serial_connected.value = True
-                self.serial_connected_port[0] = self.serial_port
+                self.serial_status.put(f"rn2483_connected True")
+                self.serial_status.put(f"rn2483_port {self.serial_port}")
 
                 self.init_rn2483_radio()
                 self.set_rx_mode()
@@ -62,8 +56,8 @@ class SerialRN2483Radio(Process):
                     self.check_for_transmissions()
 
             except SerialException:
-                self.serial_connected.value = False
-                self.serial_connected_port[0] = ""
+                self.serial_status.put(f"rn2483_connected False")
+                self.serial_status.put(f"rn2483_port null")
                 print("RN2483 Radio: Error communicating with serial device.")
                 time.sleep(3)
 
@@ -184,6 +178,9 @@ class SerialRN2483Radio(Process):
         if command_string != 'sys reset' and command_string != 'radio get snr' and command_string != 'radio get rssi':
             # TODO: clean this up with read functions
             return self.wait_for_ok()
+        elif command_string == 'radio get snr':
+            self.radio_signal_report.put(f"snr {self._read_ser()}")
+
 
     def wait_for_ok(self):
         """
@@ -310,16 +307,16 @@ class SerialRN2483Radio(Process):
     def set_sync(self, sync):
 
         # TODO: convert sync into hexadecimal
-        # TODO: make sure sync is between 0- 255 for lora modulation
-        # TODO: make sure sync is between 0 - 2^8 - 1 for fsk modulation
 
-        success = self.write_to_rn2483_radio(f"radio set sync {sync}")
-        if success:
-            print("value sync word successfully set")
-            return
-        else:
-            print("sync param error:radio unable to set ")
-            return
+        if sync in range(0, 256):
+            success = self.write_to_rn2483_radio(f"radio set sync {sync}")
+            if success:
+                print("value sync word successfully set")
+                return
+            else:
+                print("sync param error:radio unable to set ")
+                return
+        print("error: invalid sync word")
 
     def set_prlen(self, pr):
         """set the preamble length between 0 and 65535"""
@@ -347,7 +344,7 @@ class SerialRN2483Radio(Process):
                 print("crc error:radio unable to set")
                 return
 
-        print("invalid crc param ")
+        print("invalid crc param")
 
     def set_rx_mode(self):
         """set the rn2483 radio so that it constantly

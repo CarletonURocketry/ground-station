@@ -1130,7 +1130,7 @@ class MPU9250Sample:
         yield "mag_y", self.mag_y
         yield "mag_z", self.mag_z
         yield "mag_ovf", self.mag_ovf
-        yield "mag_res", self.mag_res
+        yield "mag_res", self.mag_res.value
 
 
 class MPU9250IMUDataBlock(DataBlock):

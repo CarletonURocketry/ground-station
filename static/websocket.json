@@ -1,9 +1,9 @@
 {
-    "version": "0.4.4",
+    "version": "0.4.5",
     "org": "CUInSpace",
     "status": {
         "mission": {
-            "name": "test flight",
+            "name": "",
             "epoch": -1,
             "state": 0,
             "recording": false
@@ -13,7 +13,9 @@
         },
         "rn2483_radio": {
             "connected": false,
-            "connected_port": ""
+            "connected_port": "",
+            "snr": 0,
+            "rssi": 0
         },
         "rocket": {
             "kx134_state": -1,
@@ -42,12 +44,27 @@
                 "fahrenheit": "54"
             }
         },
-        "acceleration_data": {
-            "mission_time": 8120,
-            "acceleration": {
-                "ms2": "40",
-                "fts2": "131"
-            }
+        "mpu9250_data": {
+            "mission_time": 7660,
+            "accel_x": {
+                "ms2": "-0.08789062500000001",
+                "fts2": "0"
+            },
+            "accel_y": {
+                "ms2": "-0.09985351562499999",
+                "fts2": "0"
+            },
+            "accel_z": {
+                "ms2": "0.8688151041666667",
+                "fts2": "0"
+            },
+            "temperature": {
+                "celsius": "24.81775700934579",
+                "fahrenheit": "0"
+            },
+            "gyro_x": "0.091552734375",
+            "gyro_y": "-0.050862630208333336",
+            "gyro_z": "0.040690104166666664"
         },
         "gnss": {
             "mission_time": 169012,

@@ -7,21 +7,18 @@
 import random
 import struct
 import time
-from multiprocessing import Process, Queue, Value
-from multiprocessing.shared_memory import ShareableList
+from multiprocessing import Process, Queue
 from datetime import datetime
 
 
 class SerialRN2483Emulator(Process):
-    def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
-                 rn2483_radio_payloads: Queue):
+    def __init__(self, serial_status: Queue, radio_signal_report: Queue, rn2483_radio_payloads: Queue):
         super().__init__()
 
-        self.serial_connected = serial_connected
-        self.serial_connected_port = serial_connected_port
-        self.serial_ports = serial_ports
+        self.serial_status = serial_status
 
         self.rn2483_radio_payloads = rn2483_radio_payloads
+        self.radio_signal_report = radio_signal_report
 
         # Emulation Variables
         self.altitude = 0
@@ -32,9 +29,10 @@ class SerialRN2483Emulator(Process):
         self.run()
 
     def run(self):
-        self.serial_connected.value = True
-        self.serial_connected_port[0] = "test"
-
+        self.serial_status.put(f"rn2483_connected True")
+        self.serial_status.put(f"rn2483_port test")
+        self.radio_signal_report.put("snr 30")
+        #self.radio_signal_report.put("rssi -55")
         while True:
             self.tester()
             time.sleep(random.uniform(0, 2000) / 1000)

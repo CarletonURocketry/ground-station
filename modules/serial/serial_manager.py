@@ -3,34 +3,42 @@
 #
 # Authors:
 # Thomas Selwyn (Devil)
+
 import glob
 import sys
-import time
-from multiprocessing import Process, Queue, Value
-from multiprocessing.shared_memory import ShareableList
+from multiprocessing import Process, Queue, active_children
 from serial import Serial, SerialException
 from modules.serial.serial_rn2483_radio import SerialRN2483Radio
 from modules.serial.serial_rn2483_emulator import SerialRN2483Emulator
+from signal import signal, SIGTERM
+
+
+def shutdown_sequence():
+    for child in active_children():
+        child.terminate()
+    exit(0)
 
 
 class SerialManager(Process):
-    def __init__(self, serial_connected: Value, serial_connected_port: ShareableList, serial_ports: ShareableList,
-                 serial_ws_commands: Queue, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, serial_status: Queue):
+    def __init__(self, serial_status: Queue, serial_ws_commands: Queue,  radio_signal_report: Queue,
+                 rn2483_radio_input: Queue, rn2483_radio_payloads: Queue):
         super().__init__()
 
-        self.serial_ports = serial_ports
-        self.serial_connected = serial_connected
-        self.serial_connected_port = serial_connected_port
         self.serial_status = serial_status
-
+        self.serial_ports = []
         self.serial_ws_commands = serial_ws_commands
+
+        self.radio_signal_report = radio_signal_report
+
         self.rn2483_radio_input = rn2483_radio_input
         self.rn2483_radio_payloads = rn2483_radio_payloads
-
         self.rn2483_radio = None
 
         # Immediately find serial ports
-        self.serial_ports = self.update_serial_ports()
+        self.update_serial_ports()
+
+        # Handle program closing to ensure no orphan processes
+        signal(SIGTERM, shutdown_sequence)
 
         self.run()
 
@@ -53,46 +61,34 @@ class SerialManager(Process):
             print("Serial: Error parsing ws command")
 
     def parse_rn2483_radio_ws(self, ws_cmd):
-        try:
-            if ws_cmd[0] == "connect":
-                if not self.serial_connected.value:
-                    if ws_cmd[1] != "test":
-                        self.rn2483_radio = Process(target=SerialRN2483Radio, args=(self.serial_connected,
-                                                                                    self.serial_connected_port,
-                                                                                    self.serial_ports,
-                                                                                    self.rn2483_radio_input,
-                                                                                    self.rn2483_radio_payloads,
-                                                                                    ws_cmd[1]),
-                                                    daemon=True)
-                    else:
-                        self.rn2483_radio = Process(target=SerialRN2483Emulator,
-                                                    args=(self.serial_connected, self.serial_connected_port,
-                                                          self.serial_ports, self.rn2483_radio_payloads),
-                                                    daemon=True)
-                    self.serial_connected_port[0] = ws_cmd[1]
-                    self.serial_status.put(f"connected_rn2483_port {ws_cmd[1]}")
-                    self.rn2483_radio.start()
-                    time.sleep(.1)
-                else:
-                    print(f"Serial: Already connected.")
+        radio_ws_cmd = ws_cmd[0]
 
-            if ws_cmd[0] == "disconnect":
-                if self.rn2483_radio is not None:
-                    if self.serial_connected_port[0] == "test":
-                        print("Serial: RN2483 Payload Emulator terminating")
-                    else:
-                        print(f"Serial: RN2483 Radio on port {'N/A' if self.serial_connected_port[0] == '' else self.serial_connected_port[0]} terminating")
+        if radio_ws_cmd == "connect" and self.rn2483_radio is None:
+            proposed_serial_port = ws_cmd[1]
+            if proposed_serial_port != "test":
+                self.rn2483_radio = Process(target=SerialRN2483Radio, args=(self.serial_status,
+                                                                            self.radio_signal_report,
+                                                                            self.rn2483_radio_input,
+                                                                            self.rn2483_radio_payloads,
+                                                                            proposed_serial_port),
+                                            daemon=True)
+            else:
+                self.rn2483_radio = Process(target=SerialRN2483Emulator,
+                                            args=(self.serial_status, self.radio_signal_report, self.rn2483_radio_payloads),
+                                            daemon=True)
+            self.rn2483_radio.start()
+        elif radio_ws_cmd == "connect":
+            print(f"Serial: Already connected.")
+        elif radio_ws_cmd == "disconnect" and self.rn2483_radio is not None:
+            print(f"Serial: RN2483 Radio terminating")
 
-                    self.serial_connected.value = False
-                    self.serial_connected_port[0] = ""
-                    self.serial_status.put(f"connected_rn2483 False")
-                    self.serial_status.put(f"connected_rn2483_port N/A")
-                    self.rn2483_radio.terminate()
-                    self.rn2483_radio = None
-                else:
-                    print("Serial: RN2483 Radio already disconnected.")
-        except IndexError:
-            print("Serial: Not enough arguments.")
+            self.serial_status.put(f"rn2483_connected False")
+            self.serial_status.put(f"rn2483_port null")
+            self.rn2483_radio.terminate()
+            self.rn2483_radio = None
+        elif radio_ws_cmd == "disconnect":
+            print("Serial: RN2483 Radio already disconnected.")
+
 
     def update_serial_ports(self) -> list[str]:
         """ Finds and updates serial ports on device
@@ -117,16 +113,15 @@ class SerialManager(Process):
         # Checks ports if they are potential COM ports
         for test_port in com_ports:
             try:
-                if test_port != self.serial_connected_port[0]:
-                    ser = Serial(test_port)
-                    ser.close()
-                    tested_com_ports.append(test_port)
+                ser = Serial(test_port)
+                ser.close()
+                tested_com_ports.append(test_port)
             except (OSError, SerialException):
                 pass
 
         tested_com_ports = tested_com_ports + ["test"]
 
-        for i in range(len(self.serial_ports)):
-            self.serial_ports[i] = "" if i > len(tested_com_ports) - 1 else str(tested_com_ports[i])
+        self.serial_ports = tested_com_ports
+        self.serial_status.put(f"serial_ports {self.serial_ports}")
 
         return tested_com_ports
