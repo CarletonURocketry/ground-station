@@ -12,11 +12,12 @@ from struct import unpack
 from time import time
 from pathlib import Path
 from ast import literal_eval
+from typing import Any
 
 from multiprocessing import Queue, Process, active_children
 from modules.telemetry.replay import TelemetryReplay
-from modules.telemetry.block import DeviceAddress, BlockTypes
-from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState, MPU9250Sample
+from modules.telemetry.block import BlockTypes
+from modules.telemetry.data_block import DataBlock, DataBlockSubtype, MPU9250Sample
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
@@ -43,7 +44,7 @@ def mission_path(mission_name: str, missions_dir: Path) -> Path:
     return missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
 
 
-def shutdown_sequence():
+def shutdown_sequence() -> None:
     for child in active_children():
         child.terminate()
     exit(0)
@@ -181,22 +182,14 @@ class Telemetry(Process):
         self.telemetry_data = {}
         self.replay_data = jsp.ReplayData()
 
-    def generate_websocket_response(self, telemetry_keys: list[str] = None):
+    def generate_websocket_response(self) -> dict[str, Any]:
+
+        """Returns the dictionary containing the JSON data for the websocket client."""
+
         return {"version": VERSION, "org": ORG,
                 "status": dict(self.status_data),
-                "telemetry_data": self.generate_telemetry_data(telemetry_keys),
+                "telemetry_data": self.telemetry_data,
                 "replay": dict(self.replay_data)}
-
-    def generate_telemetry_data(self, keys_to_send: list[str] = None):
-        if not keys_to_send:
-            keys_to_send = self.telemetry_data.keys()
-
-        telemetry_data_block = {}
-        for key in keys_to_send:
-            if key in self.telemetry_data.keys():
-                telemetry_data_block[key] = self.telemetry_data[key]
-
-        return telemetry_data_block
 
     def execute_command(self, command: wsc.Enum, parameters: list[str]) -> None:
 
@@ -321,7 +314,10 @@ class Telemetry(Process):
         self.status_data.mission.recording = False
         self.status_data.mission = jsp.MissionData(state=self.status_data.mission.state)
 
-    def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents):
+    def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents: str) -> None:
+
+        """Block contents are a hex string."""
+
         # Working with hex strings until this point.
         # Hex/Bytes Demarcation point
         block_contents = bytes.fromhex(block_contents)
@@ -349,9 +345,9 @@ class Telemetry(Process):
                     case DataBlockSubtype.STATUS:
                         self.status_data.rocket = jsp.RocketData.from_data_block(block_data)
                     case DataBlockSubtype.MPU9250_IMU:
-                        #print(block_data)
+                        # print(block_data)
                         accel, temp, gyro = parse_mpu9250_samples(block_data.samples)
-                        #print("AVG ACCEL", accel[0], accel[1], accel[2], "AVG TEMP", temp, "AVG GYRO", gyro[0], gyro[1], gyro[2])
+                        # print("AVG ACCEL", accel[0], accel[1], accel[2], "AVG TEMP", temp, "AVG GYRO", gyro[0], gyro[1], gyro[2])
                         self.telemetry_data["mpu9250_data"] = {"mission_time": block_data.mission_time,
                                                                "accel_x": {"ms2": accel[0]},
                                                                "accel_y": {"ms2": accel[1]},
@@ -400,7 +396,7 @@ class Telemetry(Process):
         print(f"-----" * 20)
 
 
-def parse_mpu9250_samples(data_samples: [MPU9250Sample]) -> tuple:
+def parse_mpu9250_samples(data_samples: list[MPU9250Sample]) -> tuple:
     """
     Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp and gyro.
     """
@@ -467,24 +463,3 @@ def _parse_block_header(header: str) -> BlockHeader:
     destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
 
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
-
-
-def make_block_header():
-    header = "840C0000"
-
-    # block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
-    # crypto_signature = ((header[0] >> 5) & 0x1)
-    # message_type = ((header[0] >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
-    # message_subtype = ((header[0] >> 10) & 0x3f)
-    # destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
-
-    # lol = "13634180"
-    # header = struct.pack('<I', lol)
-    # print("HEADDDDDDDDD",header)
-    # lol = 13634180
-    # header = struct.pack('<I', lol)
-    # print("HEADDDDDDDDD", int.from_bytes(header, "little"))
-
-    # test = struct.pack('<I?III', 20, False, 2, 3, 0)
-    # print("LLLLLLLL",test.hex())
-    return header
