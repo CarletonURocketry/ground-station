@@ -7,54 +7,19 @@
 import struct
 from abc import ABC, abstractmethod
 from enum import IntEnum
-
+from modules.telemetry.block import DataBlockSubtype, BlockException, BlockUnknownException
 from modules.misc import converter
 
 
-class DataBlockException(Exception):
+class DataBlockException(BlockException):
     pass
 
 
-class DataBlockUnknownException(DataBlockException):
+class DataBlockUnknownException(BlockUnknownException):
     pass
-
-
-class DataBlockSubtype(IntEnum):
-    DEBUG_MESSAGE = 0x00
-    STATUS = 0x01
-    STARTUP_MESSAGE = 0x02
-    ALTITUDE = 0x03
-    ACCELERATION = 0x04
-    ANGULAR_VELOCITY = 0x05
-    GNSS = 0x06
-    GNSS_META = 0x07
-    POWER = 0x08
-    TEMPERATURE = 0x09
-    MPU9250_IMU = 0x0a
-    KX134_1211_ACCEL = 0x0b
-
-
-class DeviceAddress(IntEnum):
-    GROUND_STATION = 0x0,
-    ROCKET = 0x1,
-    MULTICAST = 0xF,
-
-    def __str__(self):
-        match self:
-            case DeviceAddress.GROUND_STATION:
-                return "GROUND STATION"
-            case DeviceAddress.ROCKET:
-                return "ROCKET"
-            case DeviceAddress.MULTICAST:
-                return "MULTICAST"
-            case _:
-                return "UNKNOWN"
 
 
 class DataBlock(ABC):
-
-    def __init__(self):
-        self.mission_time = None
 
     @property
     @abstractmethod
@@ -232,12 +197,13 @@ class SDCardStatus(IntEnum):
 
 
 class DeploymentState(IntEnum):
-    DEPLOYMENT_STATE_IDLE = 0x0,
-    DEPLOYMENT_STATE_ARMED = 0x1,
-    DEPLOYMENT_STATE_POWERED_ASCENT = 0x2,
-    DEPLOYMENT_STATE_COASTING_ASCENT = 0x3,
-    DEPLOYMENT_STATE_DEPLOYING = 0x4,
-    DEPLOYMENT_STATE_DESCENT = 0x5,
+    DEPLOYMENT_STATE_DNE = -1
+    DEPLOYMENT_STATE_IDLE = 0x0
+    DEPLOYMENT_STATE_ARMED = 0x1
+    DEPLOYMENT_STATE_POWERED_ASCENT = 0x2
+    DEPLOYMENT_STATE_COASTING_ASCENT = 0x3
+    DEPLOYMENT_STATE_DEPLOYING = 0x4
+    DEPLOYMENT_STATE_DESCENT = 0x5
     DEPLOYMENT_STATE_RECOVERY = 0x6
 
     def __str__(self):
@@ -256,6 +222,8 @@ class DeploymentState(IntEnum):
                 return "descent"
             case DeploymentState.DEPLOYMENT_STATE_RECOVERY:
                 return "recovery"
+            case DeploymentState.DEPLOYMENT_STATE_DNE:
+                return ""
             case _:
                 return "unknown"
 
@@ -559,7 +527,6 @@ class GNSSLocationBlock(DataBlock):
         coord -= minutes * 10000
         seconds = (coord * 6) / 1000
 
-        direction_char = '?'
         if ew:
             direction_char = "E" if direction else "W"
         else:
@@ -1163,7 +1130,7 @@ class MPU9250Sample:
         yield "mag_y", self.mag_y
         yield "mag_z", self.mag_z
         yield "mag_ovf", self.mag_ovf
-        yield "mag_res", self.mag_res
+        yield "mag_res", self.mag_res.value
 
 
 class MPU9250IMUDataBlock(DataBlock):

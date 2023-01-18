@@ -4,27 +4,25 @@
 # Authors:
 # Thomas Selwyn (Devil)
 
-from multiprocessing import Process, Queue, Value
-from multiprocessing.shared_memory import ShareableList
+from multiprocessing import Process, Queue
 
 from modules.misc.messages import printCURocket
 from modules.serial.serial_manager import SerialManager
 from modules.telemetry.telemetry import Telemetry
 from modules.websocket.websocket import WebSocketHandler
-
 from re import sub
 
-rn2483_radio_input = Queue()
-rn2483_radio_payloads = Queue()
-telemetry_json_output = Queue()
-
+serial_status = Queue()
 ws_commands = Queue()
 serial_ws_commands = Queue()
 telemetry_ws_commands = Queue()
 
-serial_connected = Value('i', 0)
-serial_connected_port = ShareableList([" " * 256])
-serial_ports = ShareableList([" " * 256] * 8)
+radio_signal_report = Queue()
+rn2483_radio_input = Queue()
+rn2483_radio_payloads = Queue()
+telemetry_json_output = Queue()
+
+VERSION: str = "0.4.5-DEV"
 
 
 class ShutdownException(Exception):
@@ -32,23 +30,21 @@ class ShutdownException(Exception):
 
 
 def main():
-    printCURocket("It was Avionics’ Fault", "0.4.3-DEV", "Thomas Selwyn (Devil)")
+    printCURocket("It was Avionics’ Fault", VERSION, "Thomas Selwyn (Devil)")
 
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
     # Outputs information in hexadecimal payload format to rn2483_radio_payloads
-    serial = Process(target=SerialManager,
-                     args=(serial_connected, serial_connected_port, serial_ports,
-                           serial_ws_commands, rn2483_radio_input, rn2483_radio_payloads))
+    serial = Process(target=SerialManager, args=(serial_status, serial_ws_commands, radio_signal_report,
+                                                 rn2483_radio_input, rn2483_radio_payloads))
     serial.start()
     print(f"{'Serial':.<15} started")
 
     # Initialize Telemetry to parse radio packets, keep history and to log everything
     # Incoming information comes from rn2483_radio_payloads in payload format
     # Outputs information to telemetry_json_output in friendly json for UI
-    telemetry = Process(target=Telemetry,
-                        args=(serial_connected, serial_connected_port, serial_ports,
-                              rn2483_radio_payloads, telemetry_json_output, telemetry_ws_commands))
+    telemetry = Process(target=Telemetry, args=(serial_status, rn2483_radio_payloads, rn2483_radio_input,
+                                                radio_signal_report, telemetry_json_output, telemetry_ws_commands))
     telemetry.start()
     print(f"{'Telemetry':.<15} started")
 
@@ -81,9 +77,9 @@ def parse_ws_command(ws_cmd: str):
     try:
         match ws_cmd[0].lower():
             case "serial":
-                serial_ws_commands.put(ws_cmd)
+                serial_ws_commands.put(ws_cmd[1:])
             case "telemetry":
-                telemetry_ws_commands.put(ws_cmd)
+                telemetry_ws_commands.put(ws_cmd[1:])
             case "shutdown":
                 raise ShutdownException
             case _:

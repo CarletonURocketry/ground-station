@@ -4,52 +4,101 @@
 #
 # Authors:
 # Thomas Selwyn (Devil)
-import time
+# Matteo Golin (linguini1)
 
+# Imports
+from signal import signal, SIGTERM
 from struct import unpack
-from time import sleep, time
+from time import time
 from pathlib import Path
-from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState, DeviceAddress
+from ast import literal_eval
+
+from multiprocessing import Queue, Process, active_children
 from modules.telemetry.replay import TelemetryReplay
-from multiprocessing import Queue, Process, Value
-from multiprocessing.shared_memory import ShareableList
+from modules.telemetry.block import DeviceAddress, BlockTypes
+from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState, MPU9250Sample
+
+import modules.telemetry.json_packets as jsp
+import modules.websocket.commands as wsc
 
 
-def shareable_to_list(shareable_list, empty_padding=True) -> list:
-    new_list = [""]
-    try:
-        new_list = [""] * len(shareable_list)
+# Types
+BlockHeader = tuple[int, bool, int, int, int]
+PacketHeader = tuple[str, int, int, int, int]
 
-        for i in range(len(shareable_list)):
-            new_list[i] = str(shareable_list[i])
-
-        if empty_padding:
-            new_list = ' '.join(new_list).split()
-
-    except TypeError:
-        print(f"{new_list}")
-
-    return new_list
+# Constants
+ORG: str = "CUInSpace"
+VERSION: str = "0.4.5-DEV"
+REPLAY_STATE: int = 1
+MISSION_EXTENSION: str = ".mission"
+FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
 
+# Helper functions
+def mission_path(mission_name: str, missions_dir: Path) -> Path:
+
+    """Returns the path to the mission file with the matching mission name."""
+
+
+    return missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
+
+
+def shutdown_sequence():
+    for child in active_children():
+        child.terminate()
+    exit(0)
+
+
+def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Path:
+
+    missions_filepath = missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
+    file_suffix = 1
+
+    while missions_filepath.is_file() and file_suffix < FILE_CREATION_ATTEMPT_LIMIT:
+        missions_filepath = missions_dir.joinpath(f"{mission_name}_{file_suffix}{MISSION_EXTENSION}")
+        file_suffix += 1
+
+    return missions_filepath
+
+
+# Errors
+class MissionNotFoundError(Exception):
+
+    """Raised when the desired mission is not found."""
+    def __init__(self, mission_name: str):
+        self.mission_name = mission_name
+        self.message = f"The mission recording '{mission_name}' does not exist."
+        super().__init__(self.message)
+
+
+class AlreadyRecordingError(Exception):
+
+    """Raised if the telemetry process is already recording when instructed to record."""
+
+    def __init__(self):
+        self.message: str = "Recording is already in progress."
+        super().__init__(self.message)
+
+
+# Main class
 class Telemetry(Process):
-    def __init__(self, serial_connected: Value, serial_connected_port: Value, serial_ports: ShareableList,
-                 radio_payloads: Queue,
-                 telemetry_json_output: Queue, telemetry_ws_commands: Queue):
+    def __init__(self, serial_status: Queue, radio_payloads: Queue, rn2483_radio_input: Queue,
+                 radio_signal_report: Queue, telemetry_json_output: Queue, telemetry_ws_commands: Queue):
         super().__init__()
 
         self.radio_payloads = radio_payloads
         self.telemetry_json_output = telemetry_json_output
         self.telemetry_ws_commands = telemetry_ws_commands
+        self.rn2483_radio_input = rn2483_radio_input
+        self.radio_signal_report = radio_signal_report
 
-        self.serial_ports = serial_ports
-        self.serial_connected = serial_connected
-        self.serial_connected_port = serial_connected_port
+        self.serial_status = serial_status
+        self.serial_ports = []
 
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
-        self.status_data = {}
+        self.status_data: jsp.StatusData = jsp.StatusData()
         self.telemetry_data = {}
-        self.replay_data = {}
+        self.replay_data = jsp.ReplayData()
 
         # Mission Path
         self.missions_dir = Path.cwd().joinpath("missions")
@@ -60,6 +109,10 @@ class Telemetry(Process):
         self.replay = None
         self.replay_input = Queue()
         self.replay_output = Queue()
+        self.replay_last_played_speed = 1
+
+        # Handle program closing to ensure no orphan processes
+        signal(SIGTERM, shutdown_sequence)
 
         # Start Telemetry
         self.reset_data()
@@ -69,10 +122,43 @@ class Telemetry(Process):
     def run(self):
         while True:
             while not self.telemetry_ws_commands.empty():
-                self.parse_ws_commands(self.telemetry_ws_commands.get())
+                # Parse websocket command into an enum
+                commands: list[str] = self.telemetry_ws_commands.get()
+                command = wsc.parse(commands, wsc.WebsocketCommand)
+                parameters = commands  # Remaining items in the commands list are parameters
+                try:
+                    self.execute_command(command, parameters)
+                except AttributeError as e:
+                    print(e)
 
-            match self.status_data["mission"]["state"]:
-                case 1:
+            while not self.radio_signal_report.empty():
+                print("SIGNAL DATA", self.radio_signal_report.get())
+
+            while not self.serial_status.empty():
+                x = self.serial_status.get().split(" ", maxsplit=1)
+
+                match x[0]:
+                    case "serial_ports":
+                        self.serial_ports = literal_eval(x[1])
+                        self.status_data.serial.available_ports = self.serial_ports
+                    case "rn2483_connected":
+                        self.status_data.rn2483_radio.connected = bool(x[1])
+                    case "rn2483_port":
+                        self.reset_data()
+                        self.status_data.rn2483_radio.connected_port = x[1]
+
+                        match self.status_data.rn2483_radio.connected_port:
+                            case "test":
+                                self.status_data.mission.state = jsp.MissionState.TEST
+                            case "":
+                                self.status_data.mission.state = jsp.MissionState.DNE
+                            case _:
+                                self.status_data.mission.state = jsp.MissionState.LIVE
+
+                self.update_websocket()
+
+            match self.status_data.mission.state:
+                case jsp.MissionState.RECORDED:
                     # REPLAY SYSTEM
                     while not self.replay_output.empty():
                         block_type, block_subtype, block_data = self.replay_output.get()
@@ -84,82 +170,23 @@ class Telemetry(Process):
                         self.parse_rn2483_transmission(self.radio_payloads.get())
                         self.update_websocket()
 
-            if bool(self.serial_connected.value) != bool(self.status_data["rn2483_radio"]["connected"]):
-                self.reset_data()
 
-                match self.serial_connected_port[0]:
-                    case "test":
-                        self.status_data["mission"]["state"] = 2
-                    case "":
-                        self.status_data["mission"]["state"] = -1
-                    case _:
-                        self.status_data["mission"]["state"] = 0
+    def update_websocket(self) -> None:
 
-                self.update_websocket()
+        """Updates the websocket with the latest packet using the JSON output process."""
 
-            sleep(0.2)
-
-    def update_websocket(self):
         self.telemetry_json_output.put(self.generate_websocket_response())
 
     def reset_data(self):
-        self.status_data = {
-            "mission": {
-                "name": "",
-                "epoch": -1,
-                "state": -1,
-                "recording": False
-            },
-            "serial": {
-                "available_ports": [""]
-            },
-            "rn2483_radio": {
-                "connected": False,
-                "connected_port": ""
-            },
-            "rocket": {
-                # "call_sign": "Missile",
-                "kx134_state": -1,
-                "altimeter_state": -1,
-                "imu_state": -1,
-                "sd_driver_state": -1,
-                "deployment_state": -1,
-                "deployment_state_text": "",
-                "blocks_recorded": -1,
-                "checkouts_missed": -1,
-                "mission_time": -1,
-                "last_mission_time": -1
-            }
-        }
+        self.status_data = jsp.StatusData()
         self.telemetry_data = {}
-        self.replay_data = {
-            "status": "",
-            "speed": 1.0,
-            "mission_list": self.generate_replay_mission_list()
-        }
-
-        self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports, True)
+        self.replay_data = jsp.ReplayData()
 
     def generate_websocket_response(self, telemetry_keys="all"):
-        return {"version": "0.4.3", "org": "CU InSpace",
-                "status": self.generate_status_data(),
+        return {"version": VERSION, "org": ORG,
+                "status": dict(self.status_data),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
-                "replay": self.generate_replay_response()}
-
-    def generate_replay_response(self):
-        return {"status": self.replay_data["status"],
-                "speed": self.replay_data["speed"],
-                "mission_list": self.replay_data["mission_list"]}
-
-    def generate_replay_mission_list(self):
-        return [name.stem for name in self.missions_dir.glob("*.mission") if name.is_file()]
-
-    def generate_status_data(self):
-        self.status_data["rn2483_radio"]["connected"] = bool(self.serial_connected.value)
-        self.status_data["rn2483_radio"]["connected_port"] = self.serial_connected_port[0]
-        self.status_data["serial"]["available_ports"] = shareable_to_list(self.serial_ports)
-
-        return self.status_data
+                "replay": dict(self.replay_data)}
 
     def generate_telemetry_data(self, keys_to_send="all"):
         if keys_to_send == "all":
@@ -172,129 +199,173 @@ class Telemetry(Process):
 
         return telemetry_data_block
 
-    def parse_ws_commands(self, ws_cmd):
-        try:
-            if ws_cmd[1] == "update":
-                self.replay_data["mission_list"] = self.generate_replay_mission_list()
+    def execute_command(self, command: wsc.Enum, parameters: list[str]) -> None:
+
+        """Executes the passed websocket command."""
+
+        match command:
+            case wsc.WebsocketCommand.UPDATE:
+                self.replay_data.update_mission_list()
                 self.update_websocket()
-            if ws_cmd[1] == "replay":
-                self.parse_replay_ws_cmd(ws_cmd)
-            if ws_cmd[1] == "record":
-                self.parse_record_ws_cmd(ws_cmd)
 
-        except IndexError:
-            print("Telemetry: Error parsing ws command")
+            # Replay commands
+            case wsc.WebsocketCommand.REPLAY.value.PLAY:
+                mission_name = " ".join(parameters)
+                try:
+                    self.play_mission(mission_name)
+                except MissionNotFoundError as e:
+                    print(e.message)
+                else:
+                    self.update_websocket()
+            case wsc.WebsocketCommand.REPLAY.value.STOP:
+                self.replay_last_played_speed = self.replay_data.speed
+                self.stop_replay()
+                self.update_websocket()
+            case wsc.WebsocketCommand.REPLAY.value.PAUSE:
+                self.replay_last_played_speed = self.replay_data.speed
+                self.set_replay_speed(0.0)
+                self.update_websocket()
+            case wsc.WebsocketCommand.REPLAY.value.SPEED:
+                self.set_replay_speed(int(parameters[0]))
+                self.update_websocket()
 
-    def parse_replay_ws_cmd(self, ws_cmd):
+            # Record commands
+            case wsc.WebsocketCommand.RECORD.value.STOP:
+                self.stop_recording()
+            case wsc.WebsocketCommand.RECORD.value.START:
+                # If there is no mission name, use the default
+                mission_name = None if not parameters else " ".join(parameters)
+                try:
+                    self.start_recording(mission_name)
+                except AlreadyRecordingError as e:
+                    print(e.message)
+
+
+    def set_replay_speed(self, speed: float):
+        """Set the playback speed of the replay system."""
         try:
-            match ws_cmd[2]:
-                case "play":
-                    if len(ws_cmd) == 3:
-                        self.replay_data["status"] = "playing"
-                        self.replay_input.put("speed 1")
-                    elif len(ws_cmd) > 3:
-                        mission_name = ' '.join(ws_cmd[3:])
-                        if mission_name in self.replay_data["mission_list"]:
-                            self.status_data["mission"]["name"] = mission_name
+            speed = 0.0 if float(speed) < 0 else float(speed)
+        except ValueError:
+            speed = 0.0
 
-                            replay_mission_filepath = self.missions_dir.joinpath(f"{mission_name}.mission")
-                            if self.replay is None:
-                                self.replay = Process(target=TelemetryReplay,
-                                                      args=(self.replay_output, self.replay_input,
-                                                            replay_mission_filepath))
-                                self.replay.start()
-                            self.replay_data["status"] = "playing"
-                            self.status_data["mission"]["state"] = 1
-                            print(f"REPLAY {mission_name} PLAYING")
-                        else:
-                            print(f"REPLAY {mission_name} DOES NOT EXIST")
+        if speed == 0.0:
+            self.replay_data.status = jsp.ReplayState.PAUSED
+        else:
+            self.replay_data.status = jsp.ReplayState.PLAYING
 
-                case "pause":
-                    print("REPLAY PAUSE")
+        self.replay_data.speed = speed
+        self.replay_input.put(f"speed {speed}")
 
-                    self.replay_data["speed"] = 0
-                    self.replay_data["status"] = "paused"
-                    self.replay_input.put(f"speed 0")
-                case "speed":
-                    print(f"REPLAY SPEED {ws_cmd[3]}")
-                    self.replay_data["speed"] = 0.0 if float(ws_cmd[3]) < 0 else float(ws_cmd[3])
-                    if self.replay_data["speed"] == 0.0:
-                        self.replay_data["status"] = "paused"
-                    else:
-                        self.replay_data["status"] = "playing"
+    def stop_replay(self) -> None:
+        """Stops the replay."""
 
-                    self.replay_input.put(f"speed {0.0 if float(ws_cmd[3]) < 0 else float(ws_cmd[3])}")
-                case "stop":
-                    print("REPLAY STOP")
-                    self.replay_output.empty()
-                    self.replay.terminate()
-                    self.replay = None
+        print("REPLAY STOP")
 
-                    self.reset_data()
+        if self.replay is not None:
+            self.replay.join()
+        self.replay = None
 
-            self.update_websocket()
+        self.reset_data()
+        # Empty replay output
+        while not self.replay_output.empty():
+            self.replay_output.get()
 
-        except IndexError:
-            print("Telemetry: Error parsing ws command")
+    def play_mission(self, mission_name: str) -> None:
 
-    def parse_record_ws_cmd(self, ws_cmd):
-        try:
-            if ws_cmd[2] == "start" and not self.status_data["mission"]["recording"]:
-                print("RECORDING START")
+        """Plays the desired mission recording."""
 
-                recording_epoch = int(time())
-                mission_name = str(recording_epoch) if len(ws_cmd) <= 2 else " ".join(ws_cmd[3:])
+        if mission_name not in self.replay_data.mission_list:
+            raise MissionNotFoundError(mission_name)
 
-                self.mission_path = self.get_filepath_for_proposed_name(mission_name)
-                self.mission_path.write_text(f"{1},{recording_epoch}\n")
+        self.status_data.mission.name = mission_name
+        replay_mission_filepath = mission_path(mission_name, self.missions_dir)
 
-                self.status_data["mission"]["name"] = mission_name
-                self.status_data["mission"]["epoch"] = recording_epoch
-                self.status_data["mission"]["recording"] = True
+        if self.replay is None:
+            self.replay = Process(
+                target=TelemetryReplay,
+                args=(
+                    self.replay_output,
+                    self.replay_input,
+                    replay_mission_filepath
+                )
+            )
+            self.replay.start()
 
-                self.replay_data["mission_list"] = self.generate_replay_mission_list()
-            elif ws_cmd[2] == "start":
-                print("RECORDING HAS ALREADY STARTED. TRY STOPPING FIRST")
+        self.set_replay_speed(speed=self.replay_last_played_speed)
+        self.status_data.mission.state = jsp.MissionState.RECORDED
+        print(f"REPLAY {mission_name} PLAYING")
 
-            if ws_cmd[2] == "stop":
-                print("RECORDING STOP")
+    def start_recording(self, mission_name: str = None) -> None:
 
-                self.status_data["mission"]["name"] = ""
-                self.status_data["mission"]["epoch"] = -1
-                self.status_data["mission"]["recording"] = False
+        """Starts recording the current mission. If no mission name is give, the recording epoch is used."""
 
-        except IndexError:
-            print("Telemetry: Error parsing ws command")
+        if self.status_data.mission.recording:
+            raise AlreadyRecordingError
+
+        print("RECORDING START")
+
+        recording_epoch = int(time())
+        mission_name = str(recording_epoch) if not mission_name else mission_name
+        self.mission_path = get_filepath_for_proposed_name(mission_name, self.missions_dir)
+        self.mission_path.write_text(f"{1},{recording_epoch}\n")
+
+        self.status_data.mission.name = mission_name
+        self.status_data.mission.epoch = recording_epoch
+        self.status_data.mission.recording = True
+
+        self.replay_data.update_mission_list()
+
+    def stop_recording(self) -> None:
+
+        """Stops the current recording."""
+
+        print("RECORDING STOP")
+        self.status_data.mission.recording = False
+        self.status_data.mission = jsp.MissionData(state=self.status_data.mission.state)
+
 
     def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents):
         # Working with hex strings until this point.
         # Hex/Bytes Demarcation point
         block_contents = bytes.fromhex(block_contents)
-        match block_type:
-            case 0:
+        match BlockTypes(block_type):
+            case BlockTypes.CONTROL:
                 # CONTROL BLOCK DETECTED
-                # TODO Make a separate serial output just for signal data
                 print("CONTROL BLOCK")
-                self.replay_input.put("radio get snr")
-                # snr = self._read_ser();
-                self.replay_input.put("radio get rssi")
-                # rssi = self._read_ser()
-            case 1:
+                # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
+                self.rn2483_radio_input.put("radio get snr")
+                self.rn2483_radio_input.put("radio get rssi")
+
+            case BlockTypes.COMMAND:
                 # COMMAND BLOCK DETECTED
                 print("Command block")
-            case 2:
+            case BlockTypes.DATA:
                 # DATA BLOCK DETECTED
                 block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
                 print(block_data)
                 # Increase the last mission time
-                if block_data.mission_time > self.status_data["rocket"]["last_mission_time"]:
-                    self.status_data["rocket"]["last_mission_time"] = block_data.mission_time
+                if block_data.mission_time > self.status_data.rocket.last_mission_time:
+                    self.status_data.rocket.last_mission_time = block_data.mission_time
 
-                # Move status telemetry block to the status key instead of under telemetry
-                if DataBlockSubtype(block_subtype) == DataBlockSubtype.STATUS:
-                    self.parse_status(block_data)
-                else:
-                    self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
+                # Switch statement to treat different blocks separately
+                match DataBlockSubtype(block_subtype):
+                    case DataBlockSubtype.STATUS:
+                        self.status_data.rocket = jsp.RocketData.from_data_block(block_data)
+                    case DataBlockSubtype.MPU9250_IMU:
+                        #print(block_data)
+                        accel, temp, gyro = parse_mpu9250_samples(block_data.samples)
+                        #print("AVG ACCEL", accel[0], accel[1], accel[2], "AVG TEMP", temp, "AVG GYRO", gyro[0], gyro[1], gyro[2])
+                        self.telemetry_data["mpu9250_data"] = {"mission_time": block_data.mission_time,
+                                                               "accel_x": {"ms2": accel[0]},
+                                                               "accel_y": {"ms2": accel[1]},
+                                                               "accel_z": {"ms2": accel[2]},
+                                                               "temperature": {"celsius": temp},
+                                                               "gyro_x": gyro[0],
+                                                               "gyro_y": gyro[1],
+                                                               "gyro_z": gyro[2]}
+                        self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
+                    case _:
+                        self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
             case _:
                 print("Unknown block type")
 
@@ -309,7 +380,7 @@ class Telemetry(Process):
         blocks = data[24:]  # Remove the packet header
 
         print("-----" * 20)
-        #print(f'{DeviceAddress(srs_addr)} - {call_sign} - sent you a packet:')
+        # print(f'{DeviceAddress(srs_addr)} - {call_sign} - sent you a packet:')
         print(f"{call_sign} - sent you a packet")
 
         # Parse through all blocks
@@ -321,7 +392,7 @@ class Telemetry(Process):
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
             block_contents = blocks[8: 8 + block_len]
 
-            if self.status_data["mission"]["recording"]:
+            if self.status_data.mission.recording:
                 with open(f'{self.mission_path}', 'a') as mission:
                     mission.write(f"{block_type},{block_subtype},{block_contents}\n")
 
@@ -331,32 +402,30 @@ class Telemetry(Process):
             blocks = blocks[8 + block_len:]
         print(f"-----" * 20)
 
-    def parse_status(self, data: StatusDataBlock):
-        self.status_data["rocket"]["mission_time"] = data.mission_time
-        self.status_data["rocket"]["kx134_state"] = data.kx134_state
-        self.status_data["rocket"]["altimeter_state"] = data.alt_state
-        self.status_data["rocket"]["imu_state"] = data.imu_state
-        self.status_data["rocket"]["sd_driver_state"] = data.sd_state
-        self.status_data["rocket"]["deployment_state"] = data.deployment_state
-        self.status_data["rocket"]["deployment_state_text"] = str(DeploymentState(data.deployment_state))
-        self.status_data["rocket"]["blocks_recorded"] = data.sd_blocks_recorded
-        self.status_data["rocket"]["checkouts_missed"] = data.sd_checkouts_missed
 
-    def get_filepath_for_proposed_name(self, mission_name) -> Path:
-        self.missions_dir.mkdir(parents=True, exist_ok=True)
+def parse_mpu9250_samples(data_samples: [MPU9250Sample]) -> tuple:
+    """
+    Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp and gyro.
+    """
+    sample_size = len(data_samples)
+    accel = [0, 0, 0]
+    temp = 0
+    gyro = [0, 0, 0]
+    for sam in data_samples:
+        accel[0] += sam.accel_x / sample_size
+        accel[1] += sam.accel_y / sample_size
+        accel[2] += sam.accel_z / sample_size
 
-        missions_filepath = self.missions_dir.joinpath(f"{mission_name}.mission")
+        temp += sam.temperature / sample_size
 
-        if missions_filepath.is_file():
-            for i in range(1, 50):
-                proposed_filepath = self.missions_dir.joinpath(f"{mission_name}_{i}.mission")
-                if not proposed_filepath.is_file():
-                    return proposed_filepath
+        gyro[0] = sam.gyro_x / sample_size
+        gyro[1] = sam.gyro_y / sample_size
+        gyro[2] = sam.gyro_z / sample_size
 
-        return missions_filepath
+    return accel, temp, gyro
 
 
-def _parse_packet_header(header) -> tuple:
+def _parse_packet_header(header: str) -> PacketHeader:
     """
     Returns the packet header string's informational components in a tuple.
 
@@ -382,7 +451,7 @@ def _parse_packet_header(header) -> tuple:
     return call_sign, length, version, src_addr, packet_num
 
 
-def _parse_block_header(header) -> tuple:
+def _parse_block_header(header: str) -> BlockHeader:
     """
     Parses a block header string into its information components and returns them in a tuple.
 
@@ -392,7 +461,6 @@ def _parse_block_header(header) -> tuple:
     message_subtype: int
     destination_addr: int
     """
-
     header = unpack('<I', bytes.fromhex(header))
 
     block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block

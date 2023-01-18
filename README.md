@@ -1,12 +1,18 @@
 # CU-InSpace Ground Station
 
-A Python-based ground station for collecting telemetry information from the CU-InSpace rocket.
-This data is collected using UART and is transmitted to the user interface using WebSockets.
+## Contributors
+- Samuel Dewan
+- Thomas Selwyn
+- Matteo Golin
 
-This program needs 
+A Python-based ground station for collecting telemetry information from the CU-InSpace rocket. This data is collected 
+using UART and is transmitted to the user interface using WebSockets.
+
+## Installation Requirements
+See `requirements.txt` for more detailed module requirements.
+- Python 3.11+
 - pySerial
 - Tornado
 
-The ground station requires a minimum version of Python v3.10.
-
+## Licensing
 This code follows MIT License. Please read the LICENSE file for more information.
