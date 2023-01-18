@@ -170,7 +170,6 @@ class Telemetry(Process):
                         self.parse_rn2483_transmission(self.radio_payloads.get())
                         self.update_websocket()
 
-
     def update_websocket(self) -> None:
 
         """Updates the websocket with the latest packet using the JSON output process."""
@@ -182,14 +181,14 @@ class Telemetry(Process):
         self.telemetry_data = {}
         self.replay_data = jsp.ReplayData()
 
-    def generate_websocket_response(self, telemetry_keys="all"):
+    def generate_websocket_response(self, telemetry_keys: list[str] = None):
         return {"version": VERSION, "org": ORG,
                 "status": dict(self.status_data),
                 "telemetry_data": self.generate_telemetry_data(telemetry_keys),
                 "replay": dict(self.replay_data)}
 
-    def generate_telemetry_data(self, keys_to_send="all"):
-        if keys_to_send == "all":
+    def generate_telemetry_data(self, keys_to_send: list[str] = None):
+        if not keys_to_send:
             keys_to_send = self.telemetry_data.keys()
 
         telemetry_data_block = {}
@@ -239,7 +238,6 @@ class Telemetry(Process):
                     self.start_recording(mission_name)
                 except AlreadyRecordingError as e:
                     print(e.message)
-
 
     def set_replay_speed(self, speed: float):
         """Set the playback speed of the replay system."""
@@ -322,7 +320,6 @@ class Telemetry(Process):
         print("RECORDING STOP")
         self.status_data.mission.recording = False
         self.status_data.mission = jsp.MissionData(state=self.status_data.mission.state)
-
 
     def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents):
         # Working with hex strings until this point.
