@@ -332,9 +332,10 @@ class Telemetry(Process):
                 if block_data.mission_time > self.status_data.rocket.last_mission_time:
                     self.status_data.rocket.last_mission_time = block_data.mission_time
 
-                if DataBlockSubtype == DataBlockSubtype.STATUS:
+                if block_subtype == DataBlockSubtype.STATUS:
                     self.status_data.rocket = jsp.RocketData.from_data_block(block_data)
                 else:
+
                     self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
             case _:
                 print("Unknown block type")

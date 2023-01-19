@@ -7,7 +7,7 @@
 
 import struct
 from abc import ABC, abstractmethod
-from enum import IntEnum, StrEnum
+from enum import IntEnum
 from modules.telemetry.block import DataBlockSubtype, BlockException, BlockUnknownException
 from modules.misc import converter
 
@@ -216,6 +216,8 @@ class DeploymentState(IntEnum):
                 return "coasting ascent"
             case DeploymentState.DEPLOYMENT_STATE_DEPLOYING:
                 return "deploying"
+            case DeploymentState.DEPLOYMENT_STATE_DEPLOYING_2:
+                return "deploying 2"
             case DeploymentState.DEPLOYMENT_STATE_DESCENT:
                 return "descent"
             case DeploymentState.DEPLOYMENT_STATE_RECOVERY:
@@ -471,7 +473,7 @@ class GNSSLocationBlock(DataBlock):
                  hdop: int,
                  vdop: int,
                  sats: int,
-                 fix_type):
+                 fix_type: GNSSLocationFixType):
         super().__init__()
         self.mission_time: int = mission_time
         self.latitude: int = latitude
@@ -484,7 +486,7 @@ class GNSSLocationBlock(DataBlock):
         self.hdop: int = hdop
         self.vdop: int = vdop
         self.sats: int = sats
-        self.fix_type = fix_type  # TODO Figure what the fuck this type is
+        self.fix_type = fix_type
 
     @property
     def length(self):
@@ -603,12 +605,12 @@ class GNSSSatInfo:
         return struct.pack("<BBH", self.elevation, self.snr, id_and_azimuth)
 
     def __str__(self):
-        return (f"{'GPS' if self.sat_type == GNSSSatType.GPS else 'GLONASS'} sat -> elevation: "
-                f"{self.elevation}°, SNR: {self.snr} dB-Hz, id: {self.identifier}, azimuth: "
-                f"{self.azimuth}°")
+        return (f"{self.sat_type.name} sat -> elevation: "
+                f"{self.elevation}°, SNR: {self.snr} dB-Hz, id: {self.identifier}, "
+                f"azimuth: {self.azimuth}°")
 
     def __iter__(self):
-        yield "sat_type", "GPS" if self.sat_type == GNSSSatType.GPS else "GLONASS"
+        yield "sat_type", self.sat_type.name
         yield "elevation", self.elevation
         yield "snr", self.snr
         yield "id", self.identifier
@@ -641,9 +643,14 @@ class GNSSMetadataBlock(DataBlock):
 
         gps_sats_in_use = list()
         glonass_sats_in_use = list()
+
+        # TODO Look into this. Every glonass sat in sats_in_use is +GLONASS_SV_OFFSET every sat in gps sats in use.
         for i in range(32):
             if parts[1] & (1 << i):
                 gps_sats_in_use.append(i + GNSSSatInfo.GPS_SV_OFFSET)
+
+        for i in range(32):
+            if parts[1] & (1 << i):
                 glonass_sats_in_use.append(i + GNSSSatInfo.GLONASS_SV_OFFSET)
 
         sats_in_view = list()
@@ -775,7 +782,7 @@ class KX134AccelerometerDataBlock(DataBlock):
         self.accel_range: KX134Range = accel_range
         self.rolloff: KX134LPFRolloff = rolloff
         self.resolution: KX134Resolution = resolution
-        self.samples: list = samples  # TODO list of what?
+        self.samples: list = samples
 
         self.sample_period = 1 / self.odr.samples_per_sec
 
@@ -1239,29 +1246,21 @@ class MPU9250IMUDataBlock(DataBlock):
 
 def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
     """
-    Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp
+    Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp, gyro and magnetometer
     """
     sample_size = len(data_samples)
-    accel = [0, 0, 0]
-    temp = 0
-    gyro = [0, 0, 0]
-    mag = [0, 0, 0]
     mag_ovf = 0
     mag_res = MPU9250MagResolution(0)
 
-    for sam in data_samples:
-        accel[0] += sam.accel_x / sample_size
-        accel[1] += sam.accel_y / sample_size
-        accel[2] += sam.accel_z / sample_size
-        temp += sam.temperature / sample_size
-        gyro[0] = sam.gyro_x / sample_size
-        gyro[1] = sam.gyro_y / sample_size
-        gyro[2] = sam.gyro_z / sample_size
-        mag[0] = sam.mag_x / sample_size
-        mag[1] = sam.mag_y / sample_size
-        mag[2] = sam.mag_z / sample_size
-        mag_ovf = sam.mag_ovf / sample_size
-        mag_res = sam.mag_res if sam.mag_res.value > mag_res.value else mag_res
+    avg = dict.fromkeys(dict(data_samples[0]).keys(), 0)
 
-    return MPU9250Sample(accel[0], accel[1], accel[2], temp, gyro[0], gyro[1], gyro[2],
-                         mag[0], mag[0], mag[0], mag_ovf, mag_res)
+    for sam in data_samples:
+        mag_ovf = sam.mag_ovf if sam.mag_ovf > mag_ovf else mag_ovf
+        mag_res = sam.mag_res if sam.mag_res.value > mag_res.value else mag_res
+        data = dict(sam)
+        for key in data.keys():
+            avg[key] += data[key] / sample_size
+
+    return MPU9250Sample(avg["accel_x"], avg["accel_y"], avg["accel_z"], avg["temperature"],
+                         avg["gyro_x"], avg["gyro_y"], avg["gyro_z"], avg["mag_x"], avg["mag_y"], avg["mag_z"],
+                         mag_ovf, mag_res)
