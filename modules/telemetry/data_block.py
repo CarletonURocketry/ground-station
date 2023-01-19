@@ -1031,15 +1031,23 @@ class MPU9250Sample:
 
 class MPU9250IMUDataBlock(DataBlock):
 
-    def __init__(self, mission_time, ag_sample_rate, mag_sample_rate, accel_fsr, gyro_fsr, accel_bw, gyro_bw, samples: list[MPU9250Sample]):
+    def __init__(self,
+                 mission_time: int,
+                 ag_sample_rate: int,
+                 mag_sample_rate: MPU9250MagSR,
+                 accel_fsr: MPU9250AccelFSR,
+                 gyro_fsr: MPU9250GyroFSR,
+                 accel_bw: MPU9250AccelBW,
+                 gyro_bw: MPU9250GyroBW,
+                 samples: list[MPU9250Sample]):
         super().__init__()
-        self.mission_time = mission_time
-        self.ag_sample_rate = ag_sample_rate
-        self.mag_sample_rate = mag_sample_rate
-        self.accel_fsr = accel_fsr
-        self.gyro_fsr = gyro_fsr
-        self.accel_bw = accel_bw
-        self.gyro_bw = gyro_bw
+        self.mission_time: int = mission_time
+        self.ag_sample_rate: int = ag_sample_rate
+        self.mag_sample_rate: MPU9250MagSR = mag_sample_rate
+        self.accel_fsr: MPU9250AccelFSR = accel_fsr
+        self.gyro_fsr: MPU9250GyroFSR = gyro_fsr
+        self.accel_bw: MPU9250AccelBW = accel_bw
+        self.gyro_bw: MPU9250GyroBW = gyro_bw
         self.samples = samples
 
         self.sample_period = 1 / self.ag_sample_rate
@@ -1187,7 +1195,6 @@ def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
         mag[2] = sam.mag_z / sample_size
 
         mag_misc[0] = sam.mag_ovf / sample_size
-        mag_misc[1] = sam.mag_res / sample_size
 
     return MPU9250Sample(accel[0], accel[1], accel[2], temp, gyro[0], gyro[1], gyro[2],
-                         mag[0], mag[0], mag[0], mag_misc[0], mag_misc[1])
+                         mag[0], mag[0], mag[0], mag_misc[0], MPU9250MagResolution.RES_16_BIT)
