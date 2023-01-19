@@ -8,7 +8,6 @@
 
 import json
 from multiprocessing import Queue, Process
-import random
 from abc import ABC
 
 import tornado.gen
@@ -18,6 +17,43 @@ import tornado.web
 import tornado.websocket
 
 ws_commands_queue = Queue
+
+
+class WebSocketHandler(Process):
+    def __init__(self, telemetry_json_output: Queue, ws_commands: Queue):
+        super().__init__()
+        global ws_commands_queue
+
+        self.telemetry_json_output = telemetry_json_output
+        ws_commands_queue = ws_commands
+
+        # Default to test mode
+        # ws_commands_queue.put("serial rn2483_radio connect test")
+
+        self.start_websocket_server()
+
+    def start_websocket_server(self):
+        wss = tornado.web.Application(
+            [(r"/websocket", TornadoWSServer)],
+            websocket_ping_interval=10,
+            websocket_ping_timeout=30,
+        )
+
+        wss.listen(33845)
+
+        io_loop = tornado.ioloop.IOLoop.current()
+        periodic_callback = tornado.ioloop.PeriodicCallback(
+            lambda: TornadoWSServer.send_message(self.check_for_messages()), 50
+        )
+
+        periodic_callback.start()
+        io_loop.start()
+
+    def check_for_messages(self):
+        json_data = None
+        while not self.telemetry_json_output.empty():
+            json_data = self.telemetry_json_output.get()
+        return json.dumps(json_data)
 
 
 class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
@@ -46,44 +82,3 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
             cls.last_msg_send = message
             for client in cls.clients:
                 client.write_message(message)
-
-
-def random_number():
-    return int(random.uniform(0, 1000))
-
-
-class WebSocketHandler(Process):
-    def __init__(self, telemetry_json_output: Queue, ws_commands: Queue):
-        super().__init__()
-        global ws_commands_queue
-
-        self.telemetry_json_output = telemetry_json_output
-        ws_commands_queue = ws_commands
-
-        # Default to test mode
-        #ws_commands_queue.put("serial rn2483_radio connect test")
-
-        self.startWSS()
-
-    def startWSS(self):
-        wss = tornado.web.Application(
-            [(r"/websocket", TornadoWSServer)],
-            websocket_ping_interval=10,
-            websocket_ping_timeout=30,
-        )
-
-        wss.listen(33845)
-
-        io_loop = tornado.ioloop.IOLoop.current()
-        periodic_callback = tornado.ioloop.PeriodicCallback(
-            lambda: TornadoWSServer.send_message(self.check_for_messages()), 50
-        )
-
-        periodic_callback.start()
-        io_loop.start()
-
-    def check_for_messages(self):
-        json_data = None
-        while not self.telemetry_json_output.empty():
-            json_data = self.telemetry_json_output.get()
-        return json.dumps(json_data)

@@ -1,10 +1,10 @@
 # CU-InSpace Ground Station
 
 ## Contributors
-- Samuel Dewan
 - Thomas Selwyn
 - Matteo Golin
-
+- Samuel Dewan
+- 
 A Python-based ground station for collecting telemetry information from the CU-InSpace rocket. This data is collected 
 using UART and is transmitted to the user interface using WebSockets.
 

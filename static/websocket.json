@@ -29,7 +29,7 @@
             "last_mission_time": 8120
         }
     },
-    "telemetry_data": {
+    "telemetry": {
         "altitude": {
             "mission_time": 8120,
             "pressure": {
@@ -44,24 +44,12 @@
                 "fahrenheit": "54"
             }
         },
-        "mpu9250_data": {
+        "mpu9250_imu": {
             "mission_time": 7660,
-            "accel_x": {
-                "ms2": "-0.08789062500000001",
-                "fts2": "0"
-            },
-            "accel_y": {
-                "ms2": "-0.09985351562499999",
-                "fts2": "0"
-            },
-            "accel_z": {
-                "ms2": "0.8688151041666667",
-                "fts2": "0"
-            },
-            "temperature": {
-                "celsius": "24.81775700934579",
-                "fahrenheit": "0"
-            },
+            "accel_x": "-0.08789062500000001",
+            "accel_y": "-0.09985351562499999",
+            "accel_z": "0.8688151041666667",
+            "temperature": "24.81775700934579",
             "gyro_x": "0.091552734375",
             "gyro_y": "-0.050862630208333336",
             "gyro_z": "0.040690104166666664"

@@ -7,7 +7,7 @@ from enum import IntEnum, StrEnum
 from typing import Self
 from pathlib import Path
 
-import modules.telemetry.data_block as dblock
+import modules.telemetry.data_block as data_block
 
 # Constants
 MISSION_EXTENSION: str = ".mission"
@@ -16,7 +16,6 @@ MISSIONS_DIR: str = "missions"
 
 # Helper classes
 class MissionState(IntEnum):
-
     """The state of the mission."""
 
     DNE: int = -1
@@ -26,7 +25,6 @@ class MissionState(IntEnum):
 
 
 class ReplayState(StrEnum):
-
     """Represents the state of the mission being currently replayed."""
 
     DNE: str = ""
@@ -37,7 +35,6 @@ class ReplayState(StrEnum):
 # Status packet classes
 @dataclass
 class SerialData:
-
     """The serial data packet for the telemetry process."""
     available_ports: list[str] = field(default_factory=list)
 
@@ -47,12 +44,11 @@ class SerialData:
 
 @dataclass
 class RN2483RadioData:
-
     """The RN2483 radio data packet for the telemetry process."""
 
     connected: bool = False
     connected_port: str = ""
-    
+
     def __iter__(self):
         yield "connected", self.connected,
         yield "connected_port", self.connected_port
@@ -60,7 +56,6 @@ class RN2483RadioData:
 
 @dataclass
 class MissionData:
-
     """The mission data packet for the telemetry process."""
 
     name: str = ""
@@ -77,22 +72,20 @@ class MissionData:
 
 @dataclass
 class RocketData:
-
     """The rocket data packet for the telemetry process."""
 
     kx134_state: int = -1
     altimeter_state: int = -1
     imu_state: int = -1
     sd_driver_state: int = -1
-    deployment_state: dblock.DeploymentState = dblock.DeploymentState.DEPLOYMENT_STATE_DNE
+    deployment_state: data_block.DeploymentState = data_block.DeploymentState.DEPLOYMENT_STATE_DNE
     blocks_recorded: int = -1
     checkouts_missed: int = -1
     mission_time: int = -1
     last_mission_time: int = -1
 
     @classmethod
-    def from_data_block(cls, data: dblock.StatusDataBlock) -> Self:
-
+    def from_data_block(cls, data: data_block.StatusDataBlock) -> Self:
         """Creates a rocket data packet from a StatusDataBlock class."""
 
         return cls(
@@ -107,7 +100,6 @@ class RocketData:
         )
 
     def __iter__(self):
-
         yield "kx134_state", self.kx134_state,
         yield "altimeter_state", self.altimeter_state,
         yield "imu_state", self.imu_state,
@@ -122,7 +114,6 @@ class RocketData:
 
 @dataclass
 class StatusData:
-
     """The status data packet for the telemetry process."""
 
     mission: MissionData = field(default_factory=MissionData)
@@ -131,7 +122,6 @@ class StatusData:
     rocket: RocketData = field(default_factory=RocketData)
 
     def __iter__(self):
-
         yield "mission", dict(self.mission),
         yield "serial", dict(self.serial),
         yield "rn2483_radio", dict(self.rn2483_radio),
@@ -158,12 +148,6 @@ class ReplayData:
         self.mission_list = [name.stem for name in missions_dir.glob(f"*{MISSION_EXTENSION}") if name.is_file()]
 
     def __iter__(self):
-
         yield "status", self.status.value
         yield "speed", self.speed,
         yield "mission_list", self.mission_list
-
-
-if __name__ == '__main__':
-    rocket = RocketData()
-    print(dict(rocket))

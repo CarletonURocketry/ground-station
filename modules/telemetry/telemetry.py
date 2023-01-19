@@ -21,7 +21,6 @@ from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusData
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
 
-
 # Types
 BlockHeader = tuple[int, bool, int, int, int]
 PacketHeader = tuple[str, int, int, int, int]
@@ -36,9 +35,7 @@ FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
 # Helper functions
 def mission_path(mission_name: str, missions_dir: Path) -> Path:
-
     """Returns the path to the mission file with the matching mission name."""
-
 
     return missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
 
@@ -50,7 +47,6 @@ def shutdown_sequence():
 
 
 def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Path:
-
     missions_filepath = missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
     file_suffix = 1
 
@@ -63,8 +59,8 @@ def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Pat
 
 # Errors
 class MissionNotFoundError(Exception):
-
     """Raised when the desired mission is not found."""
+
     def __init__(self, mission_name: str):
         self.mission_name = mission_name
         self.message = f"The mission recording '{mission_name}' does not exist."
@@ -72,7 +68,6 @@ class MissionNotFoundError(Exception):
 
 
 class AlreadyRecordingError(Exception):
-
     """Raised if the telemetry process is already recording when instructed to record."""
 
     def __init__(self):
@@ -170,7 +165,6 @@ class Telemetry(Process):
                         self.parse_rn2483_transmission(self.radio_payloads.get())
                         self.update_websocket()
 
-
     def update_websocket(self) -> None:
 
         """Updates the websocket with the latest packet using the JSON output process."""
@@ -182,22 +176,11 @@ class Telemetry(Process):
         self.telemetry_data = {}
         self.replay_data = jsp.ReplayData()
 
-    def generate_websocket_response(self, telemetry_keys="all"):
+    def generate_websocket_response(self):
         return {"version": VERSION, "org": ORG,
                 "status": dict(self.status_data),
-                "telemetry_data": self.generate_telemetry_data(telemetry_keys),
+                "telemetry": self.telemetry_data,
                 "replay": dict(self.replay_data)}
-
-    def generate_telemetry_data(self, keys_to_send="all"):
-        if keys_to_send == "all":
-            keys_to_send = self.telemetry_data.keys()
-
-        telemetry_data_block = {}
-        for key in keys_to_send:
-            if key in self.telemetry_data.keys():
-                telemetry_data_block[key] = self.telemetry_data[key]
-
-        return telemetry_data_block
 
     def execute_command(self, command: wsc.Enum, parameters: list[str]) -> None:
 
@@ -239,7 +222,6 @@ class Telemetry(Process):
                     self.start_recording(mission_name)
                 except AlreadyRecordingError as e:
                     print(e.message)
-
 
     def set_replay_speed(self, speed: float):
         """Set the playback speed of the replay system."""
@@ -297,7 +279,7 @@ class Telemetry(Process):
 
     def start_recording(self, mission_name: str = None) -> None:
 
-        """Starts recording the current mission. If no mission name is give, the recording epoch is used."""
+        """Starts recording the current mission. If no mission name is given, the recording epoch is used."""
 
         if self.status_data.mission.recording:
             raise AlreadyRecordingError
@@ -323,7 +305,6 @@ class Telemetry(Process):
         self.status_data.mission.recording = False
         self.status_data.mission = jsp.MissionData(state=self.status_data.mission.state)
 
-
     def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents):
         # Working with hex strings until this point.
         # Hex/Bytes Demarcation point
@@ -334,7 +315,7 @@ class Telemetry(Process):
                 print("CONTROL BLOCK")
                 # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
                 self.rn2483_radio_input.put("radio get snr")
-                self.rn2483_radio_input.put("radio get rssi")
+                # self.rn2483_radio_input.put("radio get rssi")
 
             case BlockTypes.COMMAND:
                 # COMMAND BLOCK DETECTED
@@ -348,24 +329,10 @@ class Telemetry(Process):
                     self.status_data.rocket.last_mission_time = block_data.mission_time
 
                 # Switch statement to treat different blocks separately
-                match DataBlockSubtype(block_subtype):
-                    case DataBlockSubtype.STATUS:
-                        self.status_data.rocket = jsp.RocketData.from_data_block(block_data)
-                    case DataBlockSubtype.MPU9250_IMU:
-                        #print(block_data)
-                        accel, temp, gyro = parse_mpu9250_samples(block_data.samples)
-                        #print("AVG ACCEL", accel[0], accel[1], accel[2], "AVG TEMP", temp, "AVG GYRO", gyro[0], gyro[1], gyro[2])
-                        self.telemetry_data["mpu9250_data"] = {"mission_time": block_data.mission_time,
-                                                               "accel_x": {"ms2": accel[0]},
-                                                               "accel_y": {"ms2": accel[1]},
-                                                               "accel_z": {"ms2": accel[2]},
-                                                               "temperature": {"celsius": temp},
-                                                               "gyro_x": gyro[0],
-                                                               "gyro_y": gyro[1],
-                                                               "gyro_z": gyro[2]}
-                        self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
-                    case _:
-                        self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
+                if DataBlockSubtype == DataBlockSubtype.STATUS:
+                    self.status_data.rocket = jsp.RocketData.from_data_block(block_data)
+                else:
+                    self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
             case _:
                 print("Unknown block type")
 
@@ -401,28 +368,6 @@ class Telemetry(Process):
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[8 + block_len:]
         print(f"-----" * 20)
-
-
-def parse_mpu9250_samples(data_samples: [MPU9250Sample]) -> tuple:
-    """
-    Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp and gyro.
-    """
-    sample_size = len(data_samples)
-    accel = [0, 0, 0]
-    temp = 0
-    gyro = [0, 0, 0]
-    for sam in data_samples:
-        accel[0] += sam.accel_x / sample_size
-        accel[1] += sam.accel_y / sample_size
-        accel[2] += sam.accel_z / sample_size
-
-        temp += sam.temperature / sample_size
-
-        gyro[0] = sam.gyro_x / sample_size
-        gyro[1] = sam.gyro_y / sample_size
-        gyro[2] = sam.gyro_z / sample_size
-
-    return accel, temp, gyro
 
 
 def _parse_packet_header(header: str) -> PacketHeader:

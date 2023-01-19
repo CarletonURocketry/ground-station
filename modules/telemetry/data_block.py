@@ -1130,13 +1130,13 @@ class MPU9250Sample:
         yield "mag_y", self.mag_y
         yield "mag_z", self.mag_z
         yield "mag_ovf", self.mag_ovf
-        yield "mag_res", self.mag_res.value
+        yield "mag_res", self.mag_res
 
 
 class MPU9250IMUDataBlock(DataBlock):
     TYPE_DESC = "MPU9250 IMU Data"
 
-    def __init__(self, mission_time, ag_sample_rate, mag_sample_rate, accel_fsr, gyro_fsr, accel_bw, gyro_bw, samples):
+    def __init__(self, mission_time, ag_sample_rate, mag_sample_rate, accel_fsr, gyro_fsr, accel_bw, gyro_bw, samples: list[MPU9250Sample]):
         super().__init__()
         self.mission_time = mission_time
         self.ag_sample_rate = ag_sample_rate
@@ -1148,6 +1148,8 @@ class MPU9250IMUDataBlock(DataBlock):
         self.samples = samples
 
         self.sample_period = 1 / self.ag_sample_rate
+
+        self.sensor = avg_mpu9250_samples(self.samples)
 
     @property
     def length(self):
@@ -1236,13 +1238,61 @@ class MPU9250IMUDataBlock(DataBlock):
             yield time, samp
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time}, samples: {len(self.samples)}, "
+        return (f"{self.type_desc()} -> time: {self.mission_time}, accel_x: {self.sensor.accel_x}, accel_y: {self.sensor.accel_y}, accel_z: {self.sensor.accel_z}, temp: {self.sensor.temperature}, "
+                f"gyro_x: {self.sensor.gyro_x}, gyro_y: {self.sensor.gyro_y}, gyro_z: {self.sensor.gyro_z}, "
+                f"samples: {len(self.samples)}, "
                 f"accel/gyro sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "
                 f"gyro fsr: {self.gyro_fsr}")
 
     def __iter__(self):
         yield "mission_time", self.mission_time
+        yield "accel_x", self.sensor.accel_x
+        yield "accel_y", self.sensor.accel_y
+        yield "accel_z", self.sensor.accel_z
+        yield "temperature", self.sensor.temperature
+        yield "gyro_x", self.sensor.gyro_x
+        yield "gyro_y", self.sensor.gyro_y
+        yield "gyro_z", self.sensor.gyro_z
+        yield "mag_x", self.sensor.mag_x
+        yield "mag_y", self.sensor.mag_y
+        yield "mag_z", self.sensor.mag_z
+        yield "mag_ovf", self.sensor.mag_ovf
+        yield "mag_res", self.sensor.mag_res
         yield "samples", len(self.samples)
         yield "sensor_sample_rate", self.ag_sample_rate
         yield "accel_fsr", self.accel_fsr
         yield "gyro_fsr", self.gyro_fsr
+
+
+def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
+    """
+    Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp and gyro.
+    """
+    sample_size = len(data_samples)
+
+    accel = [0, 0, 0]
+    temp = 0
+    gyro = [0, 0, 0]
+    mag = [0, 0, 0]
+    mag_misc = [0, 0]
+
+    for sam in data_samples:
+        accel[0] += sam.accel_x / sample_size
+        accel[1] += sam.accel_y / sample_size
+        accel[2] += sam.accel_z / sample_size
+
+        temp += sam.temperature / sample_size
+
+        gyro[0] = sam.gyro_x / sample_size
+        gyro[1] = sam.gyro_y / sample_size
+        gyro[2] = sam.gyro_z / sample_size
+
+        mag[0] = sam.mag_x / sample_size
+        mag[1] = sam.mag_y / sample_size
+        mag[2] = sam.mag_z / sample_size
+
+        mag_misc[0] = sam.mag_ovf / sample_size
+        mag_misc[1] = sam.mag_res / sample_size
+
+    return MPU9250Sample(accel[0], accel[1], accel[2], temp, gyro[0], gyro[1], gyro[2],
+                         mag[0], mag[0], mag[0], mag_misc[0], mag_misc[1])
