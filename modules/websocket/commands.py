@@ -8,7 +8,6 @@ import enum
 
 # Classes
 class WebsocketCommandNotFound(Exception):
-
     """Raised when there is no matching command."""
 
     def __init__(self, command: str):
@@ -18,7 +17,6 @@ class WebsocketCommandNotFound(Exception):
 
 
 class WebsocketCommand(Enum):
-
     """Contains the structure for the telemetry commands."""
 
     UPDATE: str = "update"
@@ -42,7 +40,6 @@ class WebsocketCommand(Enum):
 
 # Parsing functions
 def parse(websocket_command: list[str], enum: EnumType) -> Enum:
-
     """
     Returns the websocket command as the matching command enum variable. Any remaining parameters will be left
     inside the websocket_command list parameter.

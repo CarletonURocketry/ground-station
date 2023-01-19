@@ -21,7 +21,6 @@ class DataBlockUnknownException(BlockUnknownException):
 
 
 class DataBlock(ABC):
-
     """Interface for all telemetry data blocks."""
 
     @property
@@ -194,17 +193,37 @@ class SDCardStatus(IntEnum):
                 return "unknown"
 
 
-class DeploymentState(StrEnum):
-    """Deployment states of the rocket."""
+class DeploymentState(IntEnum):
+    DEPLOYMENT_STATE_DNE = -1
+    DEPLOYMENT_STATE_IDLE = 0x0
+    DEPLOYMENT_STATE_ARMED = 0x1
+    DEPLOYMENT_STATE_POWERED_ASCENT = 0x2
+    DEPLOYMENT_STATE_COASTING_ASCENT = 0x3
+    DEPLOYMENT_STATE_DEPLOYING = 0x4
+    DEPLOYMENT_STATE_DEPLOYING_2 = 0xF
+    DEPLOYMENT_STATE_DESCENT = 0x5
+    DEPLOYMENT_STATE_RECOVERY = 0x6
 
-    DEPLOYMENT_STATE_DNE = ""
-    DEPLOYMENT_STATE_IDLE = "idle"
-    DEPLOYMENT_STATE_ARMED = "armed"
-    DEPLOYMENT_STATE_POWERED_ASCENT = "powered ascent"
-    DEPLOYMENT_STATE_COASTING_ASCENT = "coasting ascent"
-    DEPLOYMENT_STATE_DEPLOYING = "deploying"
-    DEPLOYMENT_STATE_DESCENT = "descent"
-    DEPLOYMENT_STATE_RECOVERY = "recovery"
+    def __str__(self):
+        match self:
+            case DeploymentState.DEPLOYMENT_STATE_IDLE:
+                return "idle"
+            case DeploymentState.DEPLOYMENT_STATE_ARMED:
+                return "armed"
+            case DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT:
+                return "powered ascent"
+            case DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT:
+                return "coasting ascent"
+            case DeploymentState.DEPLOYMENT_STATE_DEPLOYING:
+                return "deploying"
+            case DeploymentState.DEPLOYMENT_STATE_DESCENT:
+                return "descent"
+            case DeploymentState.DEPLOYMENT_STATE_RECOVERY:
+                return "recovery"
+            case DeploymentState.DEPLOYMENT_STATE_DNE:
+                return ""
+            case _:
+                return "unknown"
 
 
 class StatusDataBlock(DataBlock):
@@ -431,14 +450,13 @@ class AngularVelocityDataBlock(DataBlock):
 #   GNSS Location
 #
 class GNSSLocationFixType(IntEnum):
-    UNKNOWN = 0x0
-    NOT_AVAILABLE = 0x1
-    FIX_2D = 0x2
-    FIX_3D = 0x3
+    UNKNOWN = 0
+    NOT_AVAILABLE = 1
+    FIX_2D = 2
+    FIX_3D = 3
 
 
 class GNSSLocationBlock(DataBlock):
-
     """The data for GNSS location."""
 
     def __init__(self,
@@ -535,7 +553,6 @@ class GNSSLocationBlock(DataBlock):
 
 
 class GNSSSatType(IntEnum):
-
     """The types of GNSS satellites."""
 
     GPS: int = 0
@@ -543,7 +560,6 @@ class GNSSSatType(IntEnum):
 
 
 class GNSSSatInfo:
-
     """The information packet for the GNSS satellite info"""
 
     GPS_SV_OFFSET: int = 0
@@ -697,14 +713,24 @@ class KX134ODR(IntEnum):
 
 
 class KX134Range(IntEnum):
-    ACCEL_8G = 8
-    ACCEL_16G = 16
-    ACCEL_32G = 32
-    ACCEL_64G = 64
+    ACCEL_8G = 0
+    ACCEL_16G = 1
+    ACCEL_32G = 2
+    ACCEL_64G = 3
 
     @property
     def acceleration(self):
-        return self.value
+        match self:
+            case KX134Range.ACCEL_8G:
+                return 8
+            case KX134Range.ACCEL_16G:
+                return 16
+            case KX134Range.ACCEL_32G:
+                return 32
+            case KX134Range.ACCEL_64G:
+                return 64
+            case _:
+                return 0
 
     def __str__(self):
         return f"±{self.acceleration} g"
@@ -719,12 +745,16 @@ class KX134LPFRolloff(IntEnum):
 
 
 class KX134Resolution(IntEnum):
-    RES_8_BIT = 8
-    RES_16_BIT = 16
+    RES_8_BIT = 0
+    RES_16_BIT = 1
 
     @property
     def bits(self):
-        return self.value
+        if self == KX134Resolution.RES_8_BIT:
+            return 8
+        elif self == KX134Resolution.RES_16_BIT:
+            return 16
+        return 0
 
     def __str__(self):
         return f"{self.bits} bits per sample"
@@ -896,18 +926,33 @@ class MPU9250GyroFSR(IntEnum):
 
 
 class MPU9250AccelBW(IntEnum):
-    BW_5_HZ = 505
-    BW_10_HZ = 1020
-    BW_21_HZ = 2120
-    BW_45_HZ = 4480
-    BW_99_HZ = 9900
-    BW_218_HZ = 21810
-    BW_420_HZ = 42000
+    BW_5_HZ = 0
+    BW_10_HZ = 1
+    BW_21_HZ = 2
+    BW_45_HZ = 3
+    BW_99_HZ = 4
+    BW_218_HZ = 5
+    BW_420_HZ = 6
 
     @property
     def bandwidth(self):
-        return self.value / 100
-
+        match self:
+            case MPU9250AccelBW.BW_5_HZ:
+                return 5.05
+            case MPU9250AccelBW.BW_10_HZ:
+                return 10.2
+            case MPU9250AccelBW.BW_21_HZ:
+                return 21.2
+            case MPU9250AccelBW.BW_45_HZ:
+                return 44.8
+            case MPU9250AccelBW.BW_99_HZ:
+                return 99
+            case MPU9250AccelBW.BW_218_HZ:
+                return 218.1
+            case MPU9250AccelBW.BW_420_HZ:
+                return 420
+            case _:
+                return 0
 
     def __str__(self):
         return f"{self.bandwidth} Hz"
@@ -924,7 +969,23 @@ class MPU9250GyroBW(IntEnum):
 
     @property
     def bandwidth(self):
-        return self.value
+        match self:
+            case MPU9250GyroBW.BW_5_HZ:
+                return 5
+            case MPU9250GyroBW.BW_10_HZ:
+                return 10
+            case MPU9250GyroBW.BW_20_HZ:
+                return 20
+            case MPU9250GyroBW.BW_41_HZ:
+                return 41
+            case MPU9250GyroBW.BW_92_HZ:
+                return 92
+            case MPU9250GyroBW.BW_184_HZ:
+                return 184
+            case MPU9250GyroBW.BW_250_HZ:
+                return 250
+            case _:
+                return 0
 
     def __str__(self):
         return f"{self.bandwidth} Hz"
@@ -936,7 +997,13 @@ class MPU9250MagResolution(IntEnum):
 
     @property
     def bits(self):
-        return self.value
+        match self:
+            case MPU9250MagResolution.RES_14_BIT:
+                return 14
+            case MPU9250MagResolution.RES_16_BIT:
+                return 16
+            case _:
+                return 0
 
     @property
     def sensitivity(self):
@@ -953,7 +1020,8 @@ class MPU9250MagResolution(IntEnum):
 
 
 class MPU9250Sample:
-    def __init__(self, accel_x: int, accel_y: int, accel_z: int, temperature: int, gyro_x: int, gyro_y: int, gyro_z: int, mag_x: int,
+    def __init__(self, accel_x: int, accel_y: int, accel_z: int, temperature: int, gyro_x: int, gyro_y: int,
+                 gyro_z: int, mag_x: int,
                  mag_y: int, mag_z: int, mag_ovf: int, mag_res: MPU9250MagResolution):
         self.accel_x: int = accel_x
         self.accel_y: int = accel_y
@@ -1142,11 +1210,12 @@ class MPU9250IMUDataBlock(DataBlock):
             yield time, samp
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time}, accel_x: {self.sensor.accel_x}, accel_y: {self.sensor.accel_y}, accel_z: {self.sensor.accel_z}, temp: {self.sensor.temperature}, "
-                f"gyro_x: {self.sensor.gyro_x}, gyro_y: {self.sensor.gyro_y}, gyro_z: {self.sensor.gyro_z}, "
-                f"samples: {len(self.samples)}, "
-                f"accel/gyro sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "
-                f"gyro fsr: {self.gyro_fsr}")
+        return (
+            f"{self.type_desc()} -> time: {self.mission_time}, accel: ({self.sensor.accel_x},{self.sensor.accel_y},{self.sensor.accel_z}), temp: {self.sensor.temperature}, "
+            f"gyro: ({self.sensor.gyro_x},{self.sensor.gyro_y},{self.sensor.gyro_z}), "
+            f"samples: {len(self.samples)}, "
+            f"accel/gyro sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "
+            f"gyro fsr: {self.gyro_fsr}")
 
     def __iter__(self):
         yield "mission_time", self.mission_time
@@ -1178,7 +1247,7 @@ def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
     gyro = [0, 0, 0]
     mag = [0, 0, 0]
     mag_ovf = 0
-    mag_res = 0
+    mag_res = MPU9250MagResolution(0)
 
     for sam in data_samples:
         accel[0] += sam.accel_x / sample_size
@@ -1192,7 +1261,7 @@ def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
         mag[1] = sam.mag_y / sample_size
         mag[2] = sam.mag_z / sample_size
         mag_ovf = sam.mag_ovf / sample_size
-        mag_res = sam.mag_res if sam.mag_res > mag_res else mag_res
-        print(type(sam.mag_res), mag_res)
+        mag_res = sam.mag_res if sam.mag_res.value > mag_res.value else mag_res
+
     return MPU9250Sample(accel[0], accel[1], accel[2], temp, gyro[0], gyro[1], gyro[2],
                          mag[0], mag[0], mag[0], mag_ovf, mag_res)

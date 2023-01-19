@@ -30,7 +30,6 @@ PacketHeader = tuple[str, int, int, int, int]
 # Constants
 ORG: str = "CUInSpace"
 VERSION: str = "0.4.5-DEV"
-REPLAY_STATE: int = 1
 MISSION_EXTENSION: str = ".mission"
 FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
@@ -208,8 +207,8 @@ class Telemetry(Process):
                     self.play_mission(mission_name)
                 except MissionNotFoundError as e:
                     print(e.message)
-                else:
-                    self.update_websocket()
+
+                self.update_websocket()
             case wsc.WebsocketCommand.REPLAY.value.STOP:
                 self.replay_last_played_speed = self.replay_data.speed
                 self.stop_replay()
