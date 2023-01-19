@@ -171,6 +171,7 @@ class Telemetry(Process):
                         self.parse_rn2483_transmission(self.radio_payloads.get())
                         self.update_websocket()
 
+
     def update_websocket(self) -> None:
 
         """Updates the websocket with the latest packet using the JSON output process."""
@@ -231,6 +232,7 @@ class Telemetry(Process):
                     self.start_recording(mission_name)
                 except AlreadyRecordingError as e:
                     print(e.message)
+
 
     def set_replay_speed(self, speed: float):
         """Set the playback speed of the replay system."""
@@ -327,7 +329,7 @@ class Telemetry(Process):
                 print("CONTROL BLOCK")
                 # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
                 self.rn2483_radio_input.put("radio get snr")
-                self.rn2483_radio_input.put("radio get rssi")
+                # self.rn2483_radio_input.put("radio get rssi")
 
             case BlockTypes.COMMAND:
                 # COMMAND BLOCK DETECTED
@@ -340,25 +342,10 @@ class Telemetry(Process):
                 if block_data.mission_time > self.status_data.rocket.last_mission_time:
                     self.status_data.rocket.last_mission_time = block_data.mission_time
 
-                # Switch statement to treat different blocks separately
-                match DataBlockSubtype(block_subtype):
-                    case DataBlockSubtype.STATUS:
-                        self.status_data.rocket = jsp.RocketData.from_data_block(block_data)
-                    case DataBlockSubtype.MPU9250_IMU:
-                        # print(block_data)
-                        accel, temp, gyro = parse_mpu9250_samples(block_data.samples)
-                        # print("AVG ACCEL", accel[0], accel[1], accel[2], "AVG TEMP", temp, "AVG GYRO", gyro[0], gyro[1], gyro[2])
-                        self.telemetry_data["mpu9250_data"] = {"mission_time": block_data.mission_time,
-                                                               "accel_x": {"ms2": accel[0]},
-                                                               "accel_y": {"ms2": accel[1]},
-                                                               "accel_z": {"ms2": accel[2]},
-                                                               "temperature": {"celsius": temp},
-                                                               "gyro_x": gyro[0],
-                                                               "gyro_y": gyro[1],
-                                                               "gyro_z": gyro[2]}
-                        self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
-                    case _:
-                        self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
+                if DataBlockSubtype == DataBlockSubtype.STATUS:
+                    self.status_data.rocket = jsp.RocketData.from_data_block(block_data)
+                else:
+                    self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
             case _:
                 print("Unknown block type")
 
@@ -394,28 +381,6 @@ class Telemetry(Process):
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[8 + block_len:]
         print(f"-----" * 20)
-
-
-def parse_mpu9250_samples(data_samples: list[MPU9250Sample]) -> tuple:
-    """
-    Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp and gyro.
-    """
-    sample_size = len(data_samples)
-    accel = [0, 0, 0]
-    temp = 0
-    gyro = [0, 0, 0]
-    for sam in data_samples:
-        accel[0] += sam.accel_x / sample_size
-        accel[1] += sam.accel_y / sample_size
-        accel[2] += sam.accel_z / sample_size
-
-        temp += sam.temperature / sample_size
-
-        gyro[0] = sam.gyro_x / sample_size
-        gyro[1] = sam.gyro_y / sample_size
-        gyro[2] = sam.gyro_z / sample_size
-
-    return accel, temp, gyro
 
 
 def _parse_packet_header(header: str) -> PacketHeader:
@@ -463,3 +428,24 @@ def _parse_block_header(header: str) -> BlockHeader:
     destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
 
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
+
+
+def make_block_header():
+    header = "840C0000"
+
+    # block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
+    # crypto_signature = ((header[0] >> 5) & 0x1)
+    # message_type = ((header[0] >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
+    # message_subtype = ((header[0] >> 10) & 0x3f)
+    # destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
+
+    # lol = "13634180"
+    # header = struct.pack('<I', lol)
+    # print("HEADDDDDDDDD",header)
+    # lol = 13634180
+    # header = struct.pack('<I', lol)
+    # print("HEADDDDDDDDD", int.from_bytes(header, "little"))
+
+    # test = struct.pack('<I?III', 20, False, 2, 3, 0)
+    # print("LLLLLLLL",test.hex())
+    return header
