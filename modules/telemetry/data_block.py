@@ -848,8 +848,8 @@ class KX134AccelerometerDataBlock(DataBlock):
 
 
 class MPU9250MagSR(IntEnum):
-    SR_8 = 8
-    SR_100 = 100
+    SR_8 = 0
+    SR_100 = 1
 
     @property
     def samples_per_sec(self):
@@ -860,10 +860,10 @@ class MPU9250MagSR(IntEnum):
 
 
 class MPU9250AccelFSR(IntEnum):
-    ACCEL_2G = 2
-    ACCEL_4G = 4
-    ACCEL_8G = 8
-    ACCEL_16G = 16
+    ACCEL_2G = 0
+    ACCEL_4G = 1
+    ACCEL_8G = 2
+    ACCEL_16G = 3
 
     @property
     def acceleration(self):
@@ -878,10 +878,10 @@ class MPU9250AccelFSR(IntEnum):
 
 
 class MPU9250GyroFSR(IntEnum):
-    AV_250DPS = 250
-    AV_500DPS = 500
-    AV_1000DPS = 1000
-    AV_2000DPS = 2000
+    AV_250DPS = 0
+    AV_500DPS = 1
+    AV_1000DPS = 2
+    AV_2000DPS = 3
 
     @property
     def angular_velocity(self):
@@ -908,18 +908,19 @@ class MPU9250AccelBW(IntEnum):
     def bandwidth(self):
         return self.value / 100
 
+
     def __str__(self):
         return f"{self.bandwidth} Hz"
 
 
 class MPU9250GyroBW(IntEnum):
-    BW_5_HZ = 5
-    BW_10_HZ = 10
-    BW_20_HZ = 20
-    BW_41_HZ = 41
-    BW_92_HZ = 92
-    BW_184_HZ = 184
-    BW_250_HZ = 250
+    BW_5_HZ = 0
+    BW_10_HZ = 1
+    BW_20_HZ = 2
+    BW_41_HZ = 3
+    BW_92_HZ = 4
+    BW_184_HZ = 5
+    BW_250_HZ = 6
 
     @property
     def bandwidth(self):
@@ -930,8 +931,8 @@ class MPU9250GyroBW(IntEnum):
 
 
 class MPU9250MagResolution(IntEnum):
-    RES_14_BIT = 14
-    RES_16_BIT = 16
+    RES_14_BIT = 0
+    RES_16_BIT = 1
 
     @property
     def bits(self):
@@ -1169,32 +1170,29 @@ class MPU9250IMUDataBlock(DataBlock):
 
 def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
     """
-    Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp and gyro.
+    Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp
     """
     sample_size = len(data_samples)
-
     accel = [0, 0, 0]
     temp = 0
     gyro = [0, 0, 0]
     mag = [0, 0, 0]
-    mag_misc = [0, 0]
+    mag_ovf = 0
+    mag_res = 0
 
     for sam in data_samples:
         accel[0] += sam.accel_x / sample_size
         accel[1] += sam.accel_y / sample_size
         accel[2] += sam.accel_z / sample_size
-
         temp += sam.temperature / sample_size
-
         gyro[0] = sam.gyro_x / sample_size
         gyro[1] = sam.gyro_y / sample_size
         gyro[2] = sam.gyro_z / sample_size
-
         mag[0] = sam.mag_x / sample_size
         mag[1] = sam.mag_y / sample_size
         mag[2] = sam.mag_z / sample_size
-
-        mag_misc[0] = sam.mag_ovf / sample_size
-
+        mag_ovf = sam.mag_ovf / sample_size
+        mag_res = sam.mag_res if sam.mag_res > mag_res else mag_res
+        print(type(sam.mag_res), mag_res)
     return MPU9250Sample(accel[0], accel[1], accel[2], temp, gyro[0], gyro[1], gyro[2],
-                         mag[0], mag[0], mag[0], mag_misc[0], MPU9250MagResolution.RES_16_BIT)
+                         mag[0], mag[0], mag[0], mag_ovf, mag_res)
