@@ -5,6 +5,7 @@ __author__ = "Matteo Golin"
 from enum import StrEnum, Enum, EnumType
 import enum
 
+
 # Classes
 class WebsocketCommandNotFound(Exception):
 

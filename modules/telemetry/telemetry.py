@@ -12,14 +12,16 @@ from struct import unpack
 from time import time
 from pathlib import Path
 from ast import literal_eval
+from typing import Any
 
 from multiprocessing import Queue, Process, active_children
 from modules.telemetry.replay import TelemetryReplay
-from modules.telemetry.block import DeviceAddress, BlockTypes
-from modules.telemetry.data_block import DataBlock, DataBlockSubtype, StatusDataBlock, DeploymentState, MPU9250Sample
+from modules.telemetry.block import BlockTypes
+from modules.telemetry.data_block import DataBlock, DataBlockSubtype, MPU9250Sample
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
+
 
 # Types
 BlockHeader = tuple[int, bool, int, int, int]
@@ -35,18 +37,21 @@ FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
 # Helper functions
 def mission_path(mission_name: str, missions_dir: Path) -> Path:
+
     """Returns the path to the mission file with the matching mission name."""
+
 
     return missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
 
 
-def shutdown_sequence():
+def shutdown_sequence() -> None:
     for child in active_children():
         child.terminate()
     exit(0)
 
 
 def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Path:
+
     missions_filepath = missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
     file_suffix = 1
 
@@ -59,8 +64,8 @@ def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Pat
 
 # Errors
 class MissionNotFoundError(Exception):
-    """Raised when the desired mission is not found."""
 
+    """Raised when the desired mission is not found."""
     def __init__(self, mission_name: str):
         self.mission_name = mission_name
         self.message = f"The mission recording '{mission_name}' does not exist."
@@ -68,6 +73,7 @@ class MissionNotFoundError(Exception):
 
 
 class AlreadyRecordingError(Exception):
+
     """Raised if the telemetry process is already recording when instructed to record."""
 
     def __init__(self):
@@ -165,6 +171,7 @@ class Telemetry(Process):
                         self.parse_rn2483_transmission(self.radio_payloads.get())
                         self.update_websocket()
 
+
     def update_websocket(self) -> None:
 
         """Updates the websocket with the latest packet using the JSON output process."""
@@ -176,10 +183,13 @@ class Telemetry(Process):
         self.telemetry_data = {}
         self.replay_data = jsp.ReplayData()
 
-    def generate_websocket_response(self):
+    def generate_websocket_response(self) -> dict[str, Any]:
+
+        """Returns the dictionary containing the JSON data for the websocket client."""
+
         return {"version": VERSION, "org": ORG,
                 "status": dict(self.status_data),
-                "telemetry": self.telemetry_data,
+                "telemetry_data": self.telemetry_data,
                 "replay": dict(self.replay_data)}
 
     def execute_command(self, command: wsc.Enum, parameters: list[str]) -> None:
@@ -222,6 +232,7 @@ class Telemetry(Process):
                     self.start_recording(mission_name)
                 except AlreadyRecordingError as e:
                     print(e.message)
+
 
     def set_replay_speed(self, speed: float):
         """Set the playback speed of the replay system."""
@@ -279,7 +290,7 @@ class Telemetry(Process):
 
     def start_recording(self, mission_name: str = None) -> None:
 
-        """Starts recording the current mission. If no mission name is given, the recording epoch is used."""
+        """Starts recording the current mission. If no mission name is give, the recording epoch is used."""
 
         if self.status_data.mission.recording:
             raise AlreadyRecordingError
@@ -305,7 +316,10 @@ class Telemetry(Process):
         self.status_data.mission.recording = False
         self.status_data.mission = jsp.MissionData(state=self.status_data.mission.state)
 
-    def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents):
+    def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents: str) -> None:
+
+        """Block contents are a hex string."""
+
         # Working with hex strings until this point.
         # Hex/Bytes Demarcation point
         block_contents = bytes.fromhex(block_contents)
@@ -328,7 +342,6 @@ class Telemetry(Process):
                 if block_data.mission_time > self.status_data.rocket.last_mission_time:
                     self.status_data.rocket.last_mission_time = block_data.mission_time
 
-                # Switch statement to treat different blocks separately
                 if DataBlockSubtype == DataBlockSubtype.STATUS:
                     self.status_data.rocket = jsp.RocketData.from_data_block(block_data)
                 else:
