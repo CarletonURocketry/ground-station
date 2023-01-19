@@ -36,9 +36,7 @@ FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
 # Helper functions
 def mission_path(mission_name: str, missions_dir: Path) -> Path:
-
     """Returns the path to the mission file with the matching mission name."""
-
 
     return missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
 
@@ -50,7 +48,7 @@ def shutdown_sequence() -> None:
 
 
 def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Path:
-
+    """Obtains filepath for proposed name, with a maximum of giving a suffix 50 times before failing."""
     missions_filepath = missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
     file_suffix = 1
 
@@ -63,7 +61,6 @@ def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Pat
 
 # Errors
 class MissionNotFoundError(Exception):
-
     """Raised when the desired mission is not found."""
     def __init__(self, mission_name: str):
         self.mission_name = mission_name
@@ -72,7 +69,6 @@ class MissionNotFoundError(Exception):
 
 
 class AlreadyRecordingError(Exception):
-
     """Raised if the telemetry process is already recording when instructed to record."""
 
     def __init__(self):
@@ -172,27 +168,25 @@ class Telemetry(Process):
 
 
     def update_websocket(self) -> None:
-
         """Updates the websocket with the latest packet using the JSON output process."""
 
         self.telemetry_json_output.put(self.generate_websocket_response())
 
-    def reset_data(self):
+    def reset_data(self) -> None:
+        """Resets all live data on the telemetry backend to a default state."""
         self.status_data = jsp.StatusData()
         self.telemetry_data = {}
         self.replay_data = jsp.ReplayData()
 
     def generate_websocket_response(self) -> dict[str, Any]:
-
         """Returns the dictionary containing the JSON data for the websocket client."""
 
         return {"version": VERSION, "org": ORG,
                 "status": dict(self.status_data),
-                "telemetry_data": self.telemetry_data,
+                "telemetry": self.telemetry_data,
                 "replay": dict(self.replay_data)}
 
     def execute_command(self, command: wsc.Enum, parameters: list[str]) -> None:
-
         """Executes the passed websocket command."""
 
         match command:
@@ -263,7 +257,6 @@ class Telemetry(Process):
             self.replay_output.get()
 
     def play_mission(self, mission_name: str) -> None:
-
         """Plays the desired mission recording."""
 
         if mission_name not in self.replay_data.mission_list:
@@ -288,7 +281,6 @@ class Telemetry(Process):
         print(f"REPLAY {mission_name} PLAYING")
 
     def start_recording(self, mission_name: str = None) -> None:
-
         """Starts recording the current mission. If no mission name is give, the recording epoch is used."""
 
         if self.status_data.mission.recording:
@@ -308,7 +300,6 @@ class Telemetry(Process):
         self.replay_data.update_mission_list()
 
     def stop_recording(self) -> None:
-
         """Stops the current recording."""
 
         print("RECORDING STOP")
@@ -316,8 +307,8 @@ class Telemetry(Process):
         self.status_data.mission = jsp.MissionData(state=self.status_data.mission.state)
 
     def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents: str) -> None:
-
-        """Block contents are a hex string."""
+        """ Parses telemetry payload blocks from either parsed packets or stored replays. """
+        """ Block contents are a hex string. """
 
         # Working with hex strings until this point.
         # Hex/Bytes Demarcation point
@@ -349,7 +340,7 @@ class Telemetry(Process):
                 print("Unknown block type")
 
     def parse_rn2483_transmission(self, data: str):
-
+        """ Parses RN2483 Packets and extracts our telemetry payload blocks"""
         # Extract the packet header
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
 
