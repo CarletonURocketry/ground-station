@@ -1248,7 +1248,6 @@ def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
     """
     Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp, gyro and magnetometer
     """
-    sample_size = len(data_samples)
     mag_ovf = 0
     mag_res = MPU9250MagResolution(0)
 
@@ -1259,7 +1258,7 @@ def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
         mag_res = sam.mag_res if sam.mag_res.value > mag_res.value else mag_res
         data = dict(sam)
         for key in data.keys():
-            avg[key] += data[key] / sample_size
+            avg[key] += data[key] / len(data_samples)
 
     return MPU9250Sample(avg["accel_x"], avg["accel_y"], avg["accel_z"], avg["temperature"],
                          avg["gyro_x"], avg["gyro_y"], avg["gyro_z"], avg["mag_x"], avg["mag_y"], avg["mag_z"],

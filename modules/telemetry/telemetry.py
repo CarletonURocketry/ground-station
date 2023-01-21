@@ -17,7 +17,7 @@ from typing import Any
 from multiprocessing import Queue, Process, active_children
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.block import BlockTypes
-from modules.telemetry.data_block import DataBlock, DataBlockSubtype, MPU9250Sample
+from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
@@ -49,8 +49,8 @@ def shutdown_sequence() -> None:
 
 def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Path:
     """Obtains filepath for proposed name, with a maximum of giving a suffix 50 times before failing."""
-    missions_filepath = missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
     file_suffix = 1
+    missions_filepath = missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
 
     while missions_filepath.is_file() and file_suffix < FILE_CREATION_ATTEMPT_LIMIT:
         missions_filepath = missions_dir.joinpath(f"{mission_name}_{file_suffix}{MISSION_EXTENSION}")
@@ -192,28 +192,23 @@ class Telemetry(Process):
         match command:
             case wsc.WebsocketCommand.UPDATE:
                 self.replay_data.update_mission_list()
-                self.update_websocket()
 
             # Replay commands
             case wsc.WebsocketCommand.REPLAY.value.PLAY:
-                mission_name = " ".join(parameters)
+                mission_name = None if not parameters else " ".join(parameters)
                 try:
                     self.play_mission(mission_name)
                 except MissionNotFoundError as e:
                     print(e.message)
 
-                self.update_websocket()
             case wsc.WebsocketCommand.REPLAY.value.STOP:
                 self.replay_last_played_speed = self.replay_data.speed
                 self.stop_replay()
-                self.update_websocket()
             case wsc.WebsocketCommand.REPLAY.value.PAUSE:
                 self.replay_last_played_speed = self.replay_data.speed
                 self.set_replay_speed(0.0)
-                self.update_websocket()
             case wsc.WebsocketCommand.REPLAY.value.SPEED:
                 self.set_replay_speed(int(parameters[0]))
-                self.update_websocket()
 
             # Record commands
             case wsc.WebsocketCommand.RECORD.value.STOP:
@@ -225,6 +220,8 @@ class Telemetry(Process):
                     self.start_recording(mission_name)
                 except AlreadyRecordingError as e:
                     print(e.message)
+
+        self.update_websocket()
 
 
     def set_replay_speed(self, speed: float):
@@ -259,13 +256,15 @@ class Telemetry(Process):
     def play_mission(self, mission_name: str) -> None:
         """Plays the desired mission recording."""
 
-        if mission_name not in self.replay_data.mission_list:
+        if mission_name not in self.replay_data.mission_list and mission_name is not None:
             raise MissionNotFoundError(mission_name)
 
-        self.status_data.mission.name = mission_name
-        replay_mission_filepath = mission_path(mission_name, self.missions_dir)
 
         if self.replay is None:
+            self.status_data.mission.name = mission_name
+            self.status_data.mission.state = jsp.MissionState.RECORDED
+            replay_mission_filepath = mission_path(mission_name, self.missions_dir)
+
             self.replay = Process(
                 target=TelemetryReplay,
                 args=(
@@ -276,12 +275,11 @@ class Telemetry(Process):
             )
             self.replay.start()
 
-        self.set_replay_speed(speed=self.replay_last_played_speed)
-        self.status_data.mission.state = jsp.MissionState.RECORDED
+        self.set_replay_speed(speed=self.replay_last_played_speed if self.replay_last_played_speed > 0 else 1)
         print(f"REPLAY {mission_name} PLAYING")
 
     def start_recording(self, mission_name: str = None) -> None:
-        """Starts recording the current mission. If no mission name is give, the recording epoch is used."""
+        """Starts recording the current mission. If no mission name is given, the recording epoch is used."""
 
         if self.status_data.mission.recording:
             raise AlreadyRecordingError
@@ -335,7 +333,6 @@ class Telemetry(Process):
                 if block_subtype == DataBlockSubtype.STATUS:
                     self.status_data.rocket = jsp.RocketData.from_data_block(block_data)
                 else:
-
                     self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
             case _:
                 print("Unknown block type")
