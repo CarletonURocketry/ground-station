@@ -9,6 +9,7 @@
 import json
 from multiprocessing import Queue, Process
 from abc import ABC
+from typing import Optional
 
 import tornado.gen
 import tornado.httpserver
@@ -20,6 +21,9 @@ ws_commands_queue = Queue
 
 
 class WebSocketHandler(Process):
+
+    """Handles starting the websocket server process."""
+
     def __init__(self, telemetry_json_output: Queue, ws_commands: Queue):
         super().__init__()
         global ws_commands_queue
@@ -32,7 +36,10 @@ class WebSocketHandler(Process):
 
         self.start_websocket_server()
 
-    def start_websocket_server(self):
+    def start_websocket_server(self) -> None:
+
+        """Starts up the websocket server."""
+
         wss = tornado.web.Application(
             [(r"/websocket", TornadoWSServer)],
             websocket_ping_interval=10,
@@ -49,7 +56,10 @@ class WebSocketHandler(Process):
         periodic_callback.start()
         io_loop.start()
 
-    def check_for_messages(self):
+    def check_for_messages(self) -> Optional[str]:
+
+        """Returns any JSON data that may be on the telemetry JSON output queue."""
+
         json_data = None
         while not self.telemetry_json_output.empty():
             json_data = self.telemetry_json_output.get()
@@ -57,28 +67,35 @@ class WebSocketHandler(Process):
 
 
 class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
-    clients = set()
-    last_msg_send = {}
+
+    """The server which handles websocket connections."""
+
+    clients: set = set()
+    last_msg_send = {}  # TODO is this supposed to be dict or a string
     global ws_commands_queue
 
-    def open(self):
+    def open(self) -> None:
         TornadoWSServer.clients.add(self)
         self.send_message(self.last_msg_send)
         print(f"WebSocket: Client connected")
 
-    def on_close(self):
+    def on_close(self) -> None:
         TornadoWSServer.clients.remove(self)
         print(f"WebSocket: Client disconnected")
 
-    def on_message(self, message):
+    def on_message(self, message: str) -> None:
         ws_commands_queue.put(message)
 
-    def check_origin(self, origin):
+    # TODO what does this do and why is origin unused?
+    def check_origin(self, origin) -> bool:
         return True
 
     @classmethod
-    def send_message(cls, message: str):
-        if message != "null":
-            cls.last_msg_send = message
-            for client in cls.clients:
-                client.write_message(message)
+    def send_message(cls, message: str) -> None:
+
+        if message == "null":
+            return
+
+        cls.last_msg_send = message
+        for client in cls.clients:
+            client.write_message(message)
