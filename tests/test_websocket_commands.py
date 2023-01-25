@@ -6,9 +6,6 @@ import pytest
 import modules.websocket.commands as cmd
 
 
-# Constants
-
-
 # Helper functions
 def command_parser(command: str) -> tuple[cmd.Enum, list[str]]:
     """Parses a command string and returns the parsed command and parameter list."""
@@ -47,7 +44,6 @@ def test_wrong_enum_raises_error() -> None:
 
 
 def test_command_not_found_error_message() -> None:
-
     """Test that the error message is as expected."""
 
     command = "replay halt"
