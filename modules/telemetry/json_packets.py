@@ -10,7 +10,7 @@ from pathlib import Path
 import modules.telemetry.data_block as data_block
 
 # Constants
-MISSION_EXTENSION: str = ".mission"
+MISSION_EXTENSION: str = "mission"
 MISSIONS_DIR: str = "missions"
 
 
@@ -140,12 +140,11 @@ class ReplayData:
     def __post_init__(self) -> None:
         self.update_mission_list()  # Update the mission list on creation
 
-    def update_mission_list(self) -> None:
+    def update_mission_list(self, missions_dir: Path = Path.cwd().joinpath(MISSIONS_DIR)) -> None:
         """Gets the available mission recordings from the mission folder."""
 
         # TODO change this so that mission_extension and directory are not defined in multiple files
-        missions_dir = Path.cwd().joinpath(MISSIONS_DIR)
-        self.mission_list = [name.stem for name in missions_dir.glob(f"*{MISSION_EXTENSION}") if name.is_file()]
+        self.mission_list = [name.stem for name in missions_dir.glob(f"*.{MISSION_EXTENSION}") if name.is_file()]
 
     def __iter__(self):
         yield "status", self.status.value

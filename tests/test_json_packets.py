@@ -2,10 +2,32 @@
 __author__ = "Matteo Golin"
 
 # Imports
+import os
+from pathlib import Path
 import modules.telemetry.json_packets as jsp
 from modules.telemetry.data_block import DeploymentState
 
 # Constants
+TEST_MISSIONS = ["test_mission1", "another_test_mission"]
+
+
+# Helper functions
+def set_up_mock_missions_dir() -> None:
+    """Creates a test mission dir containing test mission files."""
+
+    os.mkdir(f"./{jsp.MISSIONS_DIR}")
+    for mission in TEST_MISSIONS:
+        with open(f"{jsp.MISSIONS_DIR}/{mission}.{jsp.MISSION_EXTENSION}", 'w') as file:
+            file.write("Testing 123...")
+
+
+def teardown_mock_missions_dir() -> None:
+    """Deletes the mock mission directory and its contents."""
+
+    missions_dir = f"./{jsp.MISSIONS_DIR}"
+    for file in os.listdir(missions_dir):
+        os.remove(f"{missions_dir}/{file}")
+    os.rmdir(missions_dir)
 
 
 # Default parameter tests
@@ -189,5 +211,40 @@ def test_replay_data_serialization() -> None:
         "mission_list": ["test mission", "another mission"]
     }
 
+
+# Logic testing
+def test_update_mission_list_default_path() -> None:
+    """Test that the mission list update method default path argument works correctly."""
+
+    # Set up false mission directory
+    replay_data = jsp.ReplayData()
+    set_up_mock_missions_dir()  # Create missions after mission list has been updated on __post_init__
+    replay_data.update_mission_list()
+
+    assert replay_data.mission_list == sorted(TEST_MISSIONS)
+    teardown_mock_missions_dir()
+
+
+def test_update_mission_list_post_init() -> None:
+    """Test that the mission list update method using the default path __post_init__ of ReplayData works correctly."""
+
+    # Check that update mission with the default path works
+    set_up_mock_missions_dir()
+    replay_data = jsp.ReplayData()
+
+    assert replay_data.mission_list == sorted(TEST_MISSIONS)
+    teardown_mock_missions_dir()
+
+
+def test_update_mission_list_custom_path() -> None:
+    """Test that the mission list update method using a custom path works correctly."""
+
+    replay_data = jsp.ReplayData()
+    set_up_mock_missions_dir()
+    replay_data.update_mission_list(Path("./missions"))
+
+    assert replay_data.mission_list == sorted(TEST_MISSIONS)
+    teardown_mock_missions_dir()
+
+
 # TODO test RocketData.from_data_block()
-# TODO test mission list logic on ReplayData
