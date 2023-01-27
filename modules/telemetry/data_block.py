@@ -227,19 +227,19 @@ class DeploymentState(IntEnum):
             case _:
                 return "unknown"
 
-
+# TODO type hint some of this stuff lol
 class StatusDataBlock(DataBlock):
     """Encapsulates the status data."""
 
-    def __init__(self, mission_time, kx134_state, alt_state, imu_state, sd_state, deployment_state, sd_blocks_recorded,
+    def __init__(self, mission_time: int, kx134_state, alt_state, imu_state, sd_state, deployment_state: DeploymentState, sd_blocks_recorded,
                  sd_checkouts_missed):
         super().__init__()
-        self.mission_time = mission_time
+        self.mission_time: int = mission_time
         self.kx134_state = kx134_state
         self.alt_state = alt_state
         self.imu_state = imu_state
         self.sd_state = sd_state
-        self.deployment_state = deployment_state
+        self.deployment_state: DeploymentState = deployment_state
         self.sd_blocks_recorded = sd_blocks_recorded
         self.sd_checkouts_missed = sd_checkouts_missed
 

@@ -5,7 +5,7 @@ __author__ = "Matteo Golin"
 import os
 from pathlib import Path
 import modules.telemetry.json_packets as jsp
-from modules.telemetry.data_block import DeploymentState
+from modules.telemetry.data_block import DeploymentState, StatusDataBlock
 
 # Constants
 TEST_MISSIONS = ["test_mission1", "another_test_mission"]
@@ -247,4 +247,27 @@ def test_update_mission_list_custom_path() -> None:
     teardown_mock_missions_dir()
 
 
-# TODO test RocketData.from_data_block()
+def test_rocket_data_from_data_block() -> None:
+    """Tests that properties of rocket data are correctly assigned from a data block."""
+
+    data_block = StatusDataBlock(
+        mission_time=145,
+        kx134_state=3,
+        alt_state=4,
+        imu_state=8,
+        sd_state=1,
+        sd_blocks_recorded=18,
+        deployment_state=DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT,
+        sd_checkouts_missed=90,
+    )
+
+    rocket_data = jsp.RocketData.from_data_block(data_block)
+
+    assert rocket_data.mission_time == 145
+    assert rocket_data.kx134_state == 3
+    assert rocket_data.altimeter_state == 4
+    assert rocket_data.imu_state == 8
+    assert rocket_data.sd_driver_state == 1
+    assert rocket_data.blocks_recorded == 18
+    assert rocket_data.deployment_state == DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT
+    assert rocket_data.checkouts_missed == 90
