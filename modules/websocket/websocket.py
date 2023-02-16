@@ -10,6 +10,7 @@ import json
 from multiprocessing import Queue, Process
 from abc import ABC
 from typing import Optional
+import logging
 
 import tornado.gen
 import tornado.httpserver
@@ -77,11 +78,11 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
     def open(self) -> None:
         TornadoWSServer.clients.add(self)
         self.send_message(self.last_msg_send)
-        print(f"WebSocket: Client connected")
+        logging.info(f"WebSocket: Client connected")
 
     def on_close(self) -> None:
         TornadoWSServer.clients.remove(self)
-        print(f"WebSocket: Client disconnected")
+        logging.info(f"WebSocket: Client disconnected")
 
     def on_message(self, message: str) -> None:
         ws_commands_queue.put(message)

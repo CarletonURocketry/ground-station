@@ -58,7 +58,6 @@ class TelemetryReplay:
                 if int(block_type) == 2:
                     block_data = DataBlock.parse(DataBlockSubtype(block_subtype), bytes.fromhex(block_payload))
                     block_time = block_data.mission_time
-                    #print(block_time, block_type, block_subtype, block_data)
 
                     current_loop_time = int(time() * 1000)
                     offset = float(current_loop_time - self.last_loop_time) * self.speed
@@ -68,7 +67,6 @@ class TelemetryReplay:
 
                     if self.total_offset < block_time:
                         next_block_wait = (block_time - self.total_offset) / self.speed
-                        # print(f"Sleeping {int(next_block_wait)} milliseconds until next block is time")
                         sleep(next_block_wait / 1000)
 
                     self.outputReplay(block_type, block_subtype, block_payload)
