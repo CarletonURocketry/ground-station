@@ -4,16 +4,25 @@
 # Authors:
 # Arsalan Syed
 # Thomas Selwyn (Devil)
+# Matteo Golin (liguini1)
 # Zacchaeus Liang
 
 import time
+import logging
 from multiprocessing import Queue, Process
 from serial import Serial, SerialException, EIGHTBITS, PARITY_NONE
 
 
 class SerialRN2483Radio(Process):
 
-    def __init__(self, serial_status: Queue, radio_signal_report: Queue, rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, serial_port: str):
+    def __init__(
+            self,
+            serial_status: Queue,
+            radio_signal_report: Queue,
+            rn2483_radio_input: Queue,
+            rn2483_radio_payloads: Queue,
+            serial_port: str
+    ):
         Process.__init__(self)
 
         self.serial_status = serial_status
@@ -30,7 +39,7 @@ class SerialRN2483Radio(Process):
         while True:
             try:
                 # initiate the USB serial connection
-                print(f"RN2483 Radio: Connecting to {self.serial_port}")
+                logging.info(f"RN2483 Radio: Connecting to {self.serial_port}")
                 # Settings matched to RN2483 Transceiver Data Sheet's default UART settings
                 self.ser = Serial(port=self.serial_port,
                                   timeout=1,
@@ -39,7 +48,7 @@ class SerialRN2483Radio(Process):
                                   parity=PARITY_NONE,
                                   stopbits=1,
                                   rtscts=False)
-                print(f"RN2483 Radio: Connected to {self.serial_port}")
+                logging.info(f"RN2483 Radio: Connected to {self.serial_port}")
                 self.serial_status.put(f"rn2483_connected True")
                 self.serial_status.put(f"rn2483_port {self.serial_port}")
 
@@ -58,7 +67,7 @@ class SerialRN2483Radio(Process):
             except SerialException:
                 self.serial_status.put(f"rn2483_connected False")
                 self.serial_status.put(f"rn2483_port null")
-                print("RN2483 Radio: Error communicating with serial device.")
+                logging.info("RN2483 Radio: Error communicating with serial device.")
                 time.sleep(3)
 
     def _read_ser(self):
@@ -80,7 +89,7 @@ class SerialRN2483Radio(Process):
         for i in range(0, 14):
             self.write_to_rn2483_radio(f"sys set pinmode GPIO{i} digin")
 
-        print('successfully set GPIO')
+        logging.info("Successfully set GPIO.")
 
     def reset(self):
         """perform a software reset on the rn2483 radio"""
@@ -91,7 +100,7 @@ class SerialRN2483Radio(Process):
         ret = self._read_ser()
 
         if 'RN2483' in ret:
-            print('radio successfully reset')
+            logging.info("Radio successfully reset.")
             return True
         else:
             return False
@@ -181,7 +190,6 @@ class SerialRN2483Radio(Process):
         elif command_string == 'radio get snr':
             self.radio_signal_report.put(f"snr {self._read_ser()}")
 
-
     def wait_for_ok(self):
         """
         Check to see if 'ok' is loaded onto the serial line by the rn2483 radio. If we receive 'ok' then this
@@ -198,24 +206,22 @@ class SerialRN2483Radio(Process):
             # returned after mac pause command.
             if '4294967245' in rv:
                 return True
-
-            print('error: wait_for_ok: ' + rv)
-
+            logging.error(f"wait_for_ok: {rv}")
             return False
 
     def set_freq(self, freq):
         """set the frequency of transmitted signals"""
 
         if not ((433050000 <= freq <= 434790000) or (863000000 <= freq <= 870000000)):
-            print('invalid frequency parameter.')
+            logging.error("Invalid frequency parameter.")
             return False
 
         success = self.write_to_rn2483_radio(f"radio set freq {freq}")
         if success:
-            print("frequency successfully set")
+            logging.debug("Frequency successfully set.")
             return True
         else:
-            print("error: frequency not set")
+            logging.error("Frequency not set.")
             return False
 
     def set_mod(self, mod):
@@ -223,11 +229,11 @@ class SerialRN2483Radio(Process):
         if mod in ['lora', 'fsk']:
             success = self.write_to_rn2483_radio(f"radio set mod {mod}")
             if success:
-                print('successfully set modulation')
+                logging.debug("Successfully set modulation.")
             else:
-                print('error setting modulation')
+                logging.error("Setting modulation.")
         else:
-            print('error setting modulation: either use fsk or lora')
+            logging.error("Setting modulation: either use fsk or lora.")
 
     def set_pwr(self, pwr):
         """ set power state between -3 and 15. The 15th state has an output power of 14.1 dBm for the 868 MHz band
@@ -235,14 +241,14 @@ class SerialRN2483Radio(Process):
         if pwr in range(-3, 16):
             success = self.write_to_rn2483_radio(f"radio set pwr {pwr}")
             if success:
-                print("value power successfully set")
+                logging.debug("Value power successfully set.")
                 return
 
             else:
-                print("power error:radio unable to set")
+                logging.error("Power: radio unable to set.")
                 return
 
-        print("invalid power param")
+        logging.error("Invalid power parameter.")
         return
 
     def set_sf(self, sf):
@@ -254,13 +260,13 @@ class SerialRN2483Radio(Process):
         if sf in [7, 8, 9, 10, 11, 12]:
             success = self.write_to_rn2483_radio(f"radio set sf {sf}")
             if success:
-                print("value spreading factor successfully set")
+                logging.debug("Value spreading factor successfully set.")
                 return
             else:
-                print("ERROR: unable to set spreading factor")
+                logging.error("Unable to set spreading factor.")
                 return
 
-        print("ERROR: invalid spreading factor")
+        logging.error("Invalid spreading factor.")
         return
 
     def set_cr(self, cr):
@@ -269,40 +275,40 @@ class SerialRN2483Radio(Process):
         if cr in ["4/5", "4/6", "4/7", "4/8"]:
             success = self.write_to_rn2483_radio(f"radio set cr {cr}")
             if success:
-                print("value cr successfully set")
+                logging.debug("Value cr successfully set.")
                 return
             else:
-                print("cr error:radio unable to set")
+                logging.error("CR :radio unable to set.")
                 return
-        print("invalid cycling rate")
+        logging.error("Invalid cycling rate.")
         return
 
     def set_bw(self, bw):
-        """set the bandwidth which can only be 125, 250 or 500 hz"""
+        """Set the bandwidth which can only be 125, 250 or 500Hz."""
 
         if bw in [125, 250, 500]:
             success = self.write_to_rn2483_radio(f"radio set bw {bw}")
             if success:
-                print("value bw successfully set")
+                logging.debug("Value BW successfully set.")
                 return
             else:
-                print("bw error: radio unable to set")
+                logging.error("BW: radio unable to set.")
                 return
 
-        print("invalid receiving bandwidth")
+        logging.error("Invalid receiving bandwidth.")
         return
 
     def set_iqi(self, iqi):
-        if iqi in ["on", "off"]:
+        if iqi in ["on", "off"]:  # TODO fix all these conditionals to be more readable.
             success = self.write_to_rn2483_radio(f"radio set iqi {iqi}")
             if success:
-                print("value successfully set")
+                logging.debug("Value successfully set.")
                 return
             else:
-                print("iqi error:radio unable to set")
+                logging.error("IQI: radio unable to set.")
                 return
 
-        print("invalid iqi setting")
+        logging.error("Invalid IQI setting.")
 
     def set_sync(self, sync):
 
@@ -311,12 +317,12 @@ class SerialRN2483Radio(Process):
         if sync in range(0, 256):
             success = self.write_to_rn2483_radio(f"radio set sync {sync}")
             if success:
-                print("value sync word successfully set")
+                logging.debug("Value sync word successfully set.")
                 return
             else:
-                print("sync param error:radio unable to set ")
+                logging.error("Sync parameter: radio unable to set.")
                 return
-        print("error: invalid sync word")
+        logging.error("Invalid sync word.")
 
     def set_prlen(self, pr):
         """set the preamble length between 0 and 65535"""
@@ -324,13 +330,13 @@ class SerialRN2483Radio(Process):
         if pr in range(0, 65535):
             success = self.write_to_rn2483_radio(f"radio set prlen {pr}")
             if success:
-                print("preamble length successfully set")
+                logging.debug("Preamble length successfully set.")
                 return
             else:
-                print("error: unable to set preamble length ")
+                logging.error("Unable to set preamble length.")
                 return
 
-        print("error: invalid preamble length")
+        logging.error("Invalid preamble length.")
 
     def set_crc(self, crc):
         """enable or disable the cyclic redundancy check"""
@@ -338,17 +344,16 @@ class SerialRN2483Radio(Process):
         if crc in ["on", "off"]:
             success = self.write_to_rn2483_radio(f"radio set crc {crc}")
             if success:
-                print("value crc successfully set")
+                logging.debug("Value CRC successfully set.")
                 return
             else:
-                print("crc error:radio unable to set")
+                logging.error("CRC: radio unable to set.")
                 return
 
-        print("invalid crc param")
+        logging.error("Invalid CRC parameter.")
 
     def set_rx_mode(self):
-        """set the rn2483 radio so that it constantly
-           listens for transmissions"""
+        """Set the rn2483 radio so that it constantly listens for transmissions."""
 
         # turn off watch dog timer
         self.write_to_rn2483_radio('radio set wdt 0')
@@ -361,10 +366,10 @@ class SerialRN2483Radio(Process):
 
         # if radio has not been put into rx mode
         if not success:
-            print('error putting radio into rx mode')
+            logging.error("Failure putting radio into rx mode.")
 
     def check_for_transmissions(self):
-        """checks for new transmissions on the line"""
+        """Checks for new transmissions on the line."""
         message = str(self.ser.readline())
 
         if message != "b''":
@@ -375,12 +380,13 @@ class SerialRN2483Radio(Process):
             self.rn2483_radio_payloads.put(message)
 
         else:
-            print('nothing received')
+            logging.info("Nothing received.")
 
     def _tx(self, data):
-        """transmit data, a method used for debugging
-
-        ROCKET DOES NOT RESPOND TO TRANSMISSIONS AT THIS TIME"""
+        """
+        Transmit data, a method used for debugging.
+        ROCKET DOES NOT RESPOND TO TRANSMISSIONS AT THIS TIME.
+        """
 
         # command that must be called before each transmission and receive
         self.write_to_rn2483_radio("mac pause")
@@ -389,24 +395,23 @@ class SerialRN2483Radio(Process):
         valid = self.write_to_rn2483_radio(f"radio tx {data}")
 
         if not valid:
-            print('invalid transmission message')
+            logging.error("Invalid transmission message.")
             return
 
-        else:
-            i = 0
+        i = 0
 
-            # radio will send 'radio_tx_ok' when message has been transmitted
-            while 'radio_tx_ok' not in str(self._read_ser()):
+        # radio will send 'radio_tx_ok' when message has been transmitted
+        while 'radio_tx_ok' not in str(self._read_ser()):
 
-                # if message not transmitted then wait for 1/10th of a second
-                time.sleep(0.1)
+            # if message not transmitted then wait for 1/10th of a second
+            time.sleep(0.1)
 
-                i += 1
+            i += 1
 
-                # if we have waited 0.3 seconds, then stop waiting. something
-                # has gone wrong.
-                if i == 3:
-                    print('unable to transmit message')
-                    return
+            # if we have waited 0.3 seconds, then stop waiting. something
+            # has gone wrong.
+            if i == 3:
+                logging.error("Unable to transmit message.")
+                return
 
-            print('successfully sent message')
+        logging.debug("Successfully sent message.")
