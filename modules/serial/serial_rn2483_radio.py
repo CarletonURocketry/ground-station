@@ -7,13 +7,27 @@
 # Matteo Golin (liguini1)
 # Zacchaeus Liang
 
+# Imports
 import time
 import logging
 from multiprocessing import Queue, Process
 from typing import Optional
 from serial import Serial, SerialException, EIGHTBITS, PARITY_NONE
 
+# Constants
+MODULATION_MODES: list[str] = ['lora', 'fsk']
+POWER_MIN: int = -3
+POWER_MAX: int = 16
+VALID_SPREADING_FACTORS: list[int] = [7, 8, 9, 10, 11, 12]
+VALID_CODING_RATES: list[str] = ["4/5", "4/6", "4/7", "4/8"]
+VALID_BANDWIDTHS: list[int] = [125, 250, 500]
+SYNC_MIN: int = 0
+SYNC_MAX: int = 256
+PREAMBLE_MIN: int = 0
+PREAMBLE_MAX: int = 65535
 
+
+# Radio process
 class SerialRN2483Radio(Process):
 
     def __init__(
@@ -76,7 +90,7 @@ class SerialRN2483Radio(Process):
         return str(self.ser.readline())
 
     def init_gpio(self) -> None:
-        """Set all GPIO pins to input mode, thereby putting them in a state of high impedance"""
+        """Set all GPIO pins to input mode, thereby putting them in a state of high impedance."""
 
         self.write_to_rn2483_radio("sys set pinmode GPIO0 digout")
         self.write_to_rn2483_radio("sys set pinmode GPIO1 digout")
@@ -102,42 +116,24 @@ class SerialRN2483Radio(Process):
 
     def init_rn2483_radio(self):
         """
-        Initializes the RN2483 radio with the following default parameters:
-        radio frequency: the frequency of the signal the radio uses to communicate with
-        power: the power of the signal (output)
-        spreading factor:
-        bandwidth:
-        length of preamble
-        should cyclic redundancy check (CRC) be enabled?
-        should image quality indicators (IQI) be enabled?
-        setting the sync word
+        Initializes the RN2483 radio with the default parameters.
+
+        Should cyclic redundancy check (CRC) be enabled?
+        Should image quality indicators (IQI) be enabled?
         """
 
         self.reset()  # Restart the radio module
-        self.init_gpio() # Initialize all the pins to be inputs
-        self.set_mod('lora')  # Set modulation type to lora
-        self.set_freq(433050000)  # Set the frequency of the radio (Hz)
-
-        # Set the transmission power state to 15. (15th TX Power state is 13.6dBm on the 433 MHz band)
-        self.set_pwr(15)
-
-        # Set the transmission spreading factor.
-        # The higher the spreading factor, the slower the transmissions (symbols are spread out more). The system will
-        # have better reception and be less error-prone.
-        self.set_sf(9)
-
-        # Set the coding rate (ratio of actual data to error-correcting data) that is transmitted.
-        # The lower the coding rate the lower the data rate.
-        self.set_cr("4/7")
-        self.set_bw(500)  # Set radio bandwidth.
-
-        # Set the length of the preamble.
-        # Preamble means introduction. It's a transmission that is used to synchronize the receiver.
-        self.set_prlen(6)
-
-        self.set_crc("on")  # Set cyclic redundancy check on/off. This is used to detect errors in the received signal
-        self.set_iqi("off")  # Set the invert IQ function
-        self.set_sync("43")  # Set sync word to be 0x43
+        self.init_gpio()
+        self.set_modulation("lora")
+        self.set_frequency(433050000)
+        self.set_power(15)
+        self.set_spread_factor(9)
+        self.set_coding_rate("4/7")
+        self.set_bandwidth(500)
+        self.set_preamble_len(6)
+        self.set_cyclic_redundancy_check(True)
+        self.set_iqi(False)
+        self.set_sync_word(0x43)
 
     def write_to_rn2483_radio(self, command_string: str) -> Optional[bool]:
         """
@@ -180,14 +176,14 @@ class SerialRN2483Radio(Process):
         logging.error(f"wait_for_ok: {rv}")
         return False
 
-    def set_freq(self, freq: int) -> bool:
-        """Set the frequency of transmitted signals."""
+    def set_frequency(self, frequency: int) -> bool:
+        """Set the frequency of transmitted signals in Hz."""
 
-        if not ((433050000 <= freq <= 434790000) or (863000000 <= freq <= 870000000)):  # TODO fix magic numbers
+        if not ((433050000 <= frequency <= 434790000) or (863000000 <= frequency <= 870000000)):  # TODO fix constants
             logging.error("Invalid frequency parameter.")
             return False
 
-        success = self.write_to_rn2483_radio(f"radio set freq {freq}")
+        success = self.write_to_rn2483_radio(f"radio set freq {frequency}")
         if success:
             logging.debug("Frequency successfully set.")
             return True
@@ -195,104 +191,107 @@ class SerialRN2483Radio(Process):
         logging.error("Frequency not set.")
         return False
 
-    def set_mod(self, mod: str) -> None:
+    def set_modulation(self, modulation: str) -> None:
         """Set the modulation of the RN2483 radio."""
 
-        if mod not in ['lora', 'fsk']:
+        if modulation not in MODULATION_MODES:
             logging.error("Setting modulation: either use fsk or lora.")
             return
 
-        if self.write_to_rn2483_radio(f"radio set mod {mod}"):
+        if self.write_to_rn2483_radio(f"radio set mod {modulation}"):
             logging.debug("Successfully set modulation.")
             return
         logging.error("Setting modulation.")
 
-    def set_pwr(self, pwr: int) -> None:
+    def set_power(self, power: int) -> None:
         """
         Set power state between -3 and 15. The 15th state has an output power of 14.1 dBm for the 868 MHz band
         and 13.6dBm for the 433 MHz band.
         """
 
-        if pwr not in range(-3, 16):
+        if power not in range(POWER_MIN, POWER_MAX):
             logging.error("Invalid power parameter.")
             return
 
-        if self.write_to_rn2483_radio(f"radio set pwr {pwr}"):
+        if self.write_to_rn2483_radio(f"radio set pwr {power}"):
             logging.debug("Value power successfully set.")
             return
         logging.error("Power: radio unable to set.")
 
-    def set_sf(self, sf: int) -> None:
+    def set_spread_factor(self, spread_factor: int) -> None:
         """
         Set the spreading factor for the rn2483 radio. Spreading factor can only be set to 7, 8, 9, 10, 11, or 12.
+        A higher spreading factor means slower transmissions (symbols are more spread out). The system will have better
+        reception and be less error-prone.
         """
-        # TODO remove magic numbers
 
-        if sf not in [7, 8, 9, 10, 11, 12]:
+        if spread_factor not in VALID_SPREADING_FACTORS:
             logging.error("Invalid spreading factor.")
             return
 
-        if self.write_to_rn2483_radio(f"radio set sf {sf}"):
+        if self.write_to_rn2483_radio(f"radio set sf {spread_factor}"):
             logging.debug("Value spreading factor successfully set.")
             return
         logging.error("Unable to set spreading factor.")
 
-    def set_cr(self, cr: str) -> None:
-        """Set coding rate. Coding rate can only be "4/5", "4/6", "4/7", "4/8"""
+    def set_coding_rate(self, coding_rate: str) -> None:
+        """
+        Set coding rate. Coding rate can only be "4/5", "4/6", "4/7", "4/8
+        Coding rate is the ratio of actual data to error-correcting data that is transmitted. Lower coding rate means a
+        lower data rate.
+        """
 
         # TODO Remove magic constants
-        if cr not in ["4/5", "4/6", "4/7", "4/8"]:
+        if coding_rate not in VALID_CODING_RATES:
             logging.error("Invalid cycling rate.")
             return
 
-        if self.write_to_rn2483_radio(f"radio set cr {cr}"):
-            logging.debug("Value cr successfully set.")
+        if self.write_to_rn2483_radio(f"radio set cr {coding_rate}"):
+            logging.debug("Value coding rate successfully set.")
             return
-        logging.error("CR :radio unable to set.")
+        logging.error("Coding rate: radio unable to set.")
 
-    def set_bw(self, band_width: int) -> None:
+    def set_bandwidth(self, bandwidth: int) -> None:
         """Set the bandwidth which can only be 125, 250 or 500Hz."""
 
-        # TODO remove magic numbers
-        if band_width not in [125, 250, 500]:
+        if bandwidth not in VALID_BANDWIDTHS:
             logging.error("Invalid receiving bandwidth.")
             return
 
-        if self.write_to_rn2483_radio(f"Radio set bandwidth {band_width}"):
-            logging.debug("Value BW successfully set.")
+        if self.write_to_rn2483_radio(f"Radio set bandwidth {bandwidth}"):
+            logging.debug("Bandwidth successfully set.")
             return
-        logging.error("BW: radio unable to set.")
+        logging.error("Bandwidth: radio unable to set.")
 
-    def set_iqi(self, iqi: str) -> None:
-        """Set IQI on the RN2483 radio."""
+    def set_iqi(self, iqi: bool) -> None:
+        """Set invert IQ function on the RN2483 radio. IQI of True is 'on', False is 'off'."""
 
-        if iqi not in ["on", "off"]:
-            logging.error("Invalid IQI setting.")
-            return
+        iqi = "on" if iqi else "off"
 
         if self.write_to_rn2483_radio(f"radio set iqi {iqi}"):
             logging.debug("Value successfully set.")
             return
         logging.error("IQI: radio unable to set.")
 
-    def set_sync(self, sync: int) -> None:
+    def set_sync_word(self, sync_word: hex) -> None:
         """Set the sync word of the RN2483 radio."""
 
-        # TODO: convert sync into hexadecimal
-
-        if sync not in range(0, 256):
+        if int(sync_word, 16) not in range(SYNC_MIN, SYNC_MAX):
             logging.error("Invalid sync word.")
             return
 
-        if self.write_to_rn2483_radio(f"Radio set sync {sync}"):
+        if self.write_to_rn2483_radio(f"Radio set sync {sync_word}"):
             logging.debug("Value sync word successfully set.")
             return
         logging.error("Sync parameter: radio unable to set.")
 
-    def set_prlen(self, preamble_length: int) -> None:
-        """Set the preamble length between 0 and 65535."""
+    def set_preamble_len(self, preamble_length: int) -> None:
+        """
+        Set the preamble length between 0 and 65535.
+        Preamble means introduction. It's a transmission that is used to synchronize the receiver.
+        """
 
-        if preamble_length in range(0, 65535):
+        if preamble_length in range(PREAMBLE_MIN, PREAMBLE_MAX):
             logging.error("Invalid preamble length.")
             return
 
@@ -301,12 +300,13 @@ class SerialRN2483Radio(Process):
             return
         logging.error("Unable to set preamble length.")
 
-    def set_crc(self, crc: str) -> None:
-        """Enable or disable the cyclic redundancy check."""
+    def set_cyclic_redundancy_check(self, crc: bool) -> None:
+        """
+        Enable or disable the cyclic redundancy check. CRC of True is 'on', False is 'off'.
+        CRC is used to detect errors in the received signal.
+        """
 
-        if crc not in ["on", "off"]:
-            logging.error("Invalid CRC parameter.")
-            return
+        crc = "on" if crc else "off"
 
         success = self.write_to_rn2483_radio(f"radio set crc {crc}")
         if success:
