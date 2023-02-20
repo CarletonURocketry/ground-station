@@ -199,8 +199,8 @@ class DeploymentState(IntEnum):
     DEPLOYMENT_STATE_ARMED = 0x1
     DEPLOYMENT_STATE_POWERED_ASCENT = 0x2
     DEPLOYMENT_STATE_COASTING_ASCENT = 0x3
-    DEPLOYMENT_STATE_DEPLOYING = 0x4
-    DEPLOYMENT_STATE_DEPLOYING_2 = 0xF
+    DEPLOYMENT_STATE_DEPLOYED_DROGUE = 0x4
+    DEPLOYMENT_STATE_DEPLOYED_MAIN = 0xF
     DEPLOYMENT_STATE_DESCENT = 0x5
     DEPLOYMENT_STATE_RECOVERY = 0x6
 
@@ -214,10 +214,10 @@ class DeploymentState(IntEnum):
                 return "powered ascent"
             case DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT:
                 return "coasting ascent"
-            case DeploymentState.DEPLOYMENT_STATE_DEPLOYING:
-                return "deploying"
-            case DeploymentState.DEPLOYMENT_STATE_DEPLOYING_2:
-                return "deploying 2"
+            case DeploymentState.DEPLOYMENT_STATE_DEPLOYED_DROGUE:
+                return "deployed drogue"
+            case DeploymentState.DEPLOYMENT_STATE_DEPLOYED_MAIN:
+                return "deployed main"
             case DeploymentState.DEPLOYMENT_STATE_DESCENT:
                 return "descent"
             case DeploymentState.DEPLOYMENT_STATE_RECOVERY:
@@ -227,7 +227,8 @@ class DeploymentState(IntEnum):
             case _:
                 return "unknown"
 
-# TODO type hint some of this stuff lol
+
+# TODO type hint some of this stuff lol. //// nou
 class StatusDataBlock(DataBlock):
     """Encapsulates the status data."""
 
@@ -1248,15 +1249,13 @@ def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
     """
     Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp, gyro and magnetometer
     """
-    mag_ovf = 0
-    mag_res = MPU9250MagResolution(0)
+    mag_ovf = data_samples[0].mag_ovf
+    mag_res = data_samples[0].mag_res
 
     avg = dict.fromkeys(dict(data_samples[0]).keys(), 0)
 
-    for sam in data_samples:
-        mag_ovf = sam.mag_ovf if sam.mag_ovf > mag_ovf else mag_ovf
-        mag_res = sam.mag_res if sam.mag_res.value > mag_res.value else mag_res
-        data = dict(sam)
+    for sample in data_samples:
+        data = dict(sample)
         for key in data.keys():
             avg[key] += data[key] / len(data_samples)
 

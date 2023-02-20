@@ -72,7 +72,7 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
     """The server which handles websocket connections."""
 
     clients: set = set()
-    last_msg_send = {}  # TODO is this supposed to be dict or a string
+    last_msg_send: str = ""
     global ws_commands_queue
 
     def open(self) -> None:
@@ -87,8 +87,8 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
     def on_message(self, message: str) -> None:
         ws_commands_queue.put(message)
 
-    # TODO what does this do and why is origin unused?
     def check_origin(self, origin) -> bool:
+        """Authenticates clients from any host origin"""
         return True
 
     @classmethod
