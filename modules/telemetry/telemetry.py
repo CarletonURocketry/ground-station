@@ -30,7 +30,7 @@ PacketHeader = tuple[str, int, int, int, int]
 # Constants
 ORG: str = "CUInSpace"
 VERSION: str = "0.4.5-DEV"
-MISSION_EXTENSION: str = ".mission"
+MISSION_EXTENSION: str = "mission"
 FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
 
@@ -38,7 +38,7 @@ FILE_CREATION_ATTEMPT_LIMIT: int = 50
 def mission_path(mission_name: str, missions_dir: Path) -> Path:
     """Returns the path to the mission file with the matching mission name."""
 
-    return missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
+    return missions_dir.joinpath(f"{mission_name}.{MISSION_EXTENSION}")
 
 
 def shutdown_sequence() -> None:
@@ -50,10 +50,10 @@ def shutdown_sequence() -> None:
 def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Path:
     """Obtains filepath for proposed name, with a maximum of giving a suffix 50 times before failing."""
     file_suffix = 1
-    missions_filepath = missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
+    missions_filepath = missions_dir.joinpath(f"{mission_name}.{MISSION_EXTENSION}")
 
     while missions_filepath.is_file() and file_suffix < FILE_CREATION_ATTEMPT_LIMIT:
-        missions_filepath = missions_dir.joinpath(f"{mission_name}_{file_suffix}{MISSION_EXTENSION}")
+        missions_filepath = missions_dir.joinpath(f"{mission_name}_{file_suffix}.{MISSION_EXTENSION}")
         file_suffix += 1
 
     return missions_filepath

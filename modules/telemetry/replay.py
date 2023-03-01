@@ -9,6 +9,7 @@ import csv
 from multiprocessing import Queue
 
 from pathlib import Path
+from modules.telemetry.block import BlockTypes
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 
 
@@ -20,7 +21,8 @@ class TelemetryReplay:
         self.replay_path = replay_path
         self.mission_start = -1
 
-        self.replay_start, self.last_loop_time = int(time() * 1000)
+        self.replay_start = int(time() * 1000)
+        self.last_loop_time = int(time() * 1000)
         self.total_time_offset = 0
         self.speed = 1
         with open(self.replay_path, 'r', newline='') as csvfile:
@@ -53,7 +55,8 @@ class TelemetryReplay:
             else:
                 block_type, block_subtype, block_payload = int(row[0]), int(row[1]), str(row[2])
 
-                if int(block_type) == 2:
+                # DataBlock type
+                if block_type == BlockTypes.DATA:
                     block_data = DataBlock.parse(DataBlockSubtype(block_subtype), bytes.fromhex(block_payload))
                     block_time = block_data.mission_time
 
