@@ -45,14 +45,23 @@
             }
         },
         "mpu9250_imu": {
-            "mission_time": 7660,
-            "accel_x": "-0.08789062500000001",
-            "accel_y": "-0.09985351562499999",
-            "accel_z": "0.8688151041666667",
-            "temperature": "24.81775700934579",
-            "gyro_x": "0.091552734375",
-            "gyro_y": "-0.050862630208333336",
-            "gyro_z": "0.040690104166666664"
+            "mission_time": 3598549,
+            "accel_x": 0.0388946533203125,
+            "accel_y": 0.0712890625,
+            "accel_z": 0.196533203125,
+            "temperature": 33.28193146417445,
+            "gyro_x": 0.00091552734375,
+            "gyro_y": -0.0024566650390625,
+            "gyro_z": -0.001678466796875,
+            "mag_x": -55.5,
+            "mag_y": 170.49999999999997,
+            "mag_z": -19.7,
+            "mag_ovf": true,
+            "mag_res": 0,
+            "samples": 6,
+            "sensor_sample_rate": 100.0,
+            "accel_fsr": 3,
+            "gyro_fsr": 3
         },
         "gnss": {
             "mission_time": 169012,
@@ -94,6 +103,7 @@
     "replay": {
         "status": "",
         "speed": 1.0,
+        "length": 3598549,
         "mission_list": ["Devil The Rocket"]
     }
 }

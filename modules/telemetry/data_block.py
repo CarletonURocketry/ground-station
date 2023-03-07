@@ -199,9 +199,10 @@ class DeploymentState(IntEnum):
     DEPLOYMENT_STATE_ARMED = 0x1
     DEPLOYMENT_STATE_POWERED_ASCENT = 0x2
     DEPLOYMENT_STATE_COASTING_ASCENT = 0x3
-    DEPLOYMENT_STATE_DEPLOYING = 0x4
-    DEPLOYMENT_STATE_DEPLOYING_2 = 0xF
-    DEPLOYMENT_STATE_DESCENT = 0x5
+    DEPLOYMENT_STATE_DROGUE_DEPLOY = 0xE
+    DEPLOYMENT_STATE_DROGUE_DESCENT = 0xF
+    DEPLOYMENT_STATE_MAIN_DEPLOYED = 0x4
+    DEPLOYMENT_STATE_MAIN_DESCENT = 0x5
     DEPLOYMENT_STATE_RECOVERY = 0x6
 
     def __str__(self):
@@ -214,12 +215,14 @@ class DeploymentState(IntEnum):
                 return "powered ascent"
             case DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT:
                 return "coasting ascent"
-            case DeploymentState.DEPLOYMENT_STATE_DEPLOYING:
-                return "deploying"
-            case DeploymentState.DEPLOYMENT_STATE_DEPLOYING_2:
-                return "deploying 2"
-            case DeploymentState.DEPLOYMENT_STATE_DESCENT:
-                return "descent"
+            case DeploymentState.DEPLOYMENT_STATE_DROGUE_DEPLOY:
+                return "drogue deployed"
+            case DeploymentState.DEPLOYMENT_STATE_DROGUE_DESCENT:
+                return "drogue descent"
+            case DeploymentState.DEPLOYMENT_STATE_MAIN_DEPLOYED:
+                return "main deployed"
+            case DeploymentState.DEPLOYMENT_STATE_MAIN_DESCENT:
+                return "main descent"
             case DeploymentState.DEPLOYMENT_STATE_RECOVERY:
                 return "recovery"
             case DeploymentState.DEPLOYMENT_STATE_DNE:
@@ -486,7 +489,7 @@ class GNSSLocationBlock(DataBlock):
         self.hdop: int = hdop
         self.vdop: int = vdop
         self.sats: int = sats
-        self.fix_type = fix_type
+        self.fix_type: GNSSLocationFixType = fix_type
 
     @property
     def length(self):
