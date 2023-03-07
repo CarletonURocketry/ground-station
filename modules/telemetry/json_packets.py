@@ -10,7 +10,7 @@ from pathlib import Path
 import modules.telemetry.data_block as data_block
 
 # Constants
-MISSION_EXTENSION: str = ".mission"
+MISSION_EXTENSION: str = "mission"
 MISSIONS_DIR: str = "missions"
 
 
@@ -18,18 +18,18 @@ MISSIONS_DIR: str = "missions"
 class MissionState(IntEnum):
     """The state of the mission."""
 
-    DNE: int = -1
-    LIVE: int = 0
-    RECORDED: int = 1
-    TEST: int = 2
+    DNE = -1
+    LIVE = 0
+    RECORDED = 1
+    TEST = 2
 
 
 class ReplayState(StrEnum):
     """Represents the state of the mission being currently replayed."""
 
-    DNE: str = ""
-    PAUSED: str = "paused"
-    PLAYING: str = "playing"
+    DNE = ""
+    PAUSED = "paused"
+    PLAYING = "playing"
 
 
 # Status packet classes
@@ -137,15 +137,14 @@ class ReplayData:
     speed: float = 1.0
     mission_list: list[str] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.update_mission_list()  # Update the mission list on creation
 
-    def update_mission_list(self):
+    def update_mission_list(self, missions_dir: Path = Path.cwd().joinpath(MISSIONS_DIR)) -> None:
         """Gets the available mission recordings from the mission folder."""
 
         # TODO change this so that mission_extension and directory are not defined in multiple files
-        missions_dir = Path.cwd().joinpath(MISSIONS_DIR)
-        self.mission_list = [name.stem for name in missions_dir.glob(f"*{MISSION_EXTENSION}") if name.is_file()]
+        self.mission_list = [name.stem for name in missions_dir.glob(f"*.{MISSION_EXTENSION}") if name.is_file()]
 
     def __iter__(self):
         yield "status", self.status.value

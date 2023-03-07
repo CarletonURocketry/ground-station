@@ -1,4 +1,10 @@
-def printCURocket(rocket_name, version, author):
+# Display for the console window
+# Thomas Selwyn (Devil)
+
+def printCURocket(rocket_name: str, version: str, author: str) -> None:
+
+    """Prints the CUInSpace rocket ASCII art with information about the rocket and software version."""
+
     print(fr"""
            ^
           / \

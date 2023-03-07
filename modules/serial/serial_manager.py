@@ -6,6 +6,7 @@
 
 import glob
 import sys
+import logging
 from multiprocessing import Process, Queue, active_children
 from serial import Serial, SerialException
 from modules.serial.serial_rn2483_radio import SerialRN2483Radio
@@ -56,9 +57,9 @@ class SerialManager(Process):
                 case "update":
                     self.update_serial_ports()
                 case _:
-                    print("Serial: Invalid device type.")
+                    logging.error("Serial: Invalid device type.")
         except IndexError:
-            print("Serial: Error parsing ws command")
+            logging.error("Serial: Error parsing ws command")
 
     def parse_rn2483_radio_ws(self, ws_cmd):
         radio_ws_cmd = ws_cmd[0]
@@ -66,30 +67,36 @@ class SerialManager(Process):
         if radio_ws_cmd == "connect" and self.rn2483_radio is None:
             proposed_serial_port = ws_cmd[1]
             if proposed_serial_port != "test":
-                self.rn2483_radio = Process(target=SerialRN2483Radio, args=(self.serial_status,
-                                                                            self.radio_signal_report,
-                                                                            self.rn2483_radio_input,
-                                                                            self.rn2483_radio_payloads,
-                                                                            proposed_serial_port),
-                                            daemon=True)
+                self.rn2483_radio = Process(
+                    target=SerialRN2483Radio,
+                    args=(
+                        self.serial_status,
+                        self.radio_signal_report,
+                        self.rn2483_radio_input,
+                        self.rn2483_radio_payloads,
+                        proposed_serial_port
+                    ),
+                    daemon=True)
             else:
-                self.rn2483_radio = Process(target=SerialRN2483Emulator,
-                                            args=(
-                                                self.serial_status, self.radio_signal_report,
-                                                self.rn2483_radio_payloads),
-                                            daemon=True)
+                self.rn2483_radio = Process(
+                    target=SerialRN2483Emulator,
+                    args=(
+                        self.serial_status,
+                        self.radio_signal_report,
+                        self.rn2483_radio_payloads
+                    ),
+                    daemon=True)
             self.rn2483_radio.start()
         elif radio_ws_cmd == "connect":
-            print(f"Serial: Already connected.")
+            logging.info(f"Serial: Already connected.")
         elif radio_ws_cmd == "disconnect" and self.rn2483_radio is not None:
-            print(f"Serial: RN2483 Radio terminating")
-
+            logging.info(f"Serial: RN2483 Radio terminating")
             self.serial_status.put(f"rn2483_connected False")
             self.serial_status.put(f"rn2483_port null")
             self.rn2483_radio.terminate()
             self.rn2483_radio = None
         elif radio_ws_cmd == "disconnect":
-            print("Serial: RN2483 Radio already disconnected.")
+            logging.warning("Serial: RN2483 Radio already disconnected.")
 
     def update_serial_ports(self) -> list[str]:
         """ Finds and updates serial ports on device

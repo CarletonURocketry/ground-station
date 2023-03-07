@@ -199,10 +199,9 @@ class DeploymentState(IntEnum):
     DEPLOYMENT_STATE_ARMED = 0x1
     DEPLOYMENT_STATE_POWERED_ASCENT = 0x2
     DEPLOYMENT_STATE_COASTING_ASCENT = 0x3
-    DEPLOYMENT_STATE_DROGUE_DEPLOY = 0xE
-    DEPLOYMENT_STATE_DROGUE_DESCENT = 0xF
-    DEPLOYMENT_STATE_MAIN_DEPLOYED = 0x4
-    DEPLOYMENT_STATE_MAIN_DESCENT = 0x5
+    DEPLOYMENT_STATE_DEPLOYED_DROGUE = 0x4
+    DEPLOYMENT_STATE_DEPLOYED_MAIN = 0xF
+    DEPLOYMENT_STATE_DESCENT = 0x5
     DEPLOYMENT_STATE_RECOVERY = 0x6
 
     def __str__(self):
@@ -215,14 +214,12 @@ class DeploymentState(IntEnum):
                 return "powered ascent"
             case DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT:
                 return "coasting ascent"
-            case DeploymentState.DEPLOYMENT_STATE_DROGUE_DEPLOY:
-                return "drogue deployed"
-            case DeploymentState.DEPLOYMENT_STATE_DROGUE_DESCENT:
-                return "drogue descent"
-            case DeploymentState.DEPLOYMENT_STATE_MAIN_DEPLOYED:
-                return "main deployed"
-            case DeploymentState.DEPLOYMENT_STATE_MAIN_DESCENT:
-                return "main descent"
+            case DeploymentState.DEPLOYMENT_STATE_DEPLOYED_DROGUE:
+                return "deployed drogue"
+            case DeploymentState.DEPLOYMENT_STATE_DEPLOYED_MAIN:
+                return "deployed main"
+            case DeploymentState.DEPLOYMENT_STATE_DESCENT:
+                return "descent"
             case DeploymentState.DEPLOYMENT_STATE_RECOVERY:
                 return "recovery"
             case DeploymentState.DEPLOYMENT_STATE_DNE:
@@ -231,18 +228,19 @@ class DeploymentState(IntEnum):
                 return "unknown"
 
 
+# TODO type hint some of this stuff lol. //// nou
 class StatusDataBlock(DataBlock):
     """Encapsulates the status data."""
 
-    def __init__(self, mission_time, kx134_state, alt_state, imu_state, sd_state, deployment_state, sd_blocks_recorded,
+    def __init__(self, mission_time: int, kx134_state, alt_state, imu_state, sd_state, deployment_state: DeploymentState, sd_blocks_recorded,
                  sd_checkouts_missed):
         super().__init__()
-        self.mission_time = mission_time
+        self.mission_time: int = mission_time
         self.kx134_state = kx134_state
         self.alt_state = alt_state
         self.imu_state = imu_state
         self.sd_state = sd_state
-        self.deployment_state = deployment_state
+        self.deployment_state: DeploymentState = deployment_state
         self.sd_blocks_recorded = sd_blocks_recorded
         self.sd_checkouts_missed = sd_checkouts_missed
 
@@ -489,7 +487,7 @@ class GNSSLocationBlock(DataBlock):
         self.hdop: int = hdop
         self.vdop: int = vdop
         self.sats: int = sats
-        self.fix_type: GNSSLocationFixType = fix_type
+        self.fix_type = fix_type
 
     @property
     def length(self):
@@ -1251,15 +1249,13 @@ def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
     """
     Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp, gyro and magnetometer
     """
-    mag_ovf = 0
-    mag_res = MPU9250MagResolution(0)
+    mag_ovf = data_samples[0].mag_ovf
+    mag_res = data_samples[0].mag_res
 
     avg = dict.fromkeys(dict(data_samples[0]).keys(), 0)
 
-    for sam in data_samples:
-        mag_ovf = sam.mag_ovf if sam.mag_ovf > mag_ovf else mag_ovf
-        mag_res = sam.mag_res if sam.mag_res.value > mag_res.value else mag_res
-        data = dict(sam)
+    for sample in data_samples:
+        data = dict(sample)
         for key in data.keys():
             avg[key] += data[key] / len(data_samples)
 

@@ -13,6 +13,7 @@ from time import time
 from pathlib import Path
 from ast import literal_eval
 from typing import Any
+import logging
 
 from multiprocessing import Queue, Process, active_children
 from modules.telemetry.replay import TelemetryReplay
@@ -22,7 +23,6 @@ from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
 
-
 # Types
 BlockHeader = tuple[int, bool, int, int, int]
 PacketHeader = tuple[str, int, int, int, int]
@@ -30,7 +30,7 @@ PacketHeader = tuple[str, int, int, int, int]
 # Constants
 ORG: str = "CUInSpace"
 VERSION: str = "0.4.5-DEV"
-MISSION_EXTENSION: str = ".mission"
+MISSION_EXTENSION: str = "mission"
 FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
 
@@ -38,7 +38,7 @@ FILE_CREATION_ATTEMPT_LIMIT: int = 50
 def mission_path(mission_name: str, missions_dir: Path) -> Path:
     """Returns the path to the mission file with the matching mission name."""
 
-    return missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
+    return missions_dir.joinpath(f"{mission_name}.{MISSION_EXTENSION}")
 
 
 def shutdown_sequence() -> None:
@@ -50,10 +50,10 @@ def shutdown_sequence() -> None:
 def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Path:
     """Obtains filepath for proposed name, with a maximum of giving a suffix 50 times before failing."""
     file_suffix = 1
-    missions_filepath = missions_dir.joinpath(f"{mission_name}{MISSION_EXTENSION}")
+    missions_filepath = missions_dir.joinpath(f"{mission_name}.{MISSION_EXTENSION}")
 
     while missions_filepath.is_file() and file_suffix < FILE_CREATION_ATTEMPT_LIMIT:
-        missions_filepath = missions_dir.joinpath(f"{mission_name}_{file_suffix}{MISSION_EXTENSION}")
+        missions_filepath = missions_dir.joinpath(f"{mission_name}_{file_suffix}.{MISSION_EXTENSION}")
         file_suffix += 1
 
     return missions_filepath
@@ -62,6 +62,7 @@ def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Pat
 # Errors
 class MissionNotFoundError(Exception):
     """Raised when the desired mission is not found."""
+
     def __init__(self, mission_name: str):
         self.mission_name = mission_name
         self.message = f"The mission recording '{mission_name}' does not exist."
@@ -125,10 +126,10 @@ class Telemetry(Process):
                 try:
                     self.execute_command(command, parameters)
                 except AttributeError as e:
-                    print(e)
+                    logging.error(e)
 
             while not self.radio_signal_report.empty():
-                print("SIGNAL DATA", self.radio_signal_report.get())
+                logging.info("SIGNAL DATA", self.radio_signal_report.get())
 
             while not self.serial_status.empty():
                 x = self.serial_status.get().split(" ", maxsplit=1)
@@ -166,7 +167,6 @@ class Telemetry(Process):
                         self.parse_rn2483_transmission(self.radio_payloads.get())
                         self.update_websocket()
 
-
     def update_websocket(self) -> None:
         """Updates the websocket with the latest packet using the JSON output process."""
 
@@ -199,7 +199,7 @@ class Telemetry(Process):
                 try:
                     self.play_mission(mission_name)
                 except MissionNotFoundError as e:
-                    print(e.message)
+                    logging.error(e.message)
 
             case wsc.WebsocketCommand.REPLAY.value.STOP:
                 self.replay_last_played_speed = self.replay_data.speed
@@ -219,10 +219,9 @@ class Telemetry(Process):
                 try:
                     self.start_recording(mission_name)
                 except AlreadyRecordingError as e:
-                    print(e.message)
+                    logging.error(e.message)
 
         self.update_websocket()
-
 
     def set_replay_speed(self, speed: float):
         """Set the playback speed of the replay system."""
@@ -242,7 +241,7 @@ class Telemetry(Process):
     def stop_replay(self) -> None:
         """Stops the replay."""
 
-        print("REPLAY STOP")
+        logging.info("REPLAY STOP")
 
         if self.replay is not None:
             self.replay.join()
@@ -258,7 +257,6 @@ class Telemetry(Process):
 
         if mission_name not in self.replay_data.mission_list and mission_name is not None:
             raise MissionNotFoundError(mission_name)
-
 
         if self.replay is None:
             self.status_data.mission.name = mission_name
@@ -276,7 +274,7 @@ class Telemetry(Process):
             self.replay.start()
 
         self.set_replay_speed(speed=self.replay_last_played_speed if self.replay_last_played_speed > 0 else 1)
-        print(f"REPLAY {mission_name} PLAYING")
+        logging.info(f"REPLAY {mission_name} PLAYING")
 
     def start_recording(self, mission_name: str = None) -> None:
         """Starts recording the current mission. If no mission name is given, the recording epoch is used."""
@@ -284,7 +282,7 @@ class Telemetry(Process):
         if self.status_data.mission.recording:
             raise AlreadyRecordingError
 
-        print("RECORDING START")
+        logging.info("RECORDING START")
 
         recording_epoch = int(time())
         mission_name = str(recording_epoch) if not mission_name else mission_name
@@ -300,7 +298,7 @@ class Telemetry(Process):
     def stop_recording(self) -> None:
         """Stops the current recording."""
 
-        print("RECORDING STOP")
+        logging.info("RECORDING STOP")
         self.status_data.mission.recording = False
         self.status_data.mission = jsp.MissionData(state=self.status_data.mission.state)
 
@@ -314,18 +312,18 @@ class Telemetry(Process):
         match BlockTypes(block_type):
             case BlockTypes.CONTROL:
                 # CONTROL BLOCK DETECTED
-                print("CONTROL BLOCK")
+                logging.info("CONTROL BLOCK")
                 # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
                 self.rn2483_radio_input.put("radio get snr")
                 # self.rn2483_radio_input.put("radio get rssi")
 
             case BlockTypes.COMMAND:
                 # COMMAND BLOCK DETECTED
-                print("Command block")
+                logging.info("Command block")
             case BlockTypes.DATA:
                 # DATA BLOCK DETECTED
                 block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
-                print(block_data)
+                logging.info(block_data)
                 # Increase the last mission time
                 if block_data.mission_time > self.status_data.rocket.last_mission_time:
                     self.status_data.rocket.last_mission_time = block_data.mission_time
@@ -335,7 +333,7 @@ class Telemetry(Process):
                 else:
                     self.telemetry_data[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
             case _:
-                print("Unknown block type")
+                logging.warning("Unknown block type")
 
     def parse_rn2483_transmission(self, data: str):
         """ Parses RN2483 Packets and extracts our telemetry payload blocks"""
@@ -343,13 +341,11 @@ class Telemetry(Process):
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
 
         if length <= 24:  # If this packet nothing more than just the header
-            print(call_sign, length, version, srs_addr, packet_num)
+            logging.info(call_sign, length, version, srs_addr, packet_num)
 
         blocks = data[24:]  # Remove the packet header
 
-        print("-----" * 20)
-        # print(f'{DeviceAddress(srs_addr)} - {call_sign} - sent you a packet:')
-        print(f"{call_sign} - sent you a packet")
+        logging.info(f"{call_sign} - sent you a packet")
 
         # Parse through all blocks
         while blocks != '':
@@ -368,7 +364,6 @@ class Telemetry(Process):
 
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[8 + block_len:]
-        print(f"-----" * 20)
 
 
 def _parse_packet_header(header: str) -> PacketHeader:
@@ -416,24 +411,3 @@ def _parse_block_header(header: str) -> BlockHeader:
     destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
 
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
-
-
-def make_block_header():
-    header = "840C0000"
-
-    # block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
-    # crypto_signature = ((header[0] >> 5) & 0x1)
-    # message_type = ((header[0] >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
-    # message_subtype = ((header[0] >> 10) & 0x3f)
-    # destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
-
-    # lol = "13634180"
-    # header = struct.pack('<I', lol)
-    # print("HEADDDDDDDDD",header)
-    # lol = 13634180
-    # header = struct.pack('<I', lol)
-    # print("HEADDDDDDDDD", int.from_bytes(header, "little"))
-
-    # test = struct.pack('<I?III', 20, False, 2, 3, 0)
-    # print("LLLLLLLL",test.hex())
-    return header
