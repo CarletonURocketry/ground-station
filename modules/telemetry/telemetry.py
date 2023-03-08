@@ -263,6 +263,9 @@ class Telemetry(Process):
             self.status_data.mission.state = jsp.MissionState.RECORDED
             replay_mission_filepath = mission_path(mission_name, self.missions_dir)
 
+            # TODO Read start of mission file and output mission epoch and length in replay data
+            # Read all mission files and cache the metadata together
+
             self.replay = Process(
                 target=TelemetryReplay,
                 args=(
@@ -312,14 +315,14 @@ class Telemetry(Process):
         match BlockTypes(block_type):
             case BlockTypes.CONTROL:
                 # CONTROL BLOCK DETECTED
-                logging.info("CONTROL BLOCK")
+                logging.info("Control block received")
                 # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
                 self.rn2483_radio_input.put("radio get snr")
                 # self.rn2483_radio_input.put("radio get rssi")
 
             case BlockTypes.COMMAND:
                 # COMMAND BLOCK DETECTED
-                logging.info("Command block")
+                logging.info("Command block received")
             case BlockTypes.DATA:
                 # DATA BLOCK DETECTED
                 block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)

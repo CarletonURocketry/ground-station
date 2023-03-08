@@ -5,12 +5,12 @@
 # Thomas Selwyn (Devil)
 # Matteo Golin (linguini1)
 
-from multiprocessing import Process, Queue
-
 from modules.misc.messages import printCURocket
 from modules.serial.serial_manager import SerialManager
 from modules.telemetry.telemetry import Telemetry
 from modules.websocket.websocket import WebSocketHandler
+
+from multiprocessing import Process, Queue
 from re import sub
 import logging
 
@@ -32,7 +32,7 @@ class ShutdownException(Exception):
 
 
 def main():
-    printCURocket("It was Avionics’ Fault", VERSION, "Thomas Selwyn (Devil)")
+    printCURocket("No Name (Gas Propelled Launching Device)", VERSION, "Thomas Selwyn (Devil)")
 
     # Set up logging
     logging.basicConfig(level=logging.INFO)

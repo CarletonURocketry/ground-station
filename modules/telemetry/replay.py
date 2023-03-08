@@ -16,15 +16,18 @@ from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 class TelemetryReplay:
     def __init__(self, replay_payloads: Queue, replay_input: Queue, replay_path: Path):
 
-        self.replay_input = replay_input
+        # Replay buffers (Input and output)
         self.replay_payloads = replay_payloads
-        self.replay_path = replay_path
-        self.mission_start = -1
+        self.replay_input = replay_input
 
-        self.replay_start = int(time() * 1000)
+        # Misc replay
+        self.replay_path = replay_path
+
+        # Loop data
         self.last_loop_time = int(time() * 1000)
         self.total_time_offset = 0
         self.speed = 1
+
         with open(self.replay_path, 'r', newline='') as csvfile:
             self.run(csvfile)
 
@@ -50,26 +53,26 @@ class TelemetryReplay:
         try:
             row = next(mission_reader)
 
+            # we do not want misc mission details here
             if mission_reader.line_num == 1:
-                self.mission_start = row[1]
-            else:
-                block_type, block_subtype, block_payload = int(row[0]), int(row[1]), str(row[2])
+                return
 
-                # DataBlock type
-                if block_type == BlockTypes.DATA:
-                    block_data = DataBlock.parse(DataBlockSubtype(block_subtype), bytes.fromhex(block_payload))
-                    block_time = block_data.mission_time
+            block_type, block_subtype, block_payload = int(row[0]), int(row[1]), str(row[2])
 
-                    current_loop_time = int(time() * 1000)
-                    loop_time_offset = float(current_loop_time - self.last_loop_time) * self.speed
+            if block_type == BlockTypes.DATA:
+                block_data = DataBlock.parse(DataBlockSubtype(block_subtype), bytes.fromhex(block_payload))
+                block_time = block_data.mission_time
 
-                    self.total_time_offset += float(loop_time_offset)
-                    if self.total_time_offset < block_time:
-                        next_block_wait = (block_time - self.total_time_offset) / self.speed
-                        sleep(next_block_wait / 1000)
+                current_loop_time = int(time() * 1000)
+                loop_time_offset = float(current_loop_time - self.last_loop_time) * self.speed
 
-                    self.last_loop_time = current_loop_time
-                    self.output_replay_data(block_type, block_subtype, block_payload)
+                self.total_time_offset += float(loop_time_offset)
+                if self.total_time_offset < block_time:
+                    next_block_wait = (block_time - self.total_time_offset) / self.speed
+                    sleep(next_block_wait / 1000)
+
+                self.last_loop_time = current_loop_time
+                self.output_replay_data(block_type, block_subtype, block_payload)
         except StopIteration:
             self.speed = 0
 
