@@ -50,7 +50,8 @@ def main():
     # Set up logging
     logging.basicConfig(
         level=STR_TO_LOGGING_MODE[args.get("l")],
-        filename=args.get("o")
+        filename=args.get("o"),
+        format="%(levelname)s:%(asctime)s:%(message)s ",
     )
 
     # Initialize Serial process to communicate with board

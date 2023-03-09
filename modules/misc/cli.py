@@ -31,6 +31,6 @@ parser.add_argument(
 
 parser.add_argument(
     "-o",
-    help="Output file for logging messages.",
+    help="Output file for logging messages. Logs to console by default.",
     type=file_path,
 )
