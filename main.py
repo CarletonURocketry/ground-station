@@ -9,6 +9,7 @@ from modules.misc.messages import print_cu_rocket
 from modules.serial.serial_manager import SerialManager
 from modules.telemetry.telemetry import Telemetry
 from modules.websocket.websocket import WebSocketHandler
+from modules.misc.cli import parser
 
 from multiprocessing import Process, Queue
 from re import sub
@@ -25,6 +26,13 @@ rn2483_radio_payloads = Queue()
 telemetry_json_output = Queue()
 
 VERSION: str = "0.4.6-DEV"
+STR_TO_LOGGING_MODE: dict[str, int] = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "critical": logging.CRITICAL,
+}
 
 
 class ShutdownException(Exception):
@@ -32,10 +40,18 @@ class ShutdownException(Exception):
 
 
 def main():
+
+    # Get the arguments
+    args = vars(parser.parse_args())
+
+    # Print display screen
     print_cu_rocket("No Name (Gas Propelled Launching Device)", VERSION, "Thomas Selwyn (Devil)")
 
     # Set up logging
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(
+        level=STR_TO_LOGGING_MODE[args.get("l")],
+        filename=args.get("o")
+    )
 
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
