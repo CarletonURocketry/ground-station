@@ -1,5 +1,5 @@
 {
-    "version": "0.4.5",
+    "version": "0.4.6-DEV",
     "org": "CUInSpace",
     "status": {
         "mission": {
@@ -14,8 +14,7 @@
         "rn2483_radio": {
             "connected": false,
             "connected_port": "",
-            "snr": 0,
-            "rssi": 0
+            "snr": 0
         },
         "rocket": {
             "kx134_state": -1,
@@ -33,15 +32,15 @@
         "altitude": {
             "mission_time": 8120,
             "pressure": {
-                "pascals": "87181"
+                "pascals": 87181
             },
             "altitude": {
-                "metres": "400",
-                "feet": "1312"
+                "metres": 400,
+                "feet": 1312
             },
             "temperature": {
-                "celsius": "12",
-                "fahrenheit": "54"
+                "celsius": 12,
+                "fahrenheit": 54
             }
         },
         "mpu9250_imu": {
@@ -64,22 +63,27 @@
             "gyro_fsr": 3
         },
         "gnss": {
-            "mission_time": 169012,
+            "mission_time": 2983933,
             "position": {
-                "latitude": "45.385273194259014",
-                "longitude": "-75.69838116342798"
+                "latitude": 45.356003333333334,
+                "longitude": -75.77771833333334
             },
-            "utc_time": 1668434486,
-            "altitude": 142.619,
-            "sats_in_use": 14,
-            "speed": 0,
+            "utc_time": 1668437392,
+            "altitude": 74.929,
+            "speed": 63.22,
+            "course": 52.51,
+            "pdop": 1.3,
+            "hdop": 0.73,
+            "vdop": 1.07,
+            "sats_in_use": 13,
             "type": "FIX_3D"
         },
         "gnss_meta": {
             "mission_time": 169012,
             "gps_sats_in_use": [2, 5, 10, 13, 15, 18, 23, 24, 27],
             "glonass_sats_in_use": [67, 70, 75, 78, 80, 83, 88, 89, 92],
-            "sats_in_view": [{"sat_type": "GPS", "elevation": 68, "snr": 18, "id": 18, "azimuth": 64},
+            "sats_in_view": [
+                {"sat_type": "GPS", "elevation": 68, "snr": 18, "id": 18, "azimuth": 64},
                 {"sat_type": "GPS", "elevation": 62, "snr": 24, "id": 23, "azimuth": 224},
                 {"sat_type": "GPS", "elevation": 54, "snr": 39, "id": 15, "azimuth": 480},
                 {"sat_type": "GPS", "elevation": 46, "snr": 28, "id": 24, "azimuth": 256},
@@ -97,7 +101,8 @@
                 {"sat_type": "GLONASS", "elevation": 28, "snr": 12, "id": 84, "azimuth": 96},
                 {"sat_type": "GLONASS", "elevation": 24, "snr": 26, "id": 79, "azimuth": 448},
                 {"sat_type": "GLONASS", "elevation": 16, "snr": 24, "id": 78, "azimuth": 416},
-                {"sat_type": "GLONASS", "elevation": 14, "snr": 24, "id": 71, "azimuth": 192}]
+                {"sat_type": "GLONASS", "elevation": 14, "snr": 24, "id": 71, "azimuth": 192}
+            ]
         }
     },
     "replay": {

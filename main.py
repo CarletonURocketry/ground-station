@@ -5,7 +5,7 @@
 # Thomas Selwyn (Devil)
 # Matteo Golin (linguini1)
 
-from modules.misc.messages import printCURocket
+from modules.misc.messages import print_cu_rocket
 from modules.serial.serial_manager import SerialManager
 from modules.telemetry.telemetry import Telemetry
 from modules.websocket.websocket import WebSocketHandler
@@ -24,7 +24,7 @@ rn2483_radio_input = Queue()
 rn2483_radio_payloads = Queue()
 telemetry_json_output = Queue()
 
-VERSION: str = "0.4.5-DEV"
+VERSION: str = "0.4.6-DEV"
 
 
 class ShutdownException(Exception):
@@ -32,7 +32,7 @@ class ShutdownException(Exception):
 
 
 def main():
-    printCURocket("No Name (Gas Propelled Launching Device)", VERSION, "Thomas Selwyn (Devil)")
+    print_cu_rocket("No Name (Gas Propelled Launching Device)", VERSION, "Thomas Selwyn (Devil)")
 
     # Set up logging
     logging.basicConfig(level=logging.INFO)
@@ -79,7 +79,7 @@ def main():
         daemon=True
     )
     websocket.start()
-    logging.info(f"{'WebSocket':.<15} started")
+    logging.info(f"{'WebSocket':.<15} started.")
 
     while True:
         # WS Commands have been sent to main process for handling
