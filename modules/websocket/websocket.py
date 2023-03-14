@@ -8,8 +8,9 @@
 
 import json
 from multiprocessing import Queue, Process
-import random
 from abc import ABC
+from typing import Optional
+import logging
 
 import tornado.gen
 import tornado.httpserver
@@ -20,39 +21,10 @@ import tornado.websocket
 ws_commands_queue = Queue
 
 
-class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
-    clients = set()
-    last_msg_send = {}
-    global ws_commands_queue
-
-    def open(self):
-        TornadoWSServer.clients.add(self)
-        self.send_message(self.last_msg_send)
-        print(f"WebSocket: Client connected")
-
-    def on_close(self):
-        TornadoWSServer.clients.remove(self)
-        print(f"WebSocket: Client disconnected")
-
-    def on_message(self, message):
-        ws_commands_queue.put(message)
-
-    def check_origin(self, origin):
-        return True
-
-    @classmethod
-    def send_message(cls, message: str):
-        if message != "null":
-            cls.last_msg_send = message
-            for client in cls.clients:
-                client.write_message(message)
-
-
-def random_number():
-    return int(random.uniform(0, 1000))
-
-
 class WebSocketHandler(Process):
+
+    """Handles starting the websocket server process."""
+
     def __init__(self, telemetry_json_output: Queue, ws_commands: Queue):
         super().__init__()
         global ws_commands_queue
@@ -61,11 +33,14 @@ class WebSocketHandler(Process):
         ws_commands_queue = ws_commands
 
         # Default to test mode
-        #ws_commands_queue.put("serial rn2483_radio connect test")
+        # ws_commands_queue.put("serial rn2483_radio connect test")
 
-        self.startWSS()
+        self.start_websocket_server()
 
-    def startWSS(self):
+    def start_websocket_server(self) -> None:
+
+        """Starts up the websocket server."""
+
         wss = tornado.web.Application(
             [(r"/websocket", TornadoWSServer)],
             websocket_ping_interval=10,
@@ -82,8 +57,46 @@ class WebSocketHandler(Process):
         periodic_callback.start()
         io_loop.start()
 
-    def check_for_messages(self):
+    def check_for_messages(self) -> Optional[str]:
+
+        """Returns any JSON data that may be on the telemetry JSON output queue."""
+
         json_data = None
         while not self.telemetry_json_output.empty():
             json_data = self.telemetry_json_output.get()
         return json.dumps(json_data)
+
+
+class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
+
+    """The server which handles websocket connections."""
+
+    clients: set = set()
+    last_msg_send: str = ""
+    global ws_commands_queue
+
+    def open(self) -> None:
+        TornadoWSServer.clients.add(self)
+        self.send_message(self.last_msg_send)
+        logging.info(f"WebSocket: Client connected")
+
+    def on_close(self) -> None:
+        TornadoWSServer.clients.remove(self)
+        logging.info(f"WebSocket: Client disconnected")
+
+    def on_message(self, message: str) -> None:
+        ws_commands_queue.put(message)
+
+    def check_origin(self, origin) -> bool:
+        """Authenticates clients from any host origin"""
+        return True
+
+    @classmethod
+    def send_message(cls, message: str) -> None:
+
+        if message == "null":
+            return
+
+        cls.last_msg_send = message
+        for client in cls.clients:
+            client.write_message(message)

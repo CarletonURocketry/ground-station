@@ -3,6 +3,7 @@
 # Authors:
 # Samuel Dewan
 # Thomas Selwyn (Devil)
+# Matteo Golin (linguin1)
 
 import struct
 from abc import ABC, abstractmethod
@@ -20,6 +21,7 @@ class DataBlockUnknownException(BlockUnknownException):
 
 
 class DataBlock(ABC):
+    """Interface for all telemetry data blocks."""
 
     @property
     @abstractmethod
@@ -34,11 +36,6 @@ class DataBlock(ABC):
     @abstractmethod
     def to_payload(self):
         """ Marshal block to a bytes object """
-
-    @staticmethod
-    @abstractmethod
-    def type_desc():
-        """ String description of block type """
 
     @classmethod
     def parse(cls, block_subtype, payload):
@@ -202,9 +199,11 @@ class DeploymentState(IntEnum):
     DEPLOYMENT_STATE_ARMED = 0x1
     DEPLOYMENT_STATE_POWERED_ASCENT = 0x2
     DEPLOYMENT_STATE_COASTING_ASCENT = 0x3
-    DEPLOYMENT_STATE_DEPLOYING = 0x4
-    DEPLOYMENT_STATE_DESCENT = 0x5
-    DEPLOYMENT_STATE_RECOVERY = 0x6
+    DEPLOYMENT_STATE_DROGUE_DEPLOY = 0x4
+    DEPLOYMENT_STATE_DROGUE_DESCENT = 0x5
+    DEPLOYMENT_STATE_MAIN_DEPLOY = 0x6
+    DEPLOYMENT_STATE_MAIN_DESCENT = 0x7
+    DEPLOYMENT_STATE_RECOVERY = 0x8
 
     def __str__(self):
         match self:
@@ -216,10 +215,14 @@ class DeploymentState(IntEnum):
                 return "powered ascent"
             case DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT:
                 return "coasting ascent"
-            case DeploymentState.DEPLOYMENT_STATE_DEPLOYING:
-                return "deploying"
-            case DeploymentState.DEPLOYMENT_STATE_DESCENT:
-                return "descent"
+            case DeploymentState.DEPLOYMENT_STATE_DROGUE_DEPLOY:
+                return "drogue deployed"
+            case DeploymentState.DEPLOYMENT_STATE_DROGUE_DESCENT:
+                return "drogue descent"
+            case DeploymentState.DEPLOYMENT_STATE_MAIN_DEPLOY:
+                return "main deployed"
+            case DeploymentState.DEPLOYMENT_STATE_MAIN_DESCENT:
+                return "main descent"
             case DeploymentState.DEPLOYMENT_STATE_RECOVERY:
                 return "recovery"
             case DeploymentState.DEPLOYMENT_STATE_DNE:
@@ -228,16 +231,19 @@ class DeploymentState(IntEnum):
                 return "unknown"
 
 
+# TODO type hint some of this stuff lol. //// nou
 class StatusDataBlock(DataBlock):
-    def __init__(self, mission_time, kx134_state, alt_state, imu_state, sd_state, deployment_state, sd_blocks_recorded,
+    """Encapsulates the status data."""
+
+    def __init__(self, mission_time: int, kx134_state, alt_state, imu_state, sd_state, deployment_state: DeploymentState, sd_blocks_recorded,
                  sd_checkouts_missed):
         super().__init__()
-        self.mission_time = mission_time
+        self.mission_time: int = mission_time
         self.kx134_state = kx134_state
         self.alt_state = alt_state
         self.imu_state = imu_state
         self.sd_state = sd_state
-        self.deployment_state = deployment_state
+        self.deployment_state: DeploymentState = deployment_state
         self.sd_blocks_recorded = sd_blocks_recorded
         self.sd_checkouts_missed = sd_checkouts_missed
 
@@ -248,10 +254,6 @@ class StatusDataBlock(DataBlock):
     @property
     def subtype(self):
         return DataBlockSubtype.STATUS
-
-    @staticmethod
-    def type_desc():
-        return "Status"
 
     @classmethod
     def from_payload(cls, payload):
@@ -296,7 +298,7 @@ class StatusDataBlock(DataBlock):
                            self.sd_checkouts_missed)
 
     def __str__(self):
-        return (f"{self.type_desc()} -> mission_time: {self.mission_time}, kx134 state: "
+        return (f"Status -> mission_time: {self.mission_time}, kx134 state: "
                 f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
                 f"IMU state: {str(self.imu_state)}, SD driver state: {str(self.sd_state)}, "
                 f"deployment state: {str(self.deployment_state)}, blocks recorded: "
@@ -317,12 +319,14 @@ class StatusDataBlock(DataBlock):
 #   Altitude
 #
 class AltitudeDataBlock(DataBlock):
-    def __init__(self, mission_time, pressure, temperature, altitude):
+    """Contains the data pertaining to the altitude block."""
+
+    def __init__(self, mission_time: int, pressure: int, temperature: int, altitude: int):
         super().__init__()
-        self.mission_time = mission_time
-        self.pressure = pressure
-        self.temperature = temperature
-        self.altitude = altitude
+        self.mission_time: int = mission_time
+        self.pressure: int = pressure
+        self.temperature: int = temperature
+        self.altitude: int = altitude
 
     @property
     def length(self):
@@ -331,10 +335,6 @@ class AltitudeDataBlock(DataBlock):
     @property
     def subtype(self):
         return DataBlockSubtype.ALTITUDE
-
-    @staticmethod
-    def type_desc():
-        return "Altitude"
 
     @classmethod
     def from_payload(cls, payload):
@@ -346,7 +346,7 @@ class AltitudeDataBlock(DataBlock):
                            int(self.temperature * 1000), int(self.altitude * 1000))
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time} ms, pressure: {self.pressure} Pa, "
+        return (f"Altitude -> time: {self.mission_time} ms, pressure: {self.pressure} Pa, "
                 f"temperature: {self.temperature} C, altitude: {self.altitude} m")
 
     def __iter__(self):
@@ -357,17 +357,14 @@ class AltitudeDataBlock(DataBlock):
                               "fahrenheit": converter.celsius_to_fahrenheit(self.temperature)}
 
 
-#
-#   Acceleration
-#
 class AccelerationDataBlock(DataBlock):
-    def __init__(self, mission_time, fsr, x, y, z):
+    def __init__(self, mission_time: int, fsr: int, x: int, y: int, z: int):
         super().__init__()
-        self.mission_time = mission_time
-        self.fsr = fsr
-        self.x = x
-        self.y = y
-        self.z = z
+        self.mission_time: int = mission_time
+        self.fsr: int = fsr
+        self.x: int = x
+        self.y: int = y
+        self.z: int = z
 
     @property
     def length(self):
@@ -376,10 +373,6 @@ class AccelerationDataBlock(DataBlock):
     @property
     def subtype(self):
         return DataBlockSubtype.ALTITUDE
-
-    @staticmethod
-    def type_desc():
-        return "Acceleration"
 
     @classmethod
     def from_payload(cls, payload):
@@ -397,7 +390,7 @@ class AccelerationDataBlock(DataBlock):
         return struct.pack("<IBBhhh", self.mission_time, self.fsr, 0, x, y, z)
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time}, fsr: {self.fsr}, "
+        return (f"Acceleration -> time: {self.mission_time}, fsr: {self.fsr}, "
                 f"x: {self.x} g, y: {self.y} g, z: {self.z} g")
 
     def __iter__(self):
@@ -463,27 +456,40 @@ class AngularVelocityDataBlock(DataBlock):
 #   GNSS Location
 #
 class GNSSLocationFixType(IntEnum):
-    UNKNOWN = 0x0
-    NOT_AVAILABLE = 0x1
-    FIX_2D = 0x2
-    FIX_3D = 0x3
+    UNKNOWN = 0
+    NOT_AVAILABLE = 1
+    FIX_2D = 2
+    FIX_3D = 3
 
 
 class GNSSLocationBlock(DataBlock):
-    def __init__(self, mission_time, latitude, longitude, utc_time, altitude, speed, course, pdop, hdop, vdop, sats,
-                 fix_type):
+    """The data for GNSS location."""
+
+    def __init__(self,
+                 mission_time: int,
+                 latitude: int,
+                 longitude: int,
+                 utc_time: int,
+                 altitude: int,
+                 speed: int,
+                 course: int,
+                 pdop: int,
+                 hdop: int,
+                 vdop: int,
+                 sats: int,
+                 fix_type: GNSSLocationFixType):
         super().__init__()
-        self.mission_time = mission_time
-        self.latitude = latitude
-        self.longitude = longitude
-        self.utc_time = utc_time
-        self.altitude = altitude
-        self.speed = speed
-        self.course = course
-        self.pdop = pdop
-        self.hdop = hdop
-        self.vdop = vdop
-        self.sats = sats
+        self.mission_time: int = mission_time
+        self.latitude: int = latitude
+        self.longitude: int = longitude
+        self.utc_time: int = utc_time
+        self.altitude: int = altitude
+        self.speed: int = speed
+        self.course: int = course
+        self.pdop: int = pdop
+        self.hdop: int = hdop
+        self.vdop: int = vdop
+        self.sats: int = sats
         self.fix_type = fix_type
 
     @property
@@ -493,10 +499,6 @@ class GNSSLocationBlock(DataBlock):
     @property
     def subtype(self):
         return DataBlockSubtype.GNSS
-
-    @staticmethod
-    def type_desc():
-        return "GNSS Location"
 
     @classmethod
     def from_payload(cls, payload):
@@ -535,7 +537,7 @@ class GNSSLocationBlock(DataBlock):
         return f"{degrees}°{minutes}'{seconds:.3f}{direction_char}"
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time}, position: "
+        return (f"GNSS Location -> time: {self.mission_time}, position: "
                 f"{(self.latitude / 600000)} {(self.longitude / 600000)}, utc time: "
                 f"{self.utc_time}, altitude: {self.altitude} m, speed: {self.speed} knots, "
                 f"course: {self.course}°, pdop: {self.pdop}, hdop: {self.hdop}, vdop: "
@@ -556,24 +558,25 @@ class GNSSLocationBlock(DataBlock):
         yield "type", self.fix_type.name
 
 
-#
-#   GNSS Metadata
-#
 class GNSSSatType(IntEnum):
-    GPS = 0
-    GLONASS = 1
+    """The types of GNSS satellites."""
+
+    GPS: int = 0
+    GLONASS: int = 1
 
 
 class GNSSSatInfo:
-    GPS_SV_OFFSET = 0
-    GLONASS_SV_OFFSET = 65
+    """The information packet for the GNSS satellite info"""
 
-    def __init__(self, sat_type, elevation, snr, identifier, azimuth):
-        self.sat_type = sat_type
-        self.elevation = elevation
-        self.snr = snr
-        self.identifier = identifier
-        self.azimuth = azimuth
+    GPS_SV_OFFSET: int = 0
+    GLONASS_SV_OFFSET: int = 65
+
+    def __init__(self, sat_type: GNSSSatType, elevation: int, snr: int, identifier: int, azimuth: int):
+        self.sat_type: GNSSSatType = sat_type
+        self.elevation: int = elevation
+        self.snr: int = snr
+        self.identifier: int = identifier
+        self.azimuth: int = azimuth
 
     @classmethod
     def from_bytes(cls, data):
@@ -606,12 +609,12 @@ class GNSSSatInfo:
         return struct.pack("<BBH", self.elevation, self.snr, id_and_azimuth)
 
     def __str__(self):
-        return (f"{'GPS' if self.sat_type == GNSSSatType.GPS else 'GLONASS'} sat -> elevation: "
-                f"{self.elevation}°, SNR: {self.snr} dB-Hz, id: {self.identifier}, azimuth: "
-                f"{self.azimuth}°")
+        return (f"{self.sat_type.name} sat -> elevation: "
+                f"{self.elevation}°, SNR: {self.snr} dB-Hz, id: {self.identifier}, "
+                f"azimuth: {self.azimuth}°")
 
     def __iter__(self):
-        yield "sat_type", "GPS" if self.sat_type == GNSSSatType.GPS else "GLONASS"
+        yield "sat_type", self.sat_type.name
         yield "elevation", self.elevation
         yield "snr", self.snr
         yield "id", self.identifier
@@ -619,37 +622,37 @@ class GNSSSatInfo:
 
 
 class GNSSMetadataBlock(DataBlock):
-    def __init__(self, mission_time, gps_sats_in_use, glonass_sats_in_use, sats_in_view):
+    def __init__(self,
+                 mission_time: int,
+                 gps_sats_in_use: list[int],
+                 glonass_sats_in_use: list[int],
+                 sats_in_view: list[GNSSSatInfo]):
         super().__init__()
-        self.mission_time = mission_time
-        self.gps_sats_in_use = gps_sats_in_use
-        self.glonass_sats_in_use = glonass_sats_in_use
-        self.sats_in_view = sats_in_view
+        self.mission_time: int = mission_time
+        self.gps_sats_in_use: list[int] = gps_sats_in_use
+        self.glonass_sats_in_use: list[int] = glonass_sats_in_use
+        self.sats_in_view: list[GNSSSatInfo] = sats_in_view
 
     @property
-    def length(self):
+    def length(self) -> int:
         return 12 + (len(self.sats_in_view) * 4)
 
     @property
-    def subtype(self):
+    def subtype(self) -> DataBlockSubtype:
         return DataBlockSubtype.GNSS_META
-
-    @staticmethod
-    def type_desc():
-        return "GNSS Metadata"
 
     @classmethod
     def from_payload(cls, payload):
         parts = struct.unpack("<III", payload[0:12])
 
         gps_sats_in_use = list()
+        glonass_sats_in_use = list()
+
+        # Check satellite in use bitfields
         for i in range(32):
             if parts[1] & (1 << i):
                 gps_sats_in_use.append(i + GNSSSatInfo.GPS_SV_OFFSET)
-
-        glonass_sats_in_use = list()
-        for i in range(32):
-            if parts[1] & (1 << i):
+            if parts[2] & (1 << i):
                 glonass_sats_in_use.append(i + GNSSSatInfo.GLONASS_SV_OFFSET)
 
         sats_in_view = list()
@@ -678,7 +681,7 @@ class GNSSMetadataBlock(DataBlock):
         return payload
 
     def __str__(self):
-        s = (f"{self.type_desc()} -> time: {self.mission_time}, GPS sats in use: "
+        s = (f"GNSS Metadata -> time: {self.mission_time}, GPS sats in use: "
              f"{self.gps_sats_in_use}, GLONASS sats in use: {self.glonass_sats_in_use}\nSats in "
              f"view:")
         for sat in self.sats_in_view:
@@ -692,9 +695,6 @@ class GNSSMetadataBlock(DataBlock):
         yield "sats_in_view", [dict(sat) for sat in self.sats_in_view if dict(sat)["snr"] != 0]
 
 
-#
-#   KX134-1211 Accelerometer Data
-#
 class KX134ODR(IntEnum):
     ODR_781 = 0
     ODR_1563 = 1
@@ -714,7 +714,7 @@ class KX134ODR(IntEnum):
     ODR_25600000 = 15
 
     @property
-    def samples_per_sec(self):
+    def samples_per_sec(self) -> float:
         return 25600.0 / (2 ** (15 - self))
 
     def __str__(self):
@@ -722,9 +722,9 @@ class KX134ODR(IntEnum):
 
 
 class KX134Range(IntEnum):
-    ACCEL_8G = 0,
-    ACCEL_16G = 1,
-    ACCEL_32G = 2,
+    ACCEL_8G = 0
+    ACCEL_16G = 1
+    ACCEL_32G = 2
     ACCEL_64G = 3
 
     @property
@@ -770,16 +770,21 @@ class KX134Resolution(IntEnum):
 
 
 class KX134AccelerometerDataBlock(DataBlock):
-    TYPE_DESC = "KX134 Accelerometer Data"
 
-    def __init__(self, mission_time, odr, accel_range, rolloff, resolution, samples):
+    def __init__(self,
+                 mission_time: int,
+                 odr: KX134ODR,
+                 accel_range: KX134Range,
+                 rolloff: KX134LPFRolloff,
+                 resolution: KX134Resolution,
+                 samples: list):
         super().__init__()
-        self.mission_time = mission_time
-        self.odr = odr
-        self.accel_range = accel_range
-        self.rolloff = rolloff
-        self.resolution = resolution
-        self.samples = samples
+        self.mission_time: int = mission_time
+        self.odr: KX134ODR = odr
+        self.accel_range: KX134Range = accel_range
+        self.rolloff: KX134LPFRolloff = rolloff
+        self.resolution: KX134Resolution = resolution
+        self.samples: list = samples
 
         self.sample_period = 1 / self.odr.samples_per_sec
 
@@ -791,10 +796,6 @@ class KX134AccelerometerDataBlock(DataBlock):
     @property
     def subtype(self):
         return DataBlockSubtype.KX134_1211_ACCEL
-
-    @staticmethod
-    def type_desc():
-        return "KX134 Accelerometer Data"
 
     @classmethod
     def from_payload(cls, payload):
@@ -872,7 +873,7 @@ class KX134AccelerometerDataBlock(DataBlock):
             yield time, samp[0], samp[1], samp[2]
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time}, samples: {len(self.samples)}, "
+        return (f"KX134 Accelerometer Data -> time: {self.mission_time}, samples: {len(self.samples)}, "
                 f"ODR: {self.odr}, range: {self.accel_range}, rolloff: {self.rolloff}, "
                 f"resolution: {self.resolution}")
 
@@ -885,46 +886,27 @@ class KX134AccelerometerDataBlock(DataBlock):
         yield "resolution", self.resolution
 
 
-#
-#   MPU9250 IMU Data
-#
 class MPU9250MagSR(IntEnum):
     SR_8 = 0
     SR_100 = 1
 
     @property
     def samples_per_sec(self):
-        match self:
-            case MPU9250MagSR.SR_8:
-                return 8
-            case MPU9250MagSR.SR_100:
-                return 100
-            case _:
-                return 0
+        return self.value
 
     def __str__(self):
         return f"{self.samples_per_sec} Hz"
 
 
 class MPU9250AccelFSR(IntEnum):
-    ACCEL_2G = 0,
-    ACCEL_4G = 1,
-    ACCEL_8G = 2,
+    ACCEL_2G = 0
+    ACCEL_4G = 1
+    ACCEL_8G = 2
     ACCEL_16G = 3
 
     @property
     def acceleration(self):
-        match self:
-            case MPU9250AccelFSR.ACCEL_2G:
-                return 2
-            case MPU9250AccelFSR.ACCEL_4G:
-                return 4
-            case MPU9250AccelFSR.ACCEL_8G:
-                return 8
-            case MPU9250AccelFSR.ACCEL_16G:
-                return 16
-            case _:
-                return 0
+        return self.value
 
     @property
     def sensitivity(self):
@@ -935,23 +917,14 @@ class MPU9250AccelFSR(IntEnum):
 
 
 class MPU9250GyroFSR(IntEnum):
-    AV_250DPS = 0,
-    AV_500DPS = 1,
-    AV_1000DPS = 2,
+    AV_250DPS = 0
+    AV_500DPS = 1
+    AV_1000DPS = 2
     AV_2000DPS = 3
 
     @property
     def angular_velocity(self):
-        match self:
-            case MPU9250GyroFSR.AV_250DPS:
-                return 250
-            case MPU9250GyroFSR.AV_500DPS:
-                return 500
-            case MPU9250GyroFSR.AV_1000DPS:
-                return 1000
-            case MPU9250GyroFSR.AV_2000DPS:
-                return 2000
-        return 0
+        return self.value
 
     @property
     def sensitivity(self):
@@ -962,12 +935,12 @@ class MPU9250GyroFSR(IntEnum):
 
 
 class MPU9250AccelBW(IntEnum):
-    BW_5_HZ = 0,
-    BW_10_HZ = 1,
-    BW_21_HZ = 2,
-    BW_45_HZ = 3,
-    BW_99_HZ = 4,
-    BW_218_HZ = 5,
+    BW_5_HZ = 0
+    BW_10_HZ = 1
+    BW_21_HZ = 2
+    BW_45_HZ = 3
+    BW_99_HZ = 4
+    BW_218_HZ = 5
     BW_420_HZ = 6
 
     @property
@@ -995,12 +968,12 @@ class MPU9250AccelBW(IntEnum):
 
 
 class MPU9250GyroBW(IntEnum):
-    BW_5_HZ = 0,
-    BW_10_HZ = 1,
-    BW_20_HZ = 2,
-    BW_41_HZ = 3,
-    BW_92_HZ = 4,
-    BW_184_HZ = 5,
+    BW_5_HZ = 0
+    BW_10_HZ = 1
+    BW_20_HZ = 2
+    BW_41_HZ = 3
+    BW_92_HZ = 4
+    BW_184_HZ = 5
     BW_250_HZ = 6
 
     @property
@@ -1056,20 +1029,21 @@ class MPU9250MagResolution(IntEnum):
 
 
 class MPU9250Sample:
-    def __init__(self, accel_x, accel_y, accel_z, temperature, gyro_x, gyro_y, gyro_z, mag_x,
-                 mag_y, mag_z, mag_ovf, mag_res):
-        self.accel_x = accel_x
-        self.accel_y = accel_y
-        self.accel_z = accel_z
-        self.temperature = temperature
-        self.gyro_x = gyro_x
-        self.gyro_y = gyro_y
-        self.gyro_z = gyro_z
-        self.mag_x = mag_x
-        self.mag_y = mag_y
-        self.mag_z = mag_z
-        self.mag_ovf = mag_ovf
-        self.mag_res = mag_res
+    def __init__(self, accel_x: int, accel_y: int, accel_z: int, temperature: int, gyro_x: int, gyro_y: int,
+                 gyro_z: int, mag_x: int,
+                 mag_y: int, mag_z: int, mag_ovf: int, mag_res: MPU9250MagResolution):
+        self.accel_x: int = accel_x
+        self.accel_y: int = accel_y
+        self.accel_z: int = accel_z
+        self.temperature: int = temperature
+        self.gyro_x: int = gyro_x
+        self.gyro_y: int = gyro_y
+        self.gyro_z: int = gyro_z
+        self.mag_x: int = mag_x
+        self.mag_y: int = mag_y
+        self.mag_z: int = mag_z
+        self.mag_ovf: int = mag_ovf
+        self.mag_res: MPU9250MagResolution = mag_res
 
     @classmethod
     def from_bytes(cls, payload, accel_sense, gyro_sense):
@@ -1130,24 +1104,33 @@ class MPU9250Sample:
         yield "mag_y", self.mag_y
         yield "mag_z", self.mag_z
         yield "mag_ovf", self.mag_ovf
-        yield "mag_res", self.mag_res.value
+        yield "mag_res", self.mag_res
 
 
 class MPU9250IMUDataBlock(DataBlock):
-    TYPE_DESC = "MPU9250 IMU Data"
 
-    def __init__(self, mission_time, ag_sample_rate, mag_sample_rate, accel_fsr, gyro_fsr, accel_bw, gyro_bw, samples):
+    def __init__(self,
+                 mission_time: int,
+                 ag_sample_rate: int,
+                 mag_sample_rate: MPU9250MagSR,
+                 accel_fsr: MPU9250AccelFSR,
+                 gyro_fsr: MPU9250GyroFSR,
+                 accel_bw: MPU9250AccelBW,
+                 gyro_bw: MPU9250GyroBW,
+                 samples: list[MPU9250Sample]):
         super().__init__()
-        self.mission_time = mission_time
-        self.ag_sample_rate = ag_sample_rate
-        self.mag_sample_rate = mag_sample_rate
-        self.accel_fsr = accel_fsr
-        self.gyro_fsr = gyro_fsr
-        self.accel_bw = accel_bw
-        self.gyro_bw = gyro_bw
+        self.mission_time: int = mission_time
+        self.ag_sample_rate: int = ag_sample_rate
+        self.mag_sample_rate: MPU9250MagSR = mag_sample_rate
+        self.accel_fsr: MPU9250AccelFSR = accel_fsr
+        self.gyro_fsr: MPU9250GyroFSR = gyro_fsr
+        self.accel_bw: MPU9250AccelBW = accel_bw
+        self.gyro_bw: MPU9250GyroBW = gyro_bw
         self.samples = samples
 
         self.sample_period = 1 / self.ag_sample_rate
+
+        self.sensor = avg_mpu9250_samples(self.samples)
 
     @property
     def length(self):
@@ -1236,13 +1219,47 @@ class MPU9250IMUDataBlock(DataBlock):
             yield time, samp
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time}, samples: {len(self.samples)}, "
-                f"accel/gyro sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "
-                f"gyro fsr: {self.gyro_fsr}")
+        return (
+            f"{self.type_desc()} -> time: {self.mission_time}, accel: ({self.sensor.accel_x},{self.sensor.accel_y},{self.sensor.accel_z}), temp: {self.sensor.temperature}, "
+            f"gyro: ({self.sensor.gyro_x},{self.sensor.gyro_y},{self.sensor.gyro_z}), "
+            f"samples: {len(self.samples)}, "
+            f"accel/gyro sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "
+            f"gyro fsr: {self.gyro_fsr}")
 
     def __iter__(self):
         yield "mission_time", self.mission_time
+        yield "accel_x", self.sensor.accel_x
+        yield "accel_y", self.sensor.accel_y
+        yield "accel_z", self.sensor.accel_z
+        yield "temperature", self.sensor.temperature
+        yield "gyro_x", self.sensor.gyro_x
+        yield "gyro_y", self.sensor.gyro_y
+        yield "gyro_z", self.sensor.gyro_z
+        yield "mag_x", self.sensor.mag_x
+        yield "mag_y", self.sensor.mag_y
+        yield "mag_z", self.sensor.mag_z
+        yield "mag_ovf", self.sensor.mag_ovf
+        yield "mag_res", self.sensor.mag_res
         yield "samples", len(self.samples)
         yield "sensor_sample_rate", self.ag_sample_rate
         yield "accel_fsr", self.accel_fsr
         yield "gyro_fsr", self.gyro_fsr
+
+
+def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
+    """
+    Parses a list of samples from a mpu9250 packet and returns the average values for accel, temp, gyro and magnetometer
+    """
+    mag_ovf = data_samples[0].mag_ovf
+    mag_res = data_samples[0].mag_res
+
+    avg = dict.fromkeys(dict(data_samples[0]).keys(), 0)
+
+    for sample in data_samples:
+        data = dict(sample)
+        for key in data.keys():
+            avg[key] += data[key] / len(data_samples)
+
+    return MPU9250Sample(avg["accel_x"], avg["accel_y"], avg["accel_z"], avg["temperature"],
+                         avg["gyro_x"], avg["gyro_y"], avg["gyro_z"], avg["mag_x"], avg["mag_y"], avg["mag_z"],
+                         mag_ovf, mag_res)

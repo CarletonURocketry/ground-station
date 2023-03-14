@@ -5,19 +5,18 @@ __author__ = "Matteo Golin"
 from enum import StrEnum, Enum, EnumType
 import enum
 
+
 # Classes
 class WebsocketCommandNotFound(Exception):
-
     """Raised when there is no matching command."""
 
     def __init__(self, command: str):
         self.command = command
-        self.message = f"The websocket command {command} does not exist."
+        self.message = f"The websocket command '{command}' does not exist."
         super().__init__(self.message)
 
 
 class WebsocketCommand(Enum):
-
     """Contains the structure for the telemetry commands."""
 
     UPDATE: str = "update"
@@ -40,8 +39,14 @@ class WebsocketCommand(Enum):
 
 
 # Parsing functions
-def parse(websocket_command: list[str], enum: EnumType) -> Enum:
+def split_command_string(command: str) -> list[str]:
 
+    """Splits a websocket command on the spaces."""
+
+    return command.split(" ")
+
+
+def parse(websocket_command: list[str], enum: EnumType = WebsocketCommand) -> Enum:
     """
     Returns the websocket command as the matching command enum variable. Any remaining parameters will be left
     inside the websocket_command list parameter.

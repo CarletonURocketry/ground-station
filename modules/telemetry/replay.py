@@ -9,20 +9,23 @@ import csv
 from multiprocessing import Queue
 
 from pathlib import Path
+from modules.telemetry.block import BlockTypes
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 
 
 class TelemetryReplay:
     def __init__(self, replay_payloads: Queue, replay_input: Queue, replay_path: Path):
 
-        self.replay_input = replay_input
+        # Replay buffers (Input and output)
         self.replay_payloads = replay_payloads
-        self.replay_path = replay_path
-        self.mission_start = -1
+        self.replay_input = replay_input
 
+        # Misc replay
+        self.replay_path = replay_path
+
+        # Loop data
         self.last_loop_time = int(time() * 1000)
-        self.replay_start = int(time() * 1000)
-        self.total_offset = 0
+        self.total_time_offset = 0
         self.speed = 1
 
         with open(self.replay_path, 'r', newline='') as csvfile:
@@ -33,12 +36,12 @@ class TelemetryReplay:
 
         while True:
             if self.speed > 0:
-                self.readNextLine(mission_reader)
+                self.read_next_line(mission_reader)
 
             if not self.replay_input.empty():
-                self.parseInputCommand(self.replay_input.get())
+                self.parse_input_command(self.replay_input.get())
 
-    def parseInputCommand(self, data):
+    def parse_input_command(self, data):
         split = data.split(" ")
         match split[0]:
             case "speed":
@@ -46,35 +49,30 @@ class TelemetryReplay:
                 # Reset loop time so resuming playback doesn't skip the time it was paused
                 self.last_loop_time = int(time() * 1000)
 
-    def readNextLine(self, mission_reader):
+    def read_next_line(self, mission_reader):
         try:
             row = next(mission_reader)
 
+            # we do not want misc mission details here
             if mission_reader.line_num == 1:
-                self.mission_start = row[1]
-            else:
-                block_type, block_subtype, block_payload = int(row[0]), int(row[1]), str(row[2])
+                return
 
-                if int(block_type) == 2:
-                    block_data = DataBlock.parse(DataBlockSubtype(block_subtype), bytes.fromhex(block_payload))
-                    block_time = block_data.mission_time
-                    #print(block_time, block_type, block_subtype, block_data)
+            block_type, block_subtype, block_payload = int(row[0]), int(row[1]), str(row[2])
 
-                    current_loop_time = int(time() * 1000)
-                    offset = float(current_loop_time - self.last_loop_time) * self.speed
+            if block_type == BlockTypes.DATA:
+                block_time = DataBlock.parse(DataBlockSubtype(block_subtype), bytes.fromhex(block_payload)).mission_time
+                current_loop_time = int(time() * 1000)
+                self.total_time_offset += float(current_loop_time - self.last_loop_time) * self.speed
 
-                    self.last_loop_time = current_loop_time
-                    self.total_offset += float(offset)
+                if self.total_time_offset < block_time:
+                    next_block_wait = (block_time - self.total_time_offset) / self.speed
+                    sleep(next_block_wait / 1000)
 
-                    if self.total_offset < block_time:
-                        next_block_wait = (block_time - self.total_offset) / self.speed
-                        # print(f"Sleeping {int(next_block_wait)} milliseconds until next block is time")
-                        sleep(next_block_wait / 1000)
-
-                    self.outputReplay(block_type, block_subtype, block_payload)
+                self.last_loop_time = current_loop_time
+                self.output_replay_data(block_type, block_subtype, block_payload)
         except StopIteration:
             self.speed = 0
 
-    def outputReplay(self, block_type, block_subtype, block_data):
+    def output_replay_data(self, block_type, block_subtype, block_data):
         replay_data = (block_type, block_subtype, block_data)
         self.replay_payloads.put(replay_data)

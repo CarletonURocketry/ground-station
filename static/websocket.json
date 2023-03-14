@@ -1,5 +1,5 @@
 {
-    "version": "0.4.5",
+    "version": "0.4.6-DEV",
     "org": "CUInSpace",
     "status": {
         "mission": {
@@ -14,8 +14,7 @@
         "rn2483_radio": {
             "connected": false,
             "connected_port": "",
-            "snr": 0,
-            "rssi": 0
+            "snr": 0
         },
         "rocket": {
             "kx134_state": -1,
@@ -29,83 +28,83 @@
             "last_mission_time": 8120
         }
     },
-    "telemetry_data": {
+    "telemetry": {
         "altitude": {
             "mission_time": 8120,
             "pressure": {
-                "pascals": "87181"
+                "pascals": 87181
             },
             "altitude": {
-                "metres": "400",
-                "feet": "1312"
+                "metres": 400,
+                "feet": 1312
             },
             "temperature": {
-                "celsius": "12",
-                "fahrenheit": "54"
+                "celsius": 12,
+                "fahrenheit": 54
             }
         },
-        "mpu9250_data": {
-            "mission_time": 7660,
-            "accel_x": {
-                "ms2": "-0.08789062500000001",
-                "fts2": "0"
-            },
-            "accel_y": {
-                "ms2": "-0.09985351562499999",
-                "fts2": "0"
-            },
-            "accel_z": {
-                "ms2": "0.8688151041666667",
-                "fts2": "0"
-            },
-            "temperature": {
-                "celsius": "24.81775700934579",
-                "fahrenheit": "0"
-            },
-            "gyro_x": "0.091552734375",
-            "gyro_y": "-0.050862630208333336",
-            "gyro_z": "0.040690104166666664"
+        "mpu9250_imu": {
+            "mission_time": 3598549,
+            "accel_x": 0.0388946533203125,
+            "accel_y": 0.0712890625,
+            "accel_z": 0.196533203125,
+            "temperature": 33.28193146417445,
+            "gyro_x": 0.00091552734375,
+            "gyro_y": -0.0024566650390625,
+            "gyro_z": -0.001678466796875,
+            "mag_x": -55.5,
+            "mag_y": 170.49999999999997,
+            "mag_z": -19.7,
+            "mag_ovf": true,
+            "mag_res": 0,
+            "samples": 6,
+            "sensor_sample_rate": 100.0,
+            "accel_fsr": 3,
+            "gyro_fsr": 3
         },
         "gnss": {
-            "mission_time": 169012,
+            "mission_time": 84020,
             "position": {
-                "latitude": "45.385273194259014",
-                "longitude": "-75.69838116342798"
+                "latitude": 44.907956666666664,
+                "longitude": -76.26173
             },
-            "utc_time": 1668434486,
-            "altitude": 142.619,
-            "sats_in_use": 14,
-            "speed": 0,
-            "type": "FIX_3D"
-        },
+            "utc_time": 1668434560,
+            "altitude": 150.701,
+            "speed": 27.49,
+            "course": 139.34,
+            "pdop": 1.15,
+            "hdop": 0.83,
+            "vdop": 0.8,
+            "sats_in_use": 13,
+            "type": "FIX_3D"},
         "gnss_meta": {
-            "mission_time": 169012,
+            "mission_time": 81976,
             "gps_sats_in_use": [2, 5, 10, 13, 15, 18, 23, 24, 27],
-            "glonass_sats_in_use": [67, 70, 75, 78, 80, 83, 88, 89, 92],
-            "sats_in_view": [{"sat_type": "GPS", "elevation": 68, "snr": 18, "id": 18, "azimuth": 64},
-                {"sat_type": "GPS", "elevation": 62, "snr": 24, "id": 23, "azimuth": 224},
-                {"sat_type": "GPS", "elevation": 54, "snr": 39, "id": 15, "azimuth": 480},
-                {"sat_type": "GPS", "elevation": 46, "snr": 28, "id": 24, "azimuth": 256},
-                {"sat_type": "GPS", "elevation": 33, "snr": 31, "id": 2, "azimuth": 64},
-                {"sat_type": "GPS", "elevation": 31, "snr": 34, "id": 10, "azimuth": 320},
-                {"sat_type": "GPS", "elevation": 24, "snr": 32, "id": 13, "azimuth": 416},
-                {"sat_type": "GPS", "elevation": 18, "snr": 25, "id": 27, "azimuth": 352},
-                {"sat_type": "GPS", "elevation": 15, "snr": 17, "id": 5, "azimuth": 160},
-                {"sat_type": "GPS", "elevation": 11, "snr": 0, "id": 1, "azimuth": 32},
-                {"sat_type": "GPS", "elevation": 8, "snr": 25, "id": 0, "azimuth": 0},
-                {"sat_type": "GPS", "elevation": 4, "snr": 17, "id": 8, "azimuth": 256},
-                {"sat_type": "GLONASS", "elevation": 58, "snr": 33, "id": 85, "azimuth": 128},
+            "glonass_sats_in_use": [69, 70, 79, 85],
+            "sats_in_view": [
+                {"sat_type": "GPS", "elevation": 68, "snr": 32, "id": 18, "azimuth": 64},
+                {"sat_type": "GPS", "elevation": 62, "snr": 33, "id": 23, "azimuth": 224},
+                {"sat_type": "GPS", "elevation": 54, "snr": 26, "id": 15, "azimuth": 480},
+                {"sat_type": "GPS", "elevation": 46, "snr": 35, "id": 24, "azimuth": 256},
+                {"sat_type": "GPS", "elevation": 33, "snr": 28, "id": 2, "azimuth": 64},
+                {"sat_type": "GPS", "elevation": 31, "snr": 35, "id": 10, "azimuth": 320},
+                {"sat_type": "GPS", "elevation": 24, "snr": 19, "id": 13, "azimuth": 416},
+                {"sat_type": "GPS", "elevation": 18, "snr": 22, "id": 27, "azimuth": 352},
+                {"sat_type": "GPS", "elevation": 15, "snr": 27, "id": 5, "azimuth": 160},
+                {"sat_type": "GPS", "elevation": 8, "snr": 18, "id": 0, "azimuth": 0},
+                {"sat_type": "GLONASS", "elevation": 58, "snr": 28, "id": 85, "azimuth": 128},
                 {"sat_type": "GLONASS", "elevation": 57, "snr": 21, "id": 70, "azimuth": 160},
-                {"sat_type": "GLONASS", "elevation": 41, "snr": 39, "id": 69, "azimuth": 128},
-                {"sat_type": "GLONASS", "elevation": 28, "snr": 12, "id": 84, "azimuth": 96},
-                {"sat_type": "GLONASS", "elevation": 24, "snr": 26, "id": 79, "azimuth": 448},
-                {"sat_type": "GLONASS", "elevation": 16, "snr": 24, "id": 78, "azimuth": 416},
-                {"sat_type": "GLONASS", "elevation": 14, "snr": 24, "id": 71, "azimuth": 192}]
+                {"sat_type": "GLONASS", "elevation": 40, "snr": 32, "id": 69, "azimuth": 128},
+                {"sat_type": "GLONASS", "elevation": 24, "snr": 31, "id": 79, "azimuth": 448},
+                {"sat_type": "GLONASS", "elevation": 16, "snr": 23, "id": 78, "azimuth": 416},
+                {"sat_type": "GLONASS", "elevation": 14, "snr": 20, "id": 71, "azimuth": 192}
+            ]
         }
     },
     "replay": {
         "status": "",
         "speed": 1.0,
+        "length": 3598549,
         "mission_list": ["Devil The Rocket"]
     }
 }

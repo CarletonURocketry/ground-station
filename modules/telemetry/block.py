@@ -28,6 +28,9 @@ class DeviceAddress(IntEnum):
 
 
 class BlockTypes(IntEnum):
+
+    """Lists the different block types."""
+
     CONTROL = 0x0
     COMMAND = 0x1
     DATA = 0x2
@@ -35,6 +38,9 @@ class BlockTypes(IntEnum):
 
 
 class ControlBlockSubtype(IntEnum):
+
+    """Lists the subtype of control blocks."""
+
     SIGNAL_REPORT = 0x00
     COMMAND_ACKNOWLEDGEMENT = 0x01
     COMMAND_NONCE_REQUEST = 0x02
@@ -45,6 +51,9 @@ class ControlBlockSubtype(IntEnum):
 
 
 class CommandBlockSubtype(IntEnum):
+
+    """Lists the subtypes of command blocks."""
+
     RESET_ROCKET_AVIONICS = 0x00
     REQUEST_TELEMETRY_DATA = 0x01
     DEPLOY_PARACHUTE = 0x02
@@ -53,6 +62,9 @@ class CommandBlockSubtype(IntEnum):
 
 
 class DataBlockSubtype(IntEnum):
+
+    """Lists the subtypes of data blocks."""
+
     DEBUG_MESSAGE = 0x00
     STATUS = 0x01
     STARTUP_MESSAGE = 0x02
