@@ -648,13 +648,11 @@ class GNSSMetadataBlock(DataBlock):
         gps_sats_in_use = list()
         glonass_sats_in_use = list()
 
-        # TODO Look into this. Every glonass sat in sats_in_use is +GLONASS_SV_OFFSET every sat in gps sats in use.
+        # Check satellite in use bitfields
         for i in range(32):
             if parts[1] & (1 << i):
                 gps_sats_in_use.append(i + GNSSSatInfo.GPS_SV_OFFSET)
-
-        for i in range(32):
-            if parts[1] & (1 << i):
+            if parts[2] & (1 << i):
                 glonass_sats_in_use.append(i + GNSSSatInfo.GLONASS_SV_OFFSET)
 
         sats_in_view = list()
