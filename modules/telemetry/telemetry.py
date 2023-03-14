@@ -29,7 +29,7 @@ PacketHeader = tuple[str, int, int, int, int]
 
 # Constants
 ORG: str = "CUInSpace"
-VERSION: str = "0.4.5-DEV"
+VERSION: str = "0.4.6-DEV"
 MISSION_EXTENSION: str = "mission"
 FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
