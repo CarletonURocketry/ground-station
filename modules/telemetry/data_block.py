@@ -199,10 +199,11 @@ class DeploymentState(IntEnum):
     DEPLOYMENT_STATE_ARMED = 0x1
     DEPLOYMENT_STATE_POWERED_ASCENT = 0x2
     DEPLOYMENT_STATE_COASTING_ASCENT = 0x3
-    DEPLOYMENT_STATE_DEPLOYED_DROGUE = 0x4
-    DEPLOYMENT_STATE_DEPLOYED_MAIN = 0xF
-    DEPLOYMENT_STATE_DESCENT = 0x5
-    DEPLOYMENT_STATE_RECOVERY = 0x6
+    DEPLOYMENT_STATE_DROGUE_DEPLOY = 0x4
+    DEPLOYMENT_STATE_DROGUE_DESCENT = 0x5
+    DEPLOYMENT_STATE_MAIN_DEPLOY = 0x6
+    DEPLOYMENT_STATE_MAIN_DESCENT = 0x7
+    DEPLOYMENT_STATE_RECOVERY = 0x8
 
     def __str__(self):
         match self:
@@ -214,12 +215,14 @@ class DeploymentState(IntEnum):
                 return "powered ascent"
             case DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT:
                 return "coasting ascent"
-            case DeploymentState.DEPLOYMENT_STATE_DEPLOYED_DROGUE:
-                return "deployed drogue"
-            case DeploymentState.DEPLOYMENT_STATE_DEPLOYED_MAIN:
-                return "deployed main"
-            case DeploymentState.DEPLOYMENT_STATE_DESCENT:
-                return "descent"
+            case DeploymentState.DEPLOYMENT_STATE_DROGUE_DEPLOY:
+                return "drogue deployed"
+            case DeploymentState.DEPLOYMENT_STATE_DROGUE_DESCENT:
+                return "drogue descent"
+            case DeploymentState.DEPLOYMENT_STATE_MAIN_DEPLOY:
+                return "main deployed"
+            case DeploymentState.DEPLOYMENT_STATE_MAIN_DESCENT:
+                return "main descent"
             case DeploymentState.DEPLOYMENT_STATE_RECOVERY:
                 return "recovery"
             case DeploymentState.DEPLOYMENT_STATE_DNE:
