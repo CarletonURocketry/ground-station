@@ -235,7 +235,8 @@ class DeploymentState(IntEnum):
 class StatusDataBlock(DataBlock):
     """Encapsulates the status data."""
 
-    def __init__(self, mission_time: int, kx134_state, alt_state, imu_state, sd_state, deployment_state: DeploymentState, sd_blocks_recorded,
+    def __init__(self, mission_time: int, kx134_state, alt_state, imu_state, sd_state,
+                 deployment_state: DeploymentState, sd_blocks_recorded,
                  sd_checkouts_missed):
         super().__init__()
         self.mission_time: int = mission_time
@@ -297,8 +298,12 @@ class StatusDataBlock(DataBlock):
         return struct.pack("<IIII", self.mission_time, states, self.sd_blocks_recorded,
                            self.sd_checkouts_missed)
 
+    @staticmethod
+    def type_desc():
+        return "Status"
+
     def __str__(self):
-        return (f"Status -> mission_time: {self.mission_time}, kx134 state: "
+        return (f"{self.type_desc()} -> mission_time: {self.mission_time}, kx134 state: "
                 f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
                 f"IMU state: {str(self.imu_state)}, SD driver state: {str(self.sd_state)}, "
                 f"deployment state: {str(self.deployment_state)}, blocks recorded: "
@@ -389,8 +394,12 @@ class AccelerationDataBlock(DataBlock):
         z = round(self.z * ((2 ** 15) / self.fsr))
         return struct.pack("<IBBhhh", self.mission_time, self.fsr, 0, x, y, z)
 
+    @staticmethod
+    def type_desc():
+        return "Acceleration"
+
     def __str__(self):
-        return (f"Acceleration -> time: {self.mission_time}, fsr: {self.fsr}, "
+        return (f"{self.type_desc()} -> time: {self.mission_time}, fsr: {self.fsr}, "
                 f"x: {self.x} g, y: {self.y} g, z: {self.z} g")
 
     def __iter__(self):
@@ -536,8 +545,13 @@ class GNSSLocationBlock(DataBlock):
 
         return f"{degrees}°{minutes}'{seconds:.3f}{direction_char}"
 
+    @staticmethod
+    def type_desc():
+        return "GNSS Location"
+
+
     def __str__(self):
-        return (f"GNSS Location -> time: {self.mission_time}, position: "
+        return (f"{self.type_desc()} -> time: {self.mission_time}, position: "
                 f"{(self.latitude / 600000)} {(self.longitude / 600000)}, utc time: "
                 f"{self.utc_time}, altitude: {self.altitude} m, speed: {self.speed} knots, "
                 f"course: {self.course}°, pdop: {self.pdop}, hdop: {self.hdop}, vdop: "
@@ -643,25 +657,30 @@ class GNSSMetadataBlock(DataBlock):
 
     @classmethod
     def from_payload(cls, payload):
-        parts = struct.unpack("<III", payload[0:12])
+        # There are 3 uint32_t variables, one for time, gps sats in use, and glonass sats in use
+        # The remaining of the payload is an array for sats in view, each 4 bytes being a unique GNSSSatInfo struct
+        # 12 bytes is 96 bits (3 x 32)
+        offset = 12
 
+        parts = struct.unpack("<III", payload[0:offset])
+        payload_time = parts[0]
         gps_sats_in_use = list()
         glonass_sats_in_use = list()
+        sats_in_view = list()
 
-        # Check satellite in use bitfields
+        # Check satellites in use bitfields
         for i in range(32):
             if parts[1] & (1 << i):
                 gps_sats_in_use.append(i + GNSSSatInfo.GPS_SV_OFFSET)
             if parts[2] & (1 << i):
                 glonass_sats_in_use.append(i + GNSSSatInfo.GLONASS_SV_OFFSET)
 
-        sats_in_view = list()
-        offset = 12
+        # Check satellites in view array
         while offset < len(payload):
             sats_in_view.append(GNSSSatInfo.from_bytes(payload[offset:offset + 4]))
             offset += 4
 
-        return GNSSMetadataBlock(parts[0], gps_sats_in_use, glonass_sats_in_use, sats_in_view)
+        return GNSSMetadataBlock(payload_time, gps_sats_in_use, glonass_sats_in_use, sats_in_view)
 
     def to_payload(self):
         gps_sats_in_use_bitfield = 0
@@ -680,8 +699,12 @@ class GNSSMetadataBlock(DataBlock):
 
         return payload
 
+    @staticmethod
+    def type_desc():
+        return "GNSS Metadata"
+
     def __str__(self):
-        s = (f"GNSS Metadata -> time: {self.mission_time}, GPS sats in use: "
+        s = (f"{self.type_desc()} -> time: {self.mission_time}, GPS sats in use: "
              f"{self.gps_sats_in_use}, GLONASS sats in use: {self.glonass_sats_in_use}\nSats in "
              f"view:")
         for sat in self.sats_in_view:
@@ -872,8 +895,12 @@ class KX134AccelerometerDataBlock(DataBlock):
             time = (self.mission_time * (1000 / 1024)) - ((count - i) * (self.sample_period * 1024))
             yield time, samp[0], samp[1], samp[2]
 
+    @staticmethod
+    def type_desc():
+        return "KX134 Accelerometer"
+
     def __str__(self):
-        return (f"KX134 Accelerometer Data -> time: {self.mission_time}, samples: {len(self.samples)}, "
+        return (f"{self.type_desc()} -> time: {self.mission_time}, samples: {len(self.samples)}, "
                 f"ODR: {self.odr}, range: {self.accel_range}, rolloff: {self.rolloff}, "
                 f"resolution: {self.resolution}")
 
@@ -1143,7 +1170,7 @@ class MPU9250IMUDataBlock(DataBlock):
 
     @staticmethod
     def type_desc():
-        return "MPU9250 IMU Data"
+        return "MPU9250 IMU"
 
     @classmethod
     def from_payload(cls, payload):
@@ -1223,7 +1250,7 @@ class MPU9250IMUDataBlock(DataBlock):
             f"{self.type_desc()} -> time: {self.mission_time}, accel: ({self.sensor.accel_x},{self.sensor.accel_y},{self.sensor.accel_z}), temp: {self.sensor.temperature}, "
             f"gyro: ({self.sensor.gyro_x},{self.sensor.gyro_y},{self.sensor.gyro_z}), "
             f"samples: {len(self.samples)}, "
-            f"accel/gyro sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "
+            f"sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "
             f"gyro fsr: {self.gyro_fsr}")
 
     def __iter__(self):

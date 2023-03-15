@@ -17,7 +17,7 @@ import logging
 
 from multiprocessing import Queue, Process, active_children
 from modules.telemetry.replay import TelemetryReplay
-from modules.telemetry.block import BlockTypes
+from modules.telemetry.block import RadioBlockType
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 
 import modules.telemetry.json_packets as jsp
@@ -312,18 +312,18 @@ class Telemetry(Process):
         # Working with hex strings until this point.
         # Hex/Bytes Demarcation point
         block_contents = bytes.fromhex(block_contents)
-        match BlockTypes(block_type):
-            case BlockTypes.CONTROL:
+        match RadioBlockType(block_type):
+            case RadioBlockType.CONTROL:
                 # CONTROL BLOCK DETECTED
                 logging.info("Control block received")
                 # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
                 self.rn2483_radio_input.put("radio get snr")
                 # self.rn2483_radio_input.put("radio get rssi")
 
-            case BlockTypes.COMMAND:
+            case RadioBlockType.COMMAND:
                 # COMMAND BLOCK DETECTED
                 logging.info("Command block received")
-            case BlockTypes.DATA:
+            case RadioBlockType.DATA:
                 # DATA BLOCK DETECTED
                 block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
                 logging.info(block_data)

@@ -27,9 +27,8 @@ class DeviceAddress(IntEnum):
                 return "UNKNOWN"
 
 
-class BlockTypes(IntEnum):
-
-    """Lists the different block types."""
+class RadioBlockType(IntEnum):
+    """Lists the different radio block types."""
 
     CONTROL = 0x0
     COMMAND = 0x1
@@ -37,8 +36,18 @@ class BlockTypes(IntEnum):
     RESERVED = 0xF
 
 
-class ControlBlockSubtype(IntEnum):
+class SDBlockType(IntEnum):
+    """Lists the different sd block types."""
 
+    LOGGING_METADATA = 0x0
+    TELEMETRY_DATA = 0x1
+    DIAGNOSTIC_DATA = 0x2
+    TELEMETRY_CONTROL = 0x3
+    TELEMETRY_COMMAND = 0x4
+    RESERVED = 0x3F
+
+
+class ControlBlockSubtype(IntEnum):
     """Lists the subtype of control blocks."""
 
     SIGNAL_REPORT = 0x00
@@ -51,7 +60,6 @@ class ControlBlockSubtype(IntEnum):
 
 
 class CommandBlockSubtype(IntEnum):
-
     """Lists the subtypes of command blocks."""
 
     RESET_ROCKET_AVIONICS = 0x00
@@ -62,7 +70,6 @@ class CommandBlockSubtype(IntEnum):
 
 
 class DataBlockSubtype(IntEnum):
-
     """Lists the subtypes of data blocks."""
 
     DEBUG_MESSAGE = 0x00

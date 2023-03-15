@@ -9,7 +9,7 @@ import csv
 from multiprocessing import Queue
 
 from pathlib import Path
-from modules.telemetry.block import BlockTypes
+from modules.telemetry.block import RadioBlockType
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 
 
@@ -59,7 +59,7 @@ class TelemetryReplay:
 
             block_type, block_subtype, block_payload = int(row[0]), int(row[1]), str(row[2])
 
-            if block_type == BlockTypes.DATA:
+            if block_type == RadioBlockType.DATA:
                 block_time = DataBlock.parse(DataBlockSubtype(block_subtype), bytes.fromhex(block_payload)).mission_time
                 current_loop_time = int(time() * 1000)
                 self.total_time_offset += float(current_loop_time - self.last_loop_time) * self.speed
