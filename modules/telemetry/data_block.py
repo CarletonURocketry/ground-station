@@ -549,12 +549,11 @@ class GNSSLocationBlock(DataBlock):
     def type_desc():
         return "GNSS Location"
 
-
     def __str__(self):
         return (f"{self.type_desc()} -> time: {self.mission_time}, position: "
                 f"{(self.latitude / 600000)} {(self.longitude / 600000)}, utc time: "
                 f"{self.utc_time}, altitude: {self.altitude} m, speed: {self.speed} knots, "
-                f"course: {self.course}°, pdop: {self.pdop}, hdop: {self.hdop}, vdop: "
+                f"course: {self.course} degs, pdop: {self.pdop}, hdop: {self.hdop}, vdop: "
                 f"{self.vdop}, sats in use: {self.sats}, type: {self.fix_type.name}")
 
     def __iter__(self):
@@ -569,7 +568,7 @@ class GNSSLocationBlock(DataBlock):
         yield "hdop", self.hdop
         yield "vdop", self.vdop
         yield "sats_in_use", self.sats
-        yield "type", self.fix_type.name
+        yield "fix_type", self.fix_type
 
 
 class GNSSSatType(IntEnum):
@@ -624,8 +623,8 @@ class GNSSSatInfo:
 
     def __str__(self):
         return (f"{self.sat_type.name} sat -> elevation: "
-                f"{self.elevation}°, SNR: {self.snr} dB-Hz, id: {self.identifier}, "
-                f"azimuth: {self.azimuth}°")
+                f"{self.elevation} degs, SNR: {self.snr} dB-Hz, id: {self.identifier}, "
+                f"azimuth: {self.azimuth} degs")
 
     def __iter__(self):
         yield "sat_type", self.sat_type.name
@@ -703,10 +702,12 @@ class GNSSMetadataBlock(DataBlock):
     def type_desc():
         return "GNSS Metadata"
 
+
+
     def __str__(self):
         s = (f"{self.type_desc()} -> time: {self.mission_time}, GPS sats in use: "
-             f"{self.gps_sats_in_use}, GLONASS sats in use: {self.glonass_sats_in_use}\nSats in "
-             f"view:")
+             f"{self.gps_sats_in_use}, GLONASS sats in use: {self.glonass_sats_in_use}\n"
+             f"Sats in view:")
         for sat in self.sats_in_view:
             s += f"\n\t{str(sat)} " if dict(sat)["snr"] != 0 else ""
         return s
@@ -940,7 +941,7 @@ class MPU9250AccelFSR(IntEnum):
         return 32768 / self.acceleration
 
     def __str__(self):
-        return f"±{self.acceleration} g"
+        return f"+/-{self.acceleration} g"
 
 
 class MPU9250GyroFSR(IntEnum):
@@ -958,7 +959,7 @@ class MPU9250GyroFSR(IntEnum):
         return 32768 / self.angular_velocity
 
     def __str__(self):
-        return f"±{self.angular_velocity} °/s"
+        return f"+/-{self.angular_velocity} deg/s"
 
 
 class MPU9250AccelBW(IntEnum):
