@@ -25,7 +25,7 @@ rn2483_radio_input = Queue()
 rn2483_radio_payloads = Queue()
 telemetry_json_output = Queue()
 
-VERSION: str = "0.4.6-DEV"
+VERSION: str = "0.4.7-DEV"
 STR_TO_LOGGING_MODE: dict[str, int] = {
     "debug": logging.DEBUG,
     "info": logging.INFO,
@@ -40,12 +40,12 @@ class ShutdownException(Exception):
 
 
 def main():
+    # Print display screen
+    print_cu_rocket("No Name (Gas Propelled Launching Device)", VERSION, "Thomas Selwyn (Devil)")
 
     # Get the arguments
     args = vars(parser.parse_args())
 
-    # Print display screen
-    print_cu_rocket("No Name (Gas Propelled Launching Device)", VERSION, "Thomas Selwyn (Devil)")
 
     # Set up logging
     logging.basicConfig(

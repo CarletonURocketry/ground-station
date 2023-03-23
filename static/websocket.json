@@ -1,5 +1,5 @@
 {
-    "version": "0.4.6-DEV",
+    "version": "0.4.7-DEV",
     "org": "CUInSpace",
     "status": {
         "mission": {
@@ -76,7 +76,8 @@
             "hdop": 0.83,
             "vdop": 0.8,
             "sats_in_use": 13,
-            "type": "FIX_3D"},
+            "fix_type": 3
+        },
         "gnss_meta": {
             "mission_time": 81976,
             "gps_sats_in_use": [2, 5, 10, 13, 15, 18, 23, 24, 27],
@@ -104,7 +105,9 @@
     "replay": {
         "status": "",
         "speed": 1.0,
-        "length": 3598549,
-        "mission_list": ["Devil The Rocket"]
+        "mission_list": [
+            {"name": "Devil The Rocket", "length": 3598549, "timestamp": 1668434478},
+            {"name": "Paige Cessna Flight", "length": 3651361, "timestamp": 1670182646}
+        ]
     }
 }

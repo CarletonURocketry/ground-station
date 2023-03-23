@@ -17,7 +17,7 @@ import logging
 
 from multiprocessing import Queue, Process, active_children
 from modules.telemetry.replay import TelemetryReplay
-from modules.telemetry.block import RadioBlockType
+from modules.telemetry.block import RadioBlockType, SDBlockClassType
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 
 import modules.telemetry.json_packets as jsp
@@ -29,16 +29,16 @@ PacketHeader = tuple[str, int, int, int, int]
 
 # Constants
 ORG: str = "CUInSpace"
-VERSION: str = "0.4.6-DEV"
+VERSION: str = "0.4.7-DEV"
 MISSION_EXTENSION: str = "mission"
 FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
 
 # Helper functions
-def mission_path(mission_name: str, missions_dir: Path) -> Path:
+def mission_path(mission_name: str, missions_dir: Path, file_suffix: int = 0) -> Path:
     """Returns the path to the mission file with the matching mission name."""
 
-    return missions_dir.joinpath(f"{mission_name}.{MISSION_EXTENSION}")
+    return missions_dir.joinpath(f"{mission_name}{'' if file_suffix == 0 else f'_{file_suffix}'}.{MISSION_EXTENSION}")
 
 
 def shutdown_sequence() -> None:
@@ -50,10 +50,10 @@ def shutdown_sequence() -> None:
 def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Path:
     """Obtains filepath for proposed name, with a maximum of giving a suffix 50 times before failing."""
     file_suffix = 1
-    missions_filepath = missions_dir.joinpath(f"{mission_name}.{MISSION_EXTENSION}")
+    missions_filepath = mission_path(mission_name, missions_dir)
 
     while missions_filepath.is_file() and file_suffix < FILE_CREATION_ATTEMPT_LIMIT:
-        missions_filepath = missions_dir.joinpath(f"{mission_name}_{file_suffix}.{MISSION_EXTENSION}")
+        missions_filepath = mission_path(mission_name, missions_dir, file_suffix)
         file_suffix += 1
 
     return missions_filepath
@@ -93,9 +93,10 @@ class Telemetry(Process):
         self.serial_ports = []
 
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
+        # None until they get initialized in reset_data()
         self.status_data: jsp.StatusData = jsp.StatusData()
         self.telemetry_data = {}
-        self.replay_data = jsp.ReplayData()
+        self.replay_data = None
 
         # Mission Path
         self.missions_dir = Path.cwd().joinpath("missions")
@@ -172,11 +173,6 @@ class Telemetry(Process):
 
         self.telemetry_json_output.put(self.generate_websocket_response())
 
-    def reset_data(self) -> None:
-        """Resets all live data on the telemetry backend to a default state."""
-        self.status_data = jsp.StatusData()
-        self.telemetry_data = {}
-        self.replay_data = jsp.ReplayData()
 
     def generate_websocket_response(self) -> dict[str, Any]:
         """Returns the dictionary containing the JSON data for the websocket client."""
@@ -185,6 +181,13 @@ class Telemetry(Process):
                 "status": dict(self.status_data),
                 "telemetry": self.telemetry_data,
                 "replay": dict(self.replay_data)}
+
+    def reset_data(self) -> None:
+        """Resets all live data on the telemetry backend to a default state."""
+        self.status_data = jsp.StatusData()
+        self.telemetry_data = {}
+        self.replay_data = jsp.ReplayData()
+
 
     def execute_command(self, command: wsc.Enum, parameters: list[str]) -> None:
         """Executes the passed websocket command."""
@@ -217,7 +220,8 @@ class Telemetry(Process):
                 # If there is no mission name, use the default
                 mission_name = None if not parameters else " ".join(parameters)
                 try:
-                    self.start_recording(mission_name)
+                    #self.start_recording(mission_name)
+                    logging.warning("RECORDING DISABLED UNTIL UPDATED WITH NEW FORMAT")
                 except AlreadyRecordingError as e:
                     logging.error(e.message)
 
@@ -359,9 +363,10 @@ class Telemetry(Process):
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
             block_contents = blocks[8: 8 + block_len]
 
-            if self.status_data.mission.recording:
-                with open(f'{self.mission_path}', 'a') as mission:
-                    mission.write(f"{block_type},{block_subtype},{block_contents}\n")
+            # TODO Update recording with SDBlock Recording style
+            #if self.status_data.mission.recording:
+                #with open(f'{self.mission_path}', 'a') as mission:
+                    #mission.write(f"{block_type},{block_subtype},{block_contents}\n")
 
             self.parse_rn2483_payload(block_type, block_subtype, block_contents)
 

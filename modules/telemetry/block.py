@@ -36,7 +36,7 @@ class RadioBlockType(IntEnum):
     RESERVED = 0xF
 
 
-class SDBlockType(IntEnum):
+class SDBlockClassType(IntEnum):
     """Lists the different sd block types."""
 
     LOGGING_METADATA = 0x0
