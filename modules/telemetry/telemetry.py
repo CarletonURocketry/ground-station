@@ -192,31 +192,32 @@ class Telemetry(Process):
     def execute_command(self, command: wsc.Enum, parameters: list[str]) -> None:
         """Executes the passed websocket command."""
 
+        WSCommand = wsc.WebsocketCommand
         match command:
-            case wsc.WebsocketCommand.UPDATE:
+            case WSCommand.UPDATE:
                 self.replay_data.update_mission_list()
 
             # Replay commands
-            case wsc.WebsocketCommand.REPLAY.value.PLAY:
+            case WSCommand.REPLAY.value.PLAY:
                 mission_name = None if not parameters else " ".join(parameters)
                 try:
                     self.play_mission(mission_name)
                 except MissionNotFoundError as e:
                     logging.error(e.message)
 
-            case wsc.WebsocketCommand.REPLAY.value.STOP:
+            case WSCommand.REPLAY.value.STOP:
                 self.replay_last_played_speed = self.replay_data.speed
                 self.stop_replay()
-            case wsc.WebsocketCommand.REPLAY.value.PAUSE:
+            case WSCommand.REPLAY.value.PAUSE:
                 self.replay_last_played_speed = self.replay_data.speed
                 self.set_replay_speed(0.0)
-            case wsc.WebsocketCommand.REPLAY.value.SPEED:
+            case WSCommand.REPLAY.value.SPEED:
                 self.set_replay_speed(int(parameters[0]))
 
             # Record commands
-            case wsc.WebsocketCommand.RECORD.value.STOP:
+            case WSCommand.RECORD.value.STOP:
                 self.stop_recording()
-            case wsc.WebsocketCommand.RECORD.value.START:
+            case WSCommand.RECORD.value.START:
                 # If there is no mission name, use the default
                 mission_name = None if not parameters else " ".join(parameters)
                 try:
@@ -266,9 +267,6 @@ class Telemetry(Process):
             self.status_data.mission.name = mission_name
             self.status_data.mission.state = jsp.MissionState.RECORDED
             replay_mission_filepath = mission_path(mission_name, self.missions_dir)
-
-            # TODO Read start of mission file and output mission epoch and length in replay data
-            # Read all mission files and cache the metadata together
 
             self.replay = Process(
                 target=TelemetryReplay,

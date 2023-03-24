@@ -176,7 +176,8 @@ class ReplayData:
     mission_list: list[MISSION_ENTRY] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        self.update_mission_list()  # Update the mission list on creation
+        # Update the mission list on creation
+        self.update_mission_list()
 
     def update_mission_list(self, missions_dir: Path = Path.cwd().joinpath(MISSIONS_DIR)) -> None:
         """Gets the available mission recordings from the mission folder."""
@@ -185,6 +186,7 @@ class ReplayData:
         self.mission_files_list = [name for name in missions_dir.glob(f"*.{MISSION_EXTENSION}") if name.is_file()]
 
         # Check each file to output its misc details
+        self.mission_list = []
         for filename in self.mission_files_list:
             with open(f"{missions_dir.joinpath(filename)}", "rb") as file:
                 # Reads superblock for flight details

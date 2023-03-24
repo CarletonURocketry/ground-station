@@ -41,7 +41,7 @@ class ShutdownException(Exception):
 
 def main():
     # Print display screen
-    print_cu_rocket("No Name (Gas Propelled Launching Device)", VERSION, "Thomas Selwyn (Devil)")
+    print_cu_rocket("No Name (Gas Propelled Launching Device)", VERSION)
 
     # Get the arguments
     args = vars(parser.parse_args())
@@ -67,7 +67,7 @@ def main():
         )
     )
     serial.start()
-    logging.info(f"{'Serial':.<15} started.")
+    logging.info(f"{'Serial':.<16} started.")
 
     # Initialize Telemetry to parse radio packets, keep history and to log everything
     # Incoming information comes from rn2483_radio_payloads in payload format
@@ -84,7 +84,7 @@ def main():
         )
     )
     telemetry.start()
-    logging.info(f"{'Telemetry':.<15} started.")
+    logging.info(f"{'Telemetry':.<16} started.")
 
     # Initialize Tornado websocket for UI communication
     # This is PURELY a pass through of data for connectivity. No format conversion is done here.
@@ -96,7 +96,7 @@ def main():
         daemon=True
     )
     websocket.start()
-    logging.info(f"{'WebSocket':.<15} started.")
+    logging.info(f"{'WebSocket':.<16} started.")
 
     while True:
         # WS Commands have been sent to main process for handling
