@@ -191,15 +191,16 @@ class ReplayData:
             with open(f"{missions_dir.joinpath(filename)}", "rb") as file:
                 # Reads superblock for flight details
                 mission_sb = SuperBlock(file.read(512))
-                first_flight = mission_sb.flights[0]
 
-                # Reads last telemetry block of flight to get final mission time
-                file.seek(first_flight.first_block * 512)
-                mission_time = get_last_mission_time(file, first_flight.num_blocks)
+                mission_time = 0
+                # Reads last telemetry block of each flight to get final mission time
+                for flight in mission_sb.flights:
+                    file.seek(flight.first_block * 512)
+                    mission_time += get_last_mission_time(file, flight.num_blocks)
 
                 # Output mission to mission list
                 mission_entry = {"name": filename.stem, "length": mission_time,
-                                 "timestamp": first_flight.timestamp}
+                                 "timestamp": mission_sb.flights[0].timestamp}
                 self.mission_list.append(mission_entry)
 
     def __iter__(self):
