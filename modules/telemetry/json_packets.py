@@ -212,9 +212,9 @@ def get_last_mission_time(file, num_blocks) -> int:
             block_class, block_subtype, block_length = parse_sd_block_header(block_header)
             block_data = file.read(block_length - 4)
         except SDBlockException:
-            return 0
+            return last_mission_time
 
-        count = count + block_length
+        count += block_length
         if count > (num_blocks * 512):
             raise ParsingException(f"Read block of length {block_length} would read {count} bytes "
                                    f"from {num_blocks * 512} byte flight")
@@ -223,6 +223,6 @@ def get_last_mission_time(file, num_blocks) -> int:
         if count > ((num_blocks - 1) * 512) and block_class == SDBlockClassType.TELEMETRY_DATA:
             # First four bytes in block data is always mission time.
             block_time = struct.unpack("<I", block_data[:4])[0]
-            last_mission_time = block_time
+            last_mission_time = block_time if block_time > last_mission_time else last_mission_time
 
     return last_mission_time
