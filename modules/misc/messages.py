@@ -26,4 +26,4 @@ def print_cu_rocket(rocket_name: str, version: str) -> None:
        ((  :  ))            CU InSpace Avionics Telemetry Server
        ((  :  ))            {f"Rocket": <11}{rocket_name}
         ((   ))             {f"Version": <11}{version}
-          ( )               {f"Author": <11}{'Thomas Selwyn (Devil)'}              """)
+          ( )               {f"Author": <11}{'Thomas Selwyn (Devil)'}""")

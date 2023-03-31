@@ -241,7 +241,6 @@ class SerialRN2483Radio(Process):
         lower data rate.
         """
 
-        # TODO Remove magic constants
         if coding_rate not in VALID_CODING_RATES:
             logging.error("Invalid cycling rate.")
             return

@@ -50,6 +50,7 @@ class SerialManager(Process):
                 self.parse_ws_command(ws_cmd)
 
     def parse_ws_command(self, ws_cmd):
+        """ Parses the serial websocket commands """
         try:
             match ws_cmd[0]:
                 case "rn2483_radio":
@@ -62,6 +63,7 @@ class SerialManager(Process):
             logging.error("Serial: Error parsing ws command")
 
     def parse_rn2483_radio_ws(self, ws_cmd):
+        """ Parses the websocket commands relating to the rn2483_radio """
         radio_ws_cmd = ws_cmd[0]
 
         if radio_ws_cmd == "connect" and self.rn2483_radio is None:

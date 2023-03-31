@@ -15,3 +15,8 @@ def test_celsius_to_fahrenheit() -> None:
 def test_metres_to_feet() -> None:
     """Test that metres are properly converted to feet."""
     assert conv.metres_to_feet(5.0) == pytest.approx(16.4)
+
+
+def test_pascals_to_psi() -> None:
+    """Test that metres are properly converted to feet."""
+    assert conv.pascals_to_psi(87181) == pytest.approx(12.64)

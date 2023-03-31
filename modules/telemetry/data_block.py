@@ -37,6 +37,10 @@ class DataBlock(ABC):
     def to_payload(self):
         """ Marshal block to a bytes object """
 
+    @staticmethod
+    def type_desc():
+        """ Type description of block"""
+
     @classmethod
     def parse(cls, block_subtype, payload):
         """ Unmarshal a bytes object to appropriate block class """
@@ -97,7 +101,7 @@ class DebugMessageDataBlock(DataBlock):
         mission_time = struct.unpack("<I", payload[0:4])[0]
         return DebugMessageDataBlock(mission_time, payload[4:].decode('utf-8'))
 
-    def to_payload(self):
+    def to_bytes(self):
         b = self.debug_msg.encode('utf-8')
         b = b + (b'\x00' * (((len(b) + 3) & ~0x3) - len(b)))
         return struct.pack("<I", self.mission_time) + b
@@ -133,7 +137,7 @@ class StartupMessageDataBlock(DataBlock):
         mission_time = struct.unpack("<I", payload[0:4])[0]
         return StartupMessageDataBlock(mission_time, payload[4:].decode('utf-8'))
 
-    def to_payload(self):
+    def to_bytes(self):
         b = self.startup_msg.encode('utf-8')
         b = b + (b'\x00' * (((len(b) + 3) & ~0x3) - len(b)))
         return struct.pack("<I", self.mission_time) + b
@@ -303,7 +307,7 @@ class StatusDataBlock(DataBlock):
         return "Status"
 
     def __str__(self):
-        return (f"{self.type_desc()} -> mission_time: {self.mission_time}, kx134 state: "
+        return (f"{self.type_desc()} -> time: {self.mission_time}, kx134 state: "
                 f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
                 f"IMU state: {str(self.imu_state)}, SD driver state: {str(self.sd_state)}, "
                 f"deployment state: {str(self.deployment_state)}, blocks recorded: "
@@ -350,13 +354,17 @@ class AltitudeDataBlock(DataBlock):
         return struct.pack("<Iiii", self.mission_time, int(self.pressure),
                            int(self.temperature * 1000), int(self.altitude * 1000))
 
+    @staticmethod
+    def type_desc():
+        return "Altitude"
+
     def __str__(self):
-        return (f"Altitude -> time: {self.mission_time} ms, pressure: {self.pressure} Pa, "
+        return (f"{self.type_desc()} -> time: {self.mission_time} ms, pressure: {self.pressure} Pa, "
                 f"temperature: {self.temperature} C, altitude: {self.altitude} m")
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "pressure", {"pascals": self.pressure, "kilopascals": self.pressure / 1000}
+        yield "pressure", {"pascals": self.pressure, "psi": converter.pascals_to_psi(self.pressure)}
         yield "altitude", {"metres": self.altitude, "feet": converter.metres_to_feet(self.altitude)}
         yield "temperature", {"celsius": self.temperature,
                               "fahrenheit": converter.celsius_to_fahrenheit(self.temperature)}
@@ -377,7 +385,7 @@ class AccelerationDataBlock(DataBlock):
 
     @property
     def subtype(self):
-        return DataBlockSubtype.ALTITUDE
+        return DataBlockSubtype.ACCELERATION
 
     @classmethod
     def from_payload(cls, payload):
@@ -701,8 +709,6 @@ class GNSSMetadataBlock(DataBlock):
     @staticmethod
     def type_desc():
         return "GNSS Metadata"
-
-
 
     def __str__(self):
         s = (f"{self.type_desc()} -> time: {self.mission_time}, GPS sats in use: "
@@ -1117,7 +1123,6 @@ class MPU9250Sample:
         ag_bytes = struct.pack(">hhhhhhh", accel_x, accel_y, accel_z,
                                temperature, gyro_x, gyro_y, gyro_z)
         mag_bytes = struct.pack("<hhhB", mag_x, mag_y, mag_z, mag_flags)
-
         return ag_bytes + mag_bytes
 
     def __iter__(self):
@@ -1167,11 +1172,11 @@ class MPU9250IMUDataBlock(DataBlock):
 
     @property
     def subtype(self):
-        return DataBlockSubtype.KX134_1211_ACCEL
+        return DataBlockSubtype.MPU9250_IMU
 
     @staticmethod
     def type_desc():
-        return "MPU9250 IMU"
+        return "MPU9250"
 
     @classmethod
     def from_payload(cls, payload):
@@ -1214,7 +1219,7 @@ class MPU9250IMUDataBlock(DataBlock):
         samples = list()
         for i in range(num_samples):
             sample_start = 8 + (i * 21)
-            sample = MPU9250Sample.from_bytes(payload[sample_start:(sample_start + 21)],
+            sample = MPU9250Sample.from_bytes(payload[sample_start:sample_start + 21],
                                               accel_fsr.sensitivity, gyro_fsr.sensitivity)
             samples.append(sample)
 
@@ -1224,7 +1229,7 @@ class MPU9250IMUDataBlock(DataBlock):
 
     def to_payload(self):
         ag_sr_div = (1000 // self.ag_sample_rate) - 1
-        info = ((ag_sr_div & 0xff) | ((self.mag_sample_rate.value & 0x1) << 8) |
+        info = ((int(ag_sr_div) & 0xff) | ((self.mag_sample_rate.value & 0x1) << 8) |
                 ((self.accel_fsr.value & 0x3) << 9) | ((self.gyro_fsr.value & 0x3) << 11) |
                 ((self.accel_bw.value & 0x7) << 13) | ((self.gyro_bw.value & 0x7) << 16))
 
@@ -1235,8 +1240,9 @@ class MPU9250IMUDataBlock(DataBlock):
         payload = struct.pack("<II", self.mission_time, info)
 
         for sample in self.samples:
-            payload += sample.to_bytes(self.accel_fsr.sensitivity,
-                                       self.gyro_fsr.sensitivity)
+            this_sample = sample.to_bytes(self.accel_fsr.sensitivity,
+                                          self.gyro_fsr.sensitivity)
+            payload += this_sample
 
         return payload + (b'\x00' * padding)
 
@@ -1248,7 +1254,7 @@ class MPU9250IMUDataBlock(DataBlock):
 
     def __str__(self):
         return (
-            f"{self.type_desc()} -> time: {self.mission_time}, accel: ({self.sensor.accel_x},{self.sensor.accel_y},{self.sensor.accel_z}), temp: {self.sensor.temperature}, "
+            f"{self.type_desc()} -> time: {self.mission_time} ms, accel: ({self.sensor.accel_x},{self.sensor.accel_y},{self.sensor.accel_z}), temp: {self.sensor.temperature}, "
             f"gyro: ({self.sensor.gyro_x},{self.sensor.gyro_y},{self.sensor.gyro_z}), "
             f"samples: {len(self.samples)}, "
             f"sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "

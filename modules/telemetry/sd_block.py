@@ -1,16 +1,16 @@
 import struct
 from abc import ABC, abstractmethod
-from enum import IntEnum
 
 from modules.telemetry.data_block import DataBlock
-from modules.telemetry.block import SDBlockClassType
+from modules.telemetry.block import SDBlockClassType, DiagnosticDataBlockSubtype, LoggingMetadataBlockSubtype, \
+    BlockUnknownException, BlockException
 
 
-class SDBlockException(Exception):
+class SDBlockException(BlockException):
     pass
 
 
-class SDBlockUnknownException(SDBlockException):
+class SDBlockUnknownException(BlockUnknownException):
     pass
 
 
@@ -18,17 +18,17 @@ class SDBlock(ABC):
     @property
     @abstractmethod
     def block_class(self):
-        """ Class of block """
+        """ Class of block (Logging metadata, telemetry data, diagnostic data, ...)"""
 
     @property
     @abstractmethod
-    def block_type(self):
-        """ Class of block """
+    def block_subtype(self):
+        """ Subtype of block (Altitude, GNSS, GNSS Meta, IMU, ...)"""
 
     @property
     @abstractmethod
     def length(self):
-        """ Length of block """
+        """ Length of block in bytes """
 
     @staticmethod
     @abstractmethod
@@ -39,8 +39,9 @@ class SDBlock(ABC):
         """ Marshal block to a bytes object """
         payload = self._payload_bytes()
 
-        block_class_type = (self.block_class & 0x3f) | ((self.block_type & 0x3ff) << 6)
-        head = struct.pack("<HH", block_class_type, len(self._payload_bytes) + 4)
+        # block_class_type = (self.block_class() & 0x3f) | ((self.block_type() & 0x3ff) << 6)
+        block_class_type = (SDBlockClassType.TELEMETRY_DATA.value & 0x3f) | ((int(self.block_subtype()) & 0x3ff) << 6)
+        head = struct.pack("<HH", block_class_type, self.length)
 
         return head + payload
 
@@ -62,20 +63,18 @@ class SDBlock(ABC):
 
         block_head = struct.unpack("<HH", data[0:4])
         try:
+            # print("FROM_BYTES", data[0:4], bin(block_head[0]), format(block_head[0], '#018b'), block_head[0] & 0x3f,
+            # 0x3f, block_head[0] >> 6)
             block_class = SDBlockClassType(block_head[0] & 0x3f)
         except ValueError as error:
             raise SDBlockUnknownException(f"Invalid block class: {block_head[0] & 0x3f:04x}") from error
 
-        block_head = struct.unpack("<HH", data[0:4])
         block_type = block_head[0] >> 6
         block_length = block_head[1]
 
         if block_class == SDBlockClassType.LOGGING_METADATA:
             return LoggingMetadataBlock.from_payload(block_type, block_length, data[4:])
         if block_class == SDBlockClassType.TELEMETRY_DATA:
-            # print(f"{data[0:4].hex(), block_type, block_length} \n")
-            # print(data[0:4].hex(), block_type, block_length)
-            # print(data[4:])
             return TelemetryDataBlock._parse(block_type, block_length, data[4:])
         if block_class == SDBlockClassType.DIAGNOSTIC_DATA:
             return DiagnosticDataBlock.from_payload(block_type, block_length, data[4:])
@@ -97,19 +96,16 @@ class SDBlock(ABC):
 #   Logging Metadata
 #
 
-class LoggingMetadataBlockType(IntEnum):
-    SPACER = 0x0
-
 
 class LoggingMetadataBlock(SDBlock, ABC):
     @classmethod
-    def from_payload(cls, block_type, length, payload):
+    def from_payload(cls, block_subtype, length, payload):
         try:
-            logging_meta_type = LoggingMetadataBlockType(block_type)
+            logging_meta_type = LoggingMetadataBlockSubtype(block_subtype)
         except ValueError as error:
-            raise SDBlockUnknownException(f"Invalid logging metadata block type: {block_type:04x}") from error
+            raise SDBlockUnknownException(f"Invalid logging metadata block subtype: {block_subtype:04x}") from error
 
-        if logging_meta_type == LoggingMetadataBlockType.SPACER:
+        if logging_meta_type == LoggingMetadataBlockSubtype.SPACER:
             return LoggingMetadataSpacerBlock._parse(logging_meta_type, length, payload)
 
         raise SDBlockUnknownException(f"Unknown logging metadata block type: {logging_meta_type}")
@@ -123,9 +119,8 @@ class LoggingMetadataSpacerBlock(LoggingMetadataBlock):
     def block_class(self):
         return SDBlockClassType.LOGGING_METADATA
 
-    @property
-    def block_type(self):
-        return LoggingMetadataBlockType.SPACER
+    def block_subtype(self):
+        return LoggingMetadataBlockSubtype.SPACER
 
     @property
     def length(self):
@@ -158,12 +153,16 @@ class TelemetryDataBlock(SDBlock):
     def block_class(self):
         return SDBlockClassType.TELEMETRY_DATA
 
-    @property
-    def block_type(self):
-        return (self.data.block_type & 0xf) | ((self.data.subtype & 0x3f) << 4)
+    def block_subtype(self):
+        return self.data.subtype
 
     @property
     def length(self):
+        """ 
+        Length of the telemetry data in bytes 
+        
+        Four bytes for the block header, then the block contents itself.
+        """
         return 4 + self.data.length
 
     @staticmethod
@@ -171,15 +170,11 @@ class TelemetryDataBlock(SDBlock):
         return f"Telemetry Data"
 
     @classmethod
-    def _parse(cls, block_type, length, payload):
-        data = DataBlock.parse(block_type, payload)
-        # print(data.length,data.subtype,data)
-        # print(data)
-        # return TelemetryDataBlock(data), block_type, data.subtype, payload
-        return TelemetryDataBlock(data)
+    def _parse(cls, block_subtype, length, payload):
+        return TelemetryDataBlock(DataBlock.parse(block_subtype, payload))
 
     def _payload_bytes(self):
-        return self.data.to_bytes()
+        return self.data.to_payload()
 
     def __str__(self):
         return f"{self.type_desc()} -> {self.data}"
@@ -189,63 +184,22 @@ class TelemetryDataBlock(SDBlock):
 #   Diagnostic Data
 #
 
-class DiagnosticDataBlockType(IntEnum):
-    LOG_MESSAGE = 0x0
-    OUTGOING_RADIO_PACKET = 0x1
-    INCOMING_RADIO_PACKET = 0x2
-
-
 class DiagnosticDataBlock(SDBlock):
     @classmethod
     def from_payload(cls, block_type, length, payload):
         try:
-            diag_data_type = DiagnosticDataBlockType(block_type)
+            diag_data_type = DiagnosticDataBlockSubtype(block_type)
         except ValueError as error:
             raise SDBlockUnknownException(f"Invalid diagnostic data block type: {block_type:04x}") from error
 
-        if diag_data_type == DiagnosticDataBlockType.LOG_MESSAGE:
+        if diag_data_type == DiagnosticDataBlockSubtype.LOG_MESSAGE:
             return DiagnosticDataLogMessageBlock._parse(diag_data_type, length, payload)
-        if diag_data_type == DiagnosticDataBlockType.OUTGOING_RADIO_PACKET:
+        if diag_data_type == DiagnosticDataBlockSubtype.OUTGOING_RADIO_PACKET:
             return DiagnosticDataOutgoingRadioPacketBlock._parse(diag_data_type, length, payload)
-        if diag_data_type == DiagnosticDataBlockType.INCOMING_RADIO_PACKET:
+        if diag_data_type == DiagnosticDataBlockSubtype.INCOMING_RADIO_PACKET:
             return DiagnosticDataIncomingRadioPacketBlock._parse(diag_data_type, length, payload)
 
         raise SDBlockUnknownException(f"Unknown diagnostic data block type: {diag_data_type}")
-
-
-class DiagnosticDataLogMessageBlock(DiagnosticDataBlock):
-    def __init__(self, mission_time, msg):
-        self.mission_time = mission_time
-        self.msg = msg
-
-    @property
-    def block_class(self):
-        return SDBlockClassType.DIAGNOSTIC_DATA
-
-    @property
-    def block_type(self):
-        return DiagnosticDataBlockType.LOG_MESSAGE
-
-    @property
-    def length(self):
-        return 8 + ((len(self.msg.encode('utf-8')) + 3) & ~0x3)
-
-    @staticmethod
-    def type_desc():
-        return "Diagnostic Data -> Message"
-
-    @classmethod
-    def _parse(cls, block_type, length, payload):
-        mission_time = struct.unpack("<I", payload[0:4])[0]
-        return DiagnosticDataLogMessageBlock(mission_time, payload[4:].decode('utf-8'))
-
-    def _payload_bytes(self):
-        b = self.msg.encode('utf-8')
-        b = b + (b'\x00' * (((len(b) + 3) & ~0x3) - len(b)))
-        return struct.pack("<I", self.mission_time) + b
-
-    def __str__(self):
-        return f"{self.type_desc()} -> mission_time: {self.mission_time}, message: \"{self.msg}\""
 
 
 class DiagnosticDataRadioPacketBlock(DiagnosticDataBlock):
@@ -267,13 +221,48 @@ class DiagnosticDataRadioPacketBlock(DiagnosticDataBlock):
         return p
 
 
+class DiagnosticDataLogMessageBlock(DiagnosticDataBlock):
+    def __init__(self, mission_time, msg):
+        self.mission_time = mission_time
+        self.msg = msg
+
+    @property
+    def block_class(self):
+        return SDBlockClassType.DIAGNOSTIC_DATA
+
+    @property
+    def block_type(self):
+        return DiagnosticDataBlockSubtype.LOG_MESSAGE
+
+    @property
+    def length(self):
+        return 8 + ((len(self.msg.encode('utf-8')) + 3) & ~0x3)
+
+    @staticmethod
+    def type_desc():
+        return "Diagnostic Data -> Message"
+
+    @classmethod
+    def _parse(cls, block_type, length, payload):
+        mission_time = struct.unpack("<I", payload[0:4])[0]
+        return DiagnosticDataLogMessageBlock(mission_time, payload[4:].decode('utf-8'))
+
+    def _payload_bytes(self):
+        b = self.msg.encode('utf-8')
+        b = b + (b'\x00' * (((len(b) + 3) & ~0x3) - len(b)))
+        return struct.pack("<I", self.mission_time) + b
+
+    def __str__(self):
+        return f"{self.type_desc()} -> time: {self.mission_time}, message: \"{self.msg}\""
+
+
 class DiagnosticDataOutgoingRadioPacketBlock(DiagnosticDataRadioPacketBlock):
     def __init__(self, mission_time, packet):
         super().__init__(mission_time, packet)
 
     @property
-    def block_type(self):
-        return DiagnosticDataBlockType.OUTGOING_RADIO_PACKET
+    def subtype(self):
+        return DiagnosticDataBlockSubtype.OUTGOING_RADIO_PACKET
 
     @staticmethod
     def type_desc():
@@ -292,8 +281,8 @@ class DiagnosticDataIncomingRadioPacketBlock(DiagnosticDataRadioPacketBlock):
         super().__init__(mission_time, packet)
 
     @property
-    def block_type(self):
-        return DiagnosticDataBlockType.INCOMING_RADIO_PACKET
+    def subtype(self):
+        return DiagnosticDataBlockSubtype.INCOMING_RADIO_PACKET
 
     @staticmethod
     def type_desc():

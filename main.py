@@ -25,7 +25,7 @@ rn2483_radio_input = Queue()
 rn2483_radio_payloads = Queue()
 telemetry_json_output = Queue()
 
-VERSION: str = "0.4.7-DEV"
+VERSION: str = "0.5.0-DEV"
 STR_TO_LOGGING_MODE: dict[str, int] = {
     "debug": logging.DEBUG,
     "info": logging.INFO,
@@ -45,7 +45,6 @@ def main():
 
     # Get the arguments
     args = vars(parser.parse_args())
-
 
     # Set up logging
     logging.basicConfig(
@@ -99,7 +98,9 @@ def main():
     logging.info(f"{'WebSocket':.<16} started.")
 
     while True:
-        # WS Commands have been sent to main process for handling
+        # Messages sent to main process for handling
+
+        # WS Commands
         while not ws_commands.empty():
             try:
                 parse_ws_command(ws_commands.get())

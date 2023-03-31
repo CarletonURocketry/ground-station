@@ -35,9 +35,10 @@ class SerialRN2483Emulator(Process):
         #self.radio_signal_report.put("rssi -55")
         while True:
             self.tester()
-            time.sleep(random.uniform(0, 2000) / 1000)
+            time.sleep(random.uniform(0, 2000) / 100000)
 
     def tester(self):
+        """ Generates test data to give to the telemetry process """
         random_alternation = int(random.uniform(0, 1000))
         if self.going_up:
             self.temp += random_alternation / 500

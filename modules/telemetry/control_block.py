@@ -61,6 +61,8 @@ class ControlBlock(ABC):
 class SignalReportControlBlock(ControlBlock):
     def __init__(self):
         self.mission_time = None
+        self.snr = 0
+        self.tx_power = 0
 
     @staticmethod
     def type_desc():
@@ -78,3 +80,11 @@ class SignalReportControlBlock(ControlBlock):
     @classmethod
     def from_payload(cls, payload):
         return ""
+
+    def __str__(self):
+        return f"{self.type_desc()} -> time: {self.mission_time}, snr: {self.snr}, power: {self.tx_power}"
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "snr", self.snr
+        yield "power", self.tx_power
