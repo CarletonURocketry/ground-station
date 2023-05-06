@@ -34,6 +34,9 @@ VERSION: str = "0.5.0-DEV"
 MISSION_EXTENSION: str = "mission"
 FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
+# Set up logging
+logger = logging.getLogger(__name__)
+
 
 # Helper functions
 def mission_path(mission_name: str, missions_dir: Path, file_suffix: int = 0) -> Path:
@@ -135,11 +138,11 @@ class Telemetry(Process):
                 try:
                     self.execute_command(command, parameters)
                 except AttributeError as e:
-                    logging.error(e)
+                    logger.error(e)
 
             while not self.radio_signal_report.empty():
                 # TODO set radio SNR
-                logging.info("SIGNAL DATA", self.radio_signal_report.get())
+                logger.info("SIGNAL DATA", self.radio_signal_report.get())
 
             while not self.serial_status.empty():
                 x = self.serial_status.get().split(" ", maxsplit=1)
@@ -205,9 +208,9 @@ class Telemetry(Process):
                 try:
                     self.play_mission(mission_name)
                 except MissionNotFoundError as e:
-                    logging.error(e.message)
+                    logger.error(e.message)
                 except ReplayPlaybackError as e:
-                    logging.error(e.message)
+                    logger.error(e.message)
 
             case WSCommand.REPLAY.value.STOP:
                 self.stop_replay()
@@ -225,9 +228,9 @@ class Telemetry(Process):
                 try:
                     self.start_recording(mission_name)
                 except AlreadyRecordingError as e:
-                    logging.error(e.message)
+                    logger.error(e.message)
                 except ReplayPlaybackError as e:
-                    logging.error(e.message)
+                    logger.error(e.message)
 
         self.update_websocket()
 
@@ -257,7 +260,7 @@ class Telemetry(Process):
     def stop_replay(self) -> None:
         """Stops the replay."""
 
-        logging.info("REPLAY STOP")
+        logger.info("REPLAY STOP")
 
         if self.replay is not None:
             self.replay.terminate()
@@ -296,7 +299,7 @@ class Telemetry(Process):
 
         self.set_replay_speed(
             speed=self.status.replay.last_played_speed if self.status.replay.last_played_speed > 0 else 1)
-        logging.info(f"REPLAY {mission_name} PLAYING")
+        logger.info(f"REPLAY {mission_name} PLAYING")
 
     def start_recording(self, mission_name: str = None) -> None:
         """Starts recording the current mission. If no mission name is given, the recording epoch is used."""
@@ -307,7 +310,7 @@ class Telemetry(Process):
         if self.status.replay.state != jsp.ReplayState.DNE:
             raise ReplayPlaybackError
 
-        logging.info("RECORDING START")
+        logger.info("RECORDING START")
 
         # Mission Name
         recording_epoch = int(time())
@@ -329,7 +332,7 @@ class Telemetry(Process):
     def stop_recording(self) -> None:
         """ Stops the current recording. """
 
-        logging.info("RECORDING STOP")
+        logger.info("RECORDING STOP")
 
         # Flush buffer and close off file
         self.recording_write_bytes(len(self.mission_recording_buffer), spacer=True)
@@ -383,18 +386,18 @@ class Telemetry(Process):
         match RadioBlockType(block_type):
             case RadioBlockType.CONTROL:
                 # CONTROL BLOCK DETECTED
-                logging.info("Control block received")
+                logger.info("Control block received")
                 # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
                 self.rn2483_radio_input.put("radio get snr")
                 # self.rn2483_radio_input.put("radio get rssi")
 
             case RadioBlockType.COMMAND:
                 # COMMAND BLOCK DETECTED
-                logging.info("Command block received")
+                logger.info("Command block received")
             case RadioBlockType.DATA:
                 # DATA BLOCK DETECTED
                 block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
-                logging.info(block_data)
+                logger.info(block_data)
                 # Increase the last mission time
                 if block_data.mission_time > self.status.mission.last_mission_time:
                     self.status.mission.last_mission_time = block_data.mission_time
@@ -411,7 +414,7 @@ class Telemetry(Process):
                 else:
                     self.telemetry[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
             case _:
-                logging.warning("Unknown block type")
+                logger.warning("Unknown block type")
 
     def parse_rn2483_transmission(self, data: str):
         """ Parses RN2483 Packets and extracts our telemetry payload blocks"""
@@ -419,11 +422,11 @@ class Telemetry(Process):
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
 
         if length <= 24:  # If this packet nothing more than just the header
-            logging.info(call_sign, length, version, srs_addr, packet_num)
+            logger.info(call_sign, length, version, srs_addr, packet_num)
 
         blocks = data[24:]  # Remove the packet header
 
-        logging.info(f"{call_sign} - sent you a packet")
+        logger.info(f"{call_sign} - sent you a packet")
 
         # Parse through all blocks
         while blocks != '':

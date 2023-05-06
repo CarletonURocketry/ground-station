@@ -3,6 +3,7 @@
 #
 # Authors:
 # Thomas Selwyn (Devil)
+# Matteo Golin (linguini)
 import logging
 import struct
 from time import time, sleep
@@ -13,6 +14,10 @@ from typing import BinaryIO
 
 from modules.telemetry.block import RadioBlockType, SDBlockClassType
 from modules.telemetry.superblock import SuperBlock
+
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 def parse_sd_block_header(header_bytes: bytes):
@@ -109,7 +114,7 @@ class TelemetryReplay:
             self.last_loop_time = current_loop_time
             self.output_replay_data(block_class, block_subtype, block_data)
         else:
-            logging.info("Flight replay finished")
+            logger.info("Flight replay finished")
             self.speed = 0
 
     def output_replay_data(self, block_type: int, block_subtype: int, block_data: bytes):

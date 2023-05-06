@@ -18,7 +18,11 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 
+# Constants
 ws_commands_queue = Queue
+
+# Logger
+logger = logging.getLogger(__name__)
 
 
 class WebSocketHandler(Process):
@@ -78,11 +82,11 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
     def open(self) -> None:
         TornadoWSServer.clients.add(self)
         self.send_message(self.last_msg_send)
-        logging.info(f"WebSocket: Client connected")
+        logger.info(f"WebSocket: Client connected")
 
     def on_close(self) -> None:
         TornadoWSServer.clients.remove(self)
-        logging.info(f"WebSocket: Client disconnected")
+        logger.info(f"WebSocket: Client disconnected")
 
     def on_message(self, message: str) -> None:
         ws_commands_queue.put(message)
