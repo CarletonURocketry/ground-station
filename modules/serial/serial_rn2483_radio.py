@@ -133,7 +133,7 @@ class SerialRN2483Radio(Process):
         self.set_preamble_len(6)
         self.set_cyclic_redundancy_check(True)
         self.set_iqi(False)
-        self.set_sync_word(0x43)
+        self.set_sync_word("0x43")
 
     def write_to_rn2483_radio(self, command_string: str) -> Optional[bool]:
         """
@@ -229,7 +229,7 @@ class SerialRN2483Radio(Process):
             logging.error("Invalid spreading factor.")
             return
 
-        if self.write_to_rn2483_radio(f"radio set sf {spread_factor}"):
+        if self.write_to_rn2483_radio(f"radio set sf sf{spread_factor}"):
             logging.debug("Value spreading factor successfully set.")
             return
         logging.error("Unable to set spreading factor.")
@@ -257,7 +257,7 @@ class SerialRN2483Radio(Process):
             logging.error("Invalid receiving bandwidth.")
             return
 
-        if self.write_to_rn2483_radio(f"Radio set bandwidth {bandwidth}"):
+        if self.write_to_rn2483_radio(f"radio set bandwidth {bandwidth}"):
             logging.debug("Bandwidth successfully set.")
             return
         logging.error("Bandwidth: radio unable to set.")
@@ -279,7 +279,7 @@ class SerialRN2483Radio(Process):
             logging.error("Invalid sync word.")
             return
 
-        if self.write_to_rn2483_radio(f"Radio set sync {sync_word}"):
+        if self.write_to_rn2483_radio(f"radio set sync {sync_word}"):
             logging.debug("Value sync word successfully set.")
             return
         logging.error("Sync parameter: radio unable to set.")
