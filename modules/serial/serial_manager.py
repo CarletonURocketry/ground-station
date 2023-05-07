@@ -14,6 +14,10 @@ from modules.serial.serial_rn2483_emulator import SerialRN2483Emulator
 from signal import signal, SIGTERM
 
 
+# Set up logging
+logger = logging.getLogger(__name__)
+
+
 def shutdown_sequence():
     for child in active_children():
         child.terminate()
@@ -50,6 +54,7 @@ class SerialManager(Process):
                 self.parse_ws_command(ws_cmd)
 
     def parse_ws_command(self, ws_cmd):
+        """ Parses the serial websocket commands """
         try:
             match ws_cmd[0]:
                 case "rn2483_radio":
@@ -57,11 +62,12 @@ class SerialManager(Process):
                 case "update":
                     self.update_serial_ports()
                 case _:
-                    logging.error("Serial: Invalid device type.")
+                    logger.error("Serial: Invalid device type.")
         except IndexError:
-            logging.error("Serial: Error parsing ws command")
+            logger.error("Serial: Error parsing ws command")
 
     def parse_rn2483_radio_ws(self, ws_cmd):
+        """ Parses the websocket commands relating to the rn2483_radio """
         radio_ws_cmd = ws_cmd[0]
 
         if radio_ws_cmd == "connect" and self.rn2483_radio is None:
@@ -88,15 +94,15 @@ class SerialManager(Process):
                     daemon=True)
             self.rn2483_radio.start()
         elif radio_ws_cmd == "connect":
-            logging.info(f"Serial: Already connected.")
+            logger.info(f"Serial: Already connected.")
         elif radio_ws_cmd == "disconnect" and self.rn2483_radio is not None:
-            logging.info(f"Serial: RN2483 Radio terminating")
+            logger.info(f"Serial: RN2483 Radio terminating")
             self.serial_status.put(f"rn2483_connected False")
             self.serial_status.put(f"rn2483_port null")
             self.rn2483_radio.terminate()
             self.rn2483_radio = None
         elif radio_ws_cmd == "disconnect":
-            logging.warning("Serial: RN2483 Radio already disconnected.")
+            logger.warning("Serial: RN2483 Radio already disconnected.")
 
     def update_serial_ports(self) -> list[str]:
         """ Finds and updates serial ports on device

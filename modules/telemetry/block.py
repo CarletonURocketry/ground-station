@@ -11,6 +11,7 @@ class BlockUnknownException(BlockException):
 
 
 class DeviceAddress(IntEnum):
+    """ Lists the different device addresses packets can be sent from. """
     GROUND_STATION = 0x0
     ROCKET = 0x1
     MULTICAST = 0xF
@@ -27,9 +28,8 @@ class DeviceAddress(IntEnum):
                 return "UNKNOWN"
 
 
-class BlockTypes(IntEnum):
-
-    """Lists the different block types."""
+class RadioBlockType(IntEnum):
+    """ Lists the different radio block classes. """
 
     CONTROL = 0x0
     COMMAND = 0x1
@@ -37,9 +37,19 @@ class BlockTypes(IntEnum):
     RESERVED = 0xF
 
 
-class ControlBlockSubtype(IntEnum):
+class SDBlockClassType(IntEnum):
+    """ Lists the different SD Block classes. """
 
-    """Lists the subtype of control blocks."""
+    LOGGING_METADATA = 0x0
+    TELEMETRY_DATA = 0x1
+    DIAGNOSTIC_DATA = 0x2
+    TELEMETRY_CONTROL = 0x3
+    TELEMETRY_COMMAND = 0x4
+    RESERVED = 0x3F
+
+
+class ControlBlockSubtype(IntEnum):
+    """ Lists the subtypes of telemetry control blocks. """
 
     SIGNAL_REPORT = 0x00
     COMMAND_ACKNOWLEDGEMENT = 0x01
@@ -51,8 +61,7 @@ class ControlBlockSubtype(IntEnum):
 
 
 class CommandBlockSubtype(IntEnum):
-
-    """Lists the subtypes of command blocks."""
+    """ Lists the subtypes of telemetry command blocks. """
 
     RESET_ROCKET_AVIONICS = 0x00
     REQUEST_TELEMETRY_DATA = 0x01
@@ -62,8 +71,7 @@ class CommandBlockSubtype(IntEnum):
 
 
 class DataBlockSubtype(IntEnum):
-
-    """Lists the subtypes of data blocks."""
+    """ Lists the subtypes of telemetry data blocks. """
 
     DEBUG_MESSAGE = 0x00
     STATUS = 0x01
@@ -78,3 +86,15 @@ class DataBlockSubtype(IntEnum):
     MPU9250_IMU = 0x0A
     KX134_1211_ACCEL = 0x0B
     RESERVED = 0x3F
+
+
+class LoggingMetadataBlockSubtype(IntEnum):
+    """ Lists the subtypes of logging meta blocks. """
+    SPACER = 0x0
+
+
+class DiagnosticDataBlockSubtype(IntEnum):
+    """ Lists the subtypes of diagnostic blocks. """
+    LOG_MESSAGE = 0x0
+    OUTGOING_RADIO_PACKET = 0x1
+    INCOMING_RADIO_PACKET = 0x2

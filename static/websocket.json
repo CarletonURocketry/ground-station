@@ -1,12 +1,13 @@
 {
-    "version": "0.4.6-DEV",
+    "version": "0.5.0-DEV",
     "org": "CUInSpace",
     "status": {
         "mission": {
             "name": "",
             "epoch": -1,
             "state": 0,
-            "recording": false
+            "recording": false,
+            "last_mission_time": 8120
         },
         "serial": {
             "available_ports": ["COM1", "test"]
@@ -17,22 +18,30 @@
             "snr": 0
         },
         "rocket": {
-            "kx134_state": -1,
-            "altimeter_state": -1,
-            "imu_state": -1,
-            "sd_driver_state": -1,
-            "deployment_state": -1,
-            "blocks_recorded": -1,
-            "checkouts_missed": -1,
-            "mission_time": 5000,
-            "last_mission_time": 8120
+            "mission_time": 246246,
+            "kx134_state": 3,
+            "altimeter_state": 2,
+            "imu_state": 2,
+            "sd_driver_state": 2,
+            "deployment_state": 0,
+            "blocks_recorded": 1216,
+            "checkouts_missed": 3
+        },
+        "replay": {
+            "state": -1,
+            "speed": 1.0,
+            "mission_list": [
+                {"name": "Devil The Rocket", "length": 3598549, "epoch": 1668434478},
+                {"name": "Paige Cessna Flight", "length": 3651361, "epoch": 1670182646}
+            ]
         }
     },
     "telemetry": {
         "altitude": {
             "mission_time": 8120,
             "pressure": {
-                "pascals": 87181
+                "pascals": 87181,
+                "psi": 12.64
             },
             "altitude": {
                 "metres": 400,
@@ -76,7 +85,8 @@
             "hdop": 0.83,
             "vdop": 0.8,
             "sats_in_use": 13,
-            "type": "FIX_3D"},
+            "fix_type": 3
+        },
         "gnss_meta": {
             "mission_time": 81976,
             "gps_sats_in_use": [2, 5, 10, 13, 15, 18, 23, 24, 27],
@@ -100,11 +110,5 @@
                 {"sat_type": "GLONASS", "elevation": 14, "snr": 20, "id": 71, "azimuth": 192}
             ]
         }
-    },
-    "replay": {
-        "status": "",
-        "speed": 1.0,
-        "length": 3598549,
-        "mission_list": ["Devil The Rocket"]
     }
 }
