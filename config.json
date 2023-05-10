@@ -1,0 +1,18 @@
+{
+  "radio_params": {
+    "modulation": "lora",
+    "frequency": 433050000,
+    "power": 15,
+    "spread_factor": 9,
+    "coding_rate": "4/7",
+    "bandwidth": 500,
+    "preamble_len": 6,
+    "cyclic_redundancy": true,
+    "iqi": false,
+    "sync_word": "0x43"
+  },
+  "approved_callsigns": {
+    "VA3INI": "Matteo Golin",
+    "VA3ZTA": "Darwin Jull"
+  }
+}
