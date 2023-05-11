@@ -162,3 +162,9 @@ def test_radio_params_outside_range_edges():
     with pytest.raises(ValueError):
         RadioParameters(power=17)
 
+    with pytest.raises(ValueError):
+        RadioParameters(sync_word="0x101")
+
+    with pytest.raises(ValueError):
+        RadioParameters(preamble_len=-1) 
+
