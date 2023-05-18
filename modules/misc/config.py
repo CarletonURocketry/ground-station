@@ -21,11 +21,15 @@ JSON = dict[str, Any]
 
 
 class ModulationModes(StrEnum):
+    """Modulation types for the RN2483 radio."""
+
     LORA = "lora"
     FSK = "fsk"
 
 
 class CodingRates(StrEnum):
+    """Coding rates for the RN2483 radio."""
+
     FOUR_FIFTHS = "4/5"
     FOUR_SIXTHS = "4/6"
     FOUR_SEVENTHS = "4/7"
@@ -115,6 +119,9 @@ class RadioParameters:
 
 @dataclass
 class Config:
+
+    """Contains settings for the ground station process."""
+
     radio_parameters: RadioParameters = field(default_factory=RadioParameters)
     approved_callsigns: dict[str, str] = field(default_factory=dict)
 
