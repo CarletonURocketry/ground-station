@@ -4,7 +4,7 @@
 # Authors:
 # Arsalan Syed
 # Thomas Selwyn (Devil)
-# Matteo Golin (liguini1)
+# Matteo Golin (linguini1)
 # Zacchaeus Liang
 
 # Imports

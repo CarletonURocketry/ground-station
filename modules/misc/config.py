@@ -5,7 +5,7 @@ __author__ = "Matteo Golin"
 import json
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Literal, Self
+from typing import Any, Self
 
 # Constants (note that trailing +1 is for inclusivity in range() object)
 POWER_RANGE: tuple[int, int] = (-3, 16 + 1)
@@ -46,33 +46,23 @@ class RadioParameters:
     sync_word: str = "0x43"
 
     def __post_init__(self):
-        if self.frequency not in range(*LF_RANGE) and self.frequency not in range(
-            *HF_RANGE
-        ):
+        if self.frequency not in range(*LF_RANGE) and self.frequency not in range(*HF_RANGE):
             raise ValueError(
                 f"Frequency '{self.frequency}' not in low frequency range {LF_RANGE} "
                 f"or high frequency range {HF_RANGE}"
             )
 
         if self.power not in range(*POWER_RANGE):
-            raise ValueError(
-                f"Power '{self.power}' not within allowed range {POWER_RANGE}"
-            )
+            raise ValueError(f"Power '{self.power}' not within allowed range {POWER_RANGE}")
 
         if self.spread_factor not in VALID_SPREADING_FACTORS:
-            raise ValueError(
-                f"Spread factor '{self.spread_factor}' invalid; must be one of {VALID_SPREADING_FACTORS}"
-            )
+            raise ValueError(f"Spread factor '{self.spread_factor}' invalid; must be one of {VALID_SPREADING_FACTORS}")
 
         if self.preamble_len not in range(*PREAMBLE_RANGE):
-            raise ValueError(
-                f"Preamble length '{self.preamble_len}' not within allowed range of {PREAMBLE_RANGE}"
-            )
+            raise ValueError(f"Preamble length '{self.preamble_len}' not within allowed range of {PREAMBLE_RANGE}")
 
         if int(self.sync_word, 16) not in range(*SYNC_RANGE):
-            raise ValueError(
-                f"Sync word '{self.sync_word}' not within allowed range of {SYNC_RANGE}"
-            )
+            raise ValueError(f"Sync word '{self.sync_word}' not within allowed range of {SYNC_RANGE}")
 
     @classmethod
     def from_json(cls, data: JSON) -> Self:
@@ -81,11 +71,11 @@ class RadioParameters:
         # Radio parameters are either initialized with an explicitly defined value from the config file, or
         # are assigned a default value.
         return cls(
-            modulation=ModulationModes[data.get("modulation", "lora")],
+            modulation=ModulationModes(data.get("modulation", "lora")),
             frequency=data.get("frequency", 433_050_000),
             power=data.get("power", 15),
             spread_factor=data.get("spread_factor", 9),
-            coding_rate=CodingRates[data.get("coding_rate", "4/7")],
+            coding_rate=CodingRates(data.get("coding_rate", "4/7")),
             bandwidth=data.get("bandwidth", 500),
             preamble_len=data.get("preamble_len", 6),
             cyclic_redundancy=data.get("cyclic_redundancy", True),
@@ -96,7 +86,7 @@ class RadioParameters:
 
 @dataclass
 class Config:
-    radio_parameters: RadioParameters
+    radio_parameters: RadioParameters = field(default_factory=RadioParameters)
     approved_callsigns: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -108,8 +98,15 @@ class Config:
         """Creates a new Config object from the JSON data contained in the user config file."""
 
         return cls(
-            radio_parameters=RadioParameters.from_json(
-                data.get("radio_params", dict())
-            ),
+            radio_parameters=RadioParameters.from_json(data.get("radio_params", dict())),
             approved_callsigns=data.get("approved_callsigns", dict()),
         )
+
+
+def load_config(filepath: str) -> Config:
+    """Returns a Config object created from a configuration JSON file."""
+
+    with open(filepath, "r") as file:
+        data = json.load(file)
+
+    return Config.from_json(data)
