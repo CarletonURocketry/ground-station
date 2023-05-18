@@ -9,6 +9,7 @@ import sys
 import logging
 from multiprocessing import Process, Queue, active_children
 from serial import Serial, SerialException
+from modules.misc.config import Config
 from modules.serial.serial_rn2483_radio import SerialRN2483Radio
 from modules.serial.serial_rn2483_emulator import SerialRN2483Emulator
 from signal import signal, SIGTERM
@@ -26,7 +27,7 @@ def shutdown_sequence():
 
 class SerialManager(Process):
     def __init__(self, serial_status: Queue, serial_ws_commands: Queue, radio_signal_report: Queue,
-                 rn2483_radio_input: Queue, rn2483_radio_payloads: Queue):
+                 rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, config: Config):
         super().__init__()
 
         self.serial_status = serial_status
@@ -38,6 +39,8 @@ class SerialManager(Process):
         self.rn2483_radio_input = rn2483_radio_input
         self.rn2483_radio_payloads = rn2483_radio_payloads
         self.rn2483_radio = None
+
+        self.config = config
 
         # Immediately find serial ports
         self.update_serial_ports()
@@ -80,7 +83,8 @@ class SerialManager(Process):
                         self.radio_signal_report,
                         self.rn2483_radio_input,
                         self.rn2483_radio_payloads,
-                        proposed_serial_port
+                        proposed_serial_port,
+                        self.config.radio_parameters,
                     ),
                     daemon=True)
             else:

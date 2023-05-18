@@ -34,6 +34,22 @@ class CodingRates(StrEnum):
 
 @dataclass
 class RadioParameters:
+
+    """
+    Represents a collection of parameters for the RN2483 radio settings.
+
+    modulation: The modulation type.
+    frequency: The frequency in Hz.
+    power: The 15th state has an output power of 14.1dBm for 868MHz and 13.6dBm for 433MHz.
+    spread_factor: Higher spreading factor means slower transmissions, but system will have better reception and less error.
+    coding_rate: The ratio of actual data to error-correcting data.
+    bandwidth: The bandwidth allocated to the transmission.
+    preamble_len: The length of the transmission used to synchronize the receiver.
+    cyclic_redundancy: Enable or disable cyclic redudancy check used to detect errors in the received signal.
+    iqi: Invert IQ function enabled/disabled.
+    sync_word: The radio sync word.
+    """
+
     modulation: ModulationModes = ModulationModes.LORA
     frequency: int = 433_050_000
     power: int = 15
@@ -63,6 +79,7 @@ class RadioParameters:
 
         if int(self.sync_word, 16) not in range(*SYNC_RANGE):
             raise ValueError(f"Sync word '{self.sync_word}' not within allowed range of {SYNC_RANGE}")
+        self.sync_word = self.sync_word[2:]  # Remove 0x
 
     @classmethod
     def from_json(cls, data: JSON) -> Self:
@@ -82,6 +99,18 @@ class RadioParameters:
             iqi=data.get("iqi", False),
             sync_word=data.get("sync_word", "0x43"),
         )
+
+    def __iter__(self):
+        yield "modulation", self.modulation.value
+        yield "frequency", self.frequency
+        yield "power", self.power
+        yield "spread_factor", self.spread_factor
+        yield "coding_rate", self.coding_rate.value
+        yield "bandwidth", self.bandwidth
+        yield "preamble_len", self.preamble_len
+        yield "cyclic_redundancy", self.cyclic_redundancy
+        yield "iqi", self.iqi
+        yield "sync_word", self.sync_word
 
 
 @dataclass

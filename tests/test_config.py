@@ -48,7 +48,7 @@ def test_radio_params_default(def_radio_params):
     assert params.preamble_len == def_radio_params.get("preamble_len")
     assert params.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert params.iqi == def_radio_params.get("iqi")
-    assert params.sync_word == def_radio_params.get("sync_word")
+    assert params.sync_word == def_radio_params.get("sync_word")[2:]
 
 
 def test_radio_params_partial_default():
@@ -57,7 +57,7 @@ def test_radio_params_partial_default():
     defaults, and specified values to the passed values.
     """
     params = RadioParameters(sync_word="0x13", power=12, coding_rate=CodingRates.FOUR_FIFTHS)
-    assert params.sync_word == "0x13"
+    assert params.sync_word == "13"
     assert params.power == 12
     assert params.coding_rate == CodingRates.FOUR_FIFTHS
 
@@ -76,7 +76,7 @@ def test_radio_params_default_json(def_radio_params):
     assert params.preamble_len == def_radio_params.get("preamble_len")
     assert params.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert params.iqi == def_radio_params.get("iqi")
-    assert params.sync_word == def_radio_params.get("sync_word")
+    assert params.sync_word == def_radio_params.get("sync_word")[2:]
 
 
 def test_radio_params_partial_defaults_json():
@@ -91,7 +91,7 @@ def test_radio_params_partial_defaults_json():
             "coding_rate": CodingRates.FOUR_FIFTHS,
         }
     )
-    assert params.sync_word == "0x13"
+    assert params.sync_word == "13"
     assert params.power == 12
     assert params.coding_rate == CodingRates.FOUR_FIFTHS
 
@@ -176,7 +176,7 @@ def test_radio_params_outside_range_edges():
 
     with pytest.raises(ValueError):
         RadioParameters(sync_word="0x101")
-    assert RadioParameters(sync_word="0x100").sync_word == "0x100"
+    assert RadioParameters(sync_word="0x100").sync_word == "100"
 
     with pytest.raises(ValueError):
         RadioParameters(preamble_len=-1)
@@ -216,7 +216,7 @@ def test_config_defaults(def_radio_params, callsigns):
     assert config.radio_parameters.preamble_len == def_radio_params.get("preamble_len")
     assert config.radio_parameters.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert config.radio_parameters.iqi == def_radio_params.get("iqi")
-    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")
+    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")[2:]
     assert config.approved_callsigns == callsigns
 
 
@@ -233,7 +233,7 @@ def test_config_defaults_json(def_radio_params, callsigns):
     assert config.radio_parameters.preamble_len == def_radio_params.get("preamble_len")
     assert config.radio_parameters.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert config.radio_parameters.iqi == def_radio_params.get("iqi")
-    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")
+    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")[2:]
     assert config.approved_callsigns == callsigns
 
 
@@ -265,7 +265,7 @@ def test_config_from_json(config):
     assert cfg.radio_parameters.preamble_len == rparams.get("preamble_len")
     assert cfg.radio_parameters.cyclic_redundancy == rparams.get("cyclic_redundancy")
     assert cfg.radio_parameters.iqi == rparams.get("iqi")
-    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")
+    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]
     assert cfg.approved_callsigns == config["approved_callsigns"]
 
 def test_load_config(config):
@@ -285,7 +285,7 @@ def test_load_config(config):
     assert cfg.radio_parameters.preamble_len == rparams.get("preamble_len")
     assert cfg.radio_parameters.cyclic_redundancy == rparams.get("cyclic_redundancy")
     assert cfg.radio_parameters.iqi == rparams.get("iqi")
-    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")
+    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]
     assert cfg.approved_callsigns == config["approved_callsigns"]
     
     # Teardown

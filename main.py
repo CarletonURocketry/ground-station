@@ -8,6 +8,7 @@
 from multiprocessing import Process, Queue
 from re import sub
 import logging
+from modules.misc.config import load_config
 
 from modules.misc.messages import print_cu_rocket
 from modules.serial.serial_manager import SerialManager
@@ -55,6 +56,9 @@ def main():
 
     # Print display screen
     print_cu_rocket("No Name (Gas Propelled Launching Device)", VERSION)
+    
+    # Load config file
+    config = load_config("config.json")
 
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
@@ -65,7 +69,8 @@ def main():
             serial_status, serial_ws_commands,
             radio_signal_report,
             rn2483_radio_input,
-            rn2483_radio_payloads
+            rn2483_radio_payloads,
+            config,
         )
     )
     serial.start()

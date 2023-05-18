@@ -14,8 +14,10 @@ from multiprocessing import Queue, Process
 from typing import Optional
 from serial import Serial, SerialException, EIGHTBITS, PARITY_NONE
 
+from modules.misc.config import RadioParameters
+
 # Constants
-MODULATION_MODES: list[str] = ['lora', 'fsk']
+MODULATION_MODES: list[str] = ["lora", "fsk"]
 POWER_MIN: int = -3
 POWER_MAX: int = 16
 VALID_SPREADING_FACTORS: list[int] = [7, 8, 9, 10, 11, 12]
@@ -25,7 +27,18 @@ SYNC_MIN: int = 0
 SYNC_MAX: int = 256
 PREAMBLE_MIN: int = 0
 PREAMBLE_MAX: int = 65535
-
+SETTING_KW: dict[str, str] = {
+    "modulation": "mod",
+    "frequency": "freq",
+    "power": "pwr",
+    "spread_factor": "sf",
+    "coding_rate": "cr",
+    "bandwidth": "bw",
+    "preamble_len": "prlen",
+    "cyclic_redundancy": "crc",
+    "iqi": "iqi",
+    "sync_word": "sync",
+}
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -33,14 +46,14 @@ logger = logging.getLogger(__name__)
 
 # Radio process
 class SerialRN2483Radio(Process):
-
     def __init__(
-            self,
-            serial_status: Queue,
-            radio_signal_report: Queue,
-            rn2483_radio_input: Queue,
-            rn2483_radio_payloads: Queue,
-            serial_port: str
+        self,
+        serial_status: Queue,
+        radio_signal_report: Queue,
+        rn2483_radio_input: Queue,
+        rn2483_radio_payloads: Queue,
+        serial_port: str,
+        settings: RadioParameters,
     ):
         Process.__init__(self)
 
@@ -51,6 +64,7 @@ class SerialRN2483Radio(Process):
 
         self.serial_port = serial_port
         self.ser = None
+        self.settings = settings
 
         self.run()
 
@@ -60,13 +74,15 @@ class SerialRN2483Radio(Process):
                 # initiate the USB serial connection
                 logger.info(f"RN2483 Radio: Connecting to {self.serial_port}")
                 # Settings matched to RN2483 Transceiver Data Sheet's default UART settings
-                self.ser = Serial(port=self.serial_port,
-                                  timeout=1,
-                                  baudrate=57600,
-                                  bytesize=EIGHTBITS,
-                                  parity=PARITY_NONE,
-                                  stopbits=1,
-                                  rtscts=False)
+                self.ser = Serial(
+                    port=self.serial_port,
+                    timeout=1,
+                    baudrate=57600,
+                    bytesize=EIGHTBITS,
+                    parity=PARITY_NONE,
+                    stopbits=1,
+                    rtscts=False,
+                )
                 logger.info(f"RN2483 Radio: Connected to {self.serial_port}")
                 self.serial_status.put(f"rn2483_connected True")
                 self.serial_status.put(f"rn2483_port {self.serial_port}")
@@ -111,10 +127,10 @@ class SerialRN2483Radio(Process):
     def reset(self) -> bool:
         """Performs a software reset on the RN2483 radio."""
 
-        self.write_to_rn2483_radio('sys reset')
+        self.write_to_rn2483_radio("sys reset")
 
         ret = self._read_ser()  # Confirm from the rn2483 radio that the reset was a success
-        if 'RN2483' in ret:
+        if "RN2483" in ret:
             logger.info("Radio successfully reset.")
         return "RN2483" in ret
 
@@ -126,18 +142,29 @@ class SerialRN2483Radio(Process):
         Should image quality indicators (IQI) be enabled?
         """
 
-        self.reset()  # Restart the radio module
+        # Restart the radio module
+        self.reset()
+        logger.info("Resetting radio...")
+
+        # Initialize GPIO pins
         self.init_gpio()
-        self.set_modulation("lora")
-        self.set_frequency(433050000)
-        self.set_power(15)
-        self.set_spread_factor(9)
-        self.set_coding_rate("4/7")
-        self.set_bandwidth(500)
-        self.set_preamble_len(6)
-        self.set_cyclic_redundancy_check(True)
-        self.set_iqi(False)
-        self.set_sync_word("0x43")
+        logger.info("Initializing GPIO...")
+
+        # Setting parameters
+        for parameter, value in self.settings:
+
+            # Special case where spread factor value must be preceded by sf
+            if parameter == "spread_factor":
+                value = f"sf{value}"
+
+            # Special case: boolean settings must be specified using on/off terms instead of true/false
+            if parameter == "cyclic_redundancy" or parameter == "iqi":
+                value = "on" if value else "off"
+
+            if self.write_to_rn2483_radio(f"radio set {SETTING_KW[parameter]} {value}"):
+                logger.debug(f"{parameter} successfully set to {value}.")
+            else:
+                logger.error(f"{parameter} could not be set to {value}.")
 
     def write_to_rn2483_radio(self, command_string: str) -> Optional[bool]:
         """
@@ -154,13 +181,13 @@ class SerialRN2483Radio(Process):
         data += "\r\n"  # Must include carriage return for valid commands (see DS40001784B pg XX)
         self.ser.flush()  # Flush the serial port
 
-        self.ser.write(data.encode('utf-8'))  # Encode command_string as bytes and then transmit over serial port
+        self.ser.write(data.encode("utf-8"))  # Encode command_string as bytes and then transmit over serial port
         # Wait for response on the serial line. Return if 'ok' received
         # Sys reset gives us info about the board which we want to process differently from other commands
         if command_string not in ["sys reset", "radio get snr", "radio get rssi"]:
             # TODO: clean this up with read functions
             return self.wait_for_ok()
-        elif command_string == 'radio get snr':
+        elif command_string == "radio get snr":
             self.radio_signal_report.put(f"snr {self._read_ser()}")
 
     def wait_for_ok(self) -> bool:
@@ -171,151 +198,14 @@ class SerialRN2483Radio(Process):
 
         rv = str(self.ser.readline())  # Read from serial line
 
-        if 'ok' in rv:
+        if "ok" in rv:
             return True
 
         # Returned after mac pause command.
-        if '4294967245' in rv:
+        if "4294967245" in rv:
             return True
         logger.error(f"wait_for_ok: {rv}")
         return False
-
-    def set_frequency(self, frequency: int) -> bool:
-        """Set the frequency of transmitted signals in Hz."""
-
-        if not ((433050000 <= frequency <= 434790000) or (863000000 <= frequency <= 870000000)):  # TODO fix constants
-            logger.error("Invalid frequency parameter.")
-            return False
-
-        success = self.write_to_rn2483_radio(f"radio set freq {frequency}")
-        if success:
-            logger.debug("Frequency successfully set.")
-            return True
-
-        logger.error("Frequency not set.")
-        return False
-
-    def set_modulation(self, modulation: str) -> None:
-        """Set the modulation of the RN2483 radio."""
-
-        if modulation not in MODULATION_MODES:
-            logger.error("Setting modulation: either use fsk or lora.")
-            return
-
-        if self.write_to_rn2483_radio(f"radio set mod {modulation}"):
-            logger.debug("Successfully set modulation.")
-            return
-        logger.error("Setting modulation.")
-
-    def set_power(self, power: int) -> None:
-        """
-        Set power state between -3 and 15. The 15th state has an output power of 14.1 dBm for the 868 MHz band
-        and 13.6dBm for the 433 MHz band.
-        """
-
-        if power not in range(POWER_MIN, POWER_MAX):
-            logger.error("Invalid power parameter.")
-            return
-
-        if self.write_to_rn2483_radio(f"radio set pwr {power}"):
-            logger.debug("Value power successfully set.")
-            return
-        logger.error("Power: radio unable to set.")
-
-    def set_spread_factor(self, spread_factor: int) -> None:
-        """
-        Set the spreading factor for the rn2483 radio. Spreading factor can only be set to 7, 8, 9, 10, 11, or 12.
-        A higher spreading factor means slower transmissions (symbols are more spread out). The system will have better
-        reception and be less error-prone.
-        """
-
-        if spread_factor not in VALID_SPREADING_FACTORS:
-            logger.error("Invalid spreading factor.")
-            return
-
-        if self.write_to_rn2483_radio(f"radio set sf sf{spread_factor}"):
-            logger.debug("Value spreading factor successfully set.")
-            return
-        logger.error("Unable to set spreading factor.")
-
-    def set_coding_rate(self, coding_rate: str) -> None:
-        """
-        Set coding rate. Coding rate can only be "4/5", "4/6", "4/7", "4/8
-        Coding rate is the ratio of actual data to error-correcting data that is transmitted. Lower coding rate means a
-        lower data rate.
-        """
-
-        if coding_rate not in VALID_CODING_RATES:
-            logger.error("Invalid cycling rate.")
-            return
-
-        if self.write_to_rn2483_radio(f"radio set cr {coding_rate}"):
-            logger.debug("Value coding rate successfully set.")
-            return
-        logger.error("Coding rate: radio unable to set.")
-
-    def set_bandwidth(self, bandwidth: int) -> None:
-        """Set the bandwidth which can only be 125, 250 or 500Hz."""
-
-        if bandwidth not in VALID_BANDWIDTHS:
-            logger.error("Invalid receiving bandwidth.")
-            return
-
-        if self.write_to_rn2483_radio(f"radio set bw {bandwidth}"):
-            logger.debug("Bandwidth successfully set.")
-            return
-        logger.error("Bandwidth: radio unable to set.")
-
-    def set_iqi(self, iqi: bool) -> None:
-        """Set invert IQ function on the RN2483 radio. IQI of True is 'on', False is 'off'."""
-
-        iqi = "on" if iqi else "off"
-
-        if self.write_to_rn2483_radio(f"radio set iqi {iqi}"):
-            logger.debug("Value successfully set.")
-            return
-        logger.error("IQI: radio unable to set.")
-
-    def set_sync_word(self, sync_word: hex) -> None:
-        """Set the sync word of the RN2483 radio."""
-
-        if int(sync_word, 16) not in range(SYNC_MIN, SYNC_MAX):
-            logger.error("Invalid sync word.")
-            return
-
-        if self.write_to_rn2483_radio(f"radio set sync {sync_word[2:]}"):
-            logger.debug(f"Value sync word successfully set to {sync_word[2:]}.")
-            return
-        logger.error(f"Sync parameter: radio unable to set sync word as '{sync_word}'.")
-
-    def set_preamble_len(self, preamble_length: int) -> None:
-        """
-        Set the preamble length between 0 and 65535.
-        Preamble means introduction. It's a transmission that is used to synchronize the receiver.
-        """
-
-        if preamble_length not in range(PREAMBLE_MIN, PREAMBLE_MAX):
-            logger.error("Invalid preamble length.")
-            return
-
-        if self.write_to_rn2483_radio(f"radio set prlen {preamble_length}"):
-            logger.debug("Preamble length successfully set.")
-            return
-        logger.error("Unable to set preamble length.")
-
-    def set_cyclic_redundancy_check(self, crc: bool) -> None:
-        """
-        Enable or disable the cyclic redundancy check. CRC of True is 'on', False is 'off'.
-        CRC is used to detect errors in the received signal.
-        """
-
-        crc = "on" if crc else "off"
-
-        success = self.write_to_rn2483_radio(f"radio set crc {crc}")
-        if success:
-            logger.debug("Value CRC successfully set.")
-            return
-        logger.error("CRC: radio unable to set.")
 
     def set_rx_mode(self) -> None:
         """Set the RN2483 radio so that it constantly listens for transmissions."""
@@ -352,7 +242,7 @@ class SerialRN2483Radio(Process):
 
         # Radio will send 'radio_tx_ok' when message has been transmitted
         i = 0
-        while 'radio_tx_ok' not in str(self._read_ser()):
+        while "radio_tx_ok" not in str(self._read_ser()):
             time.sleep(0.1)  # If message not transmitted then wait for 1/10th of a second
             i += 1
             if i == 3:  # If we have waited 0.3 seconds, then stop waiting. Something has gone wrong.
