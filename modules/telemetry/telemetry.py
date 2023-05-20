@@ -92,8 +92,15 @@ class ReplayPlaybackError(Exception):
 
 # Main class
 class Telemetry(Process):
-    def __init__(self, serial_status: Queue, radio_payloads: Queue, rn2483_radio_input: Queue,
-                 radio_signal_report: Queue, telemetry_json_output: Queue, telemetry_ws_commands: Queue):
+    def __init__(
+        self,
+        serial_status: Queue,
+        radio_payloads: Queue,
+        rn2483_radio_input: Queue,
+        radio_signal_report: Queue,
+        telemetry_json_output: Queue,
+        telemetry_ws_commands: Queue,
+    ):
         super().__init__()
 
         self.radio_payloads = radio_payloads
@@ -115,7 +122,7 @@ class Telemetry(Process):
         # Mission Recording
         self.mission_recording_file = None
         self.mission_recording_sb: SuperBlock = SuperBlock()
-        self.mission_recording_buffer: bytearray = bytearray(b'')
+        self.mission_recording_buffer: bytearray = bytearray(b"")
 
         # Replay System
         self.replay = None
@@ -168,9 +175,7 @@ class Telemetry(Process):
 
     def generate_websocket_response(self) -> dict[str, Any]:
         """Returns the dictionary containing the JSON data for the websocket client."""
-        return {"version": VERSION, "org": ORG,
-                "status": dict(self.status),
-                "telemetry": self.telemetry}
+        return {"version": VERSION, "org": ORG, "status": dict(self.status), "telemetry": self.telemetry}
 
     def reset_data(self) -> None:
         """Resets all live data on the telemetry backend to a default state."""
@@ -178,7 +183,7 @@ class Telemetry(Process):
         self.telemetry = {}
 
     def parse_serial_status(self, command: str, data: str):
-        """ Parses the serial managers status output """
+        """Parses the serial managers status output"""
         match command:
             case "serial_ports":
                 self.status.serial.available_ports = literal_eval(data)
@@ -282,24 +287,21 @@ class Telemetry(Process):
 
         if self.replay is None:
             self.status.mission.name = mission_name
-            self.status.mission.epoch = [mission["epoch"] for mission in self.status.replay.mission_list
-                                         if mission["name"] == mission_name][0]
+            self.status.mission.epoch = [
+                mission["epoch"] for mission in self.status.replay.mission_list if mission["name"] == mission_name
+            ][0]
             self.status.mission.state = jsp.MissionState.RECORDED
             self.status.mission.recording = False
 
             self.replay = Process(
                 target=TelemetryReplay,
-                args=(
-                    self.replay_output,
-                    self.replay_input,
-                    self.status.replay.speed,
-                    mission_file
-                )
+                args=(self.replay_output, self.replay_input, self.status.replay.speed, mission_file),
             )
             self.replay.start()
 
         self.set_replay_speed(
-            speed=self.status.replay.last_played_speed if self.status.replay.last_played_speed > 0 else 1)
+            speed=self.status.replay.last_played_speed if self.status.replay.last_played_speed > 0 else 1
+        )
         logger.info(f"REPLAY {mission_name} PLAYING")
 
     def start_recording(self, mission_name: str = None) -> None:
@@ -331,7 +333,7 @@ class Telemetry(Process):
         self.status.mission.recording = True
 
     def stop_recording(self) -> None:
-        """ Stops the current recording. """
+        """Stops the current recording."""
 
         logger.info("RECORDING STOP")
 
@@ -343,14 +345,15 @@ class Telemetry(Process):
         # Reset recording data
         self.mission_recording_file = None
         self.mission_recording_sb = SuperBlock()
-        self.mission_recording_buffer = bytearray(b'')
+        self.mission_recording_buffer = bytearray(b"")
 
         # Reset mission data except state and last mission time
-        self.status.mission = jsp.MissionData(state=self.status.mission.state,
-                                              last_mission_time=self.status.mission.last_mission_time)
+        self.status.mission = jsp.MissionData(
+            state=self.status.mission.state, last_mission_time=self.status.mission.last_mission_time
+        )
 
     def recording_write_bytes(self, num_bytes: int, spacer: bool = False) -> None:
-        """ Outputs the specified number of bytes from the buffer to the recording file """
+        """Outputs the specified number of bytes from the buffer to the recording file"""
 
         # If the file is open
         if self.mission_recording_file is None:
@@ -378,7 +381,7 @@ class Telemetry(Process):
             self.mission_recording_file.write(spacer_block.to_bytes())
 
     def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents: str) -> None:
-        """ Parses telemetry payload blocks from either parsed packets or stored replays. """
+        """Parses telemetry payload blocks from either parsed packets or stored replays."""
         """ Block contents are a hex string. """
 
         # Working with hex strings until this point.
@@ -400,7 +403,7 @@ class Telemetry(Process):
                 return
             case RadioBlockType.COMMAND:
                 # COMMAND BLOCK DETECTED
-                logger.info("Command block received")
+                logger.info(f"Command block received of subtype {CommandBlockSubtype(block_subtype)}")
                 self.rn2483_radio_input.put("radio get snr")
                 return
             case RadioBlockType.DATA:
@@ -425,7 +428,7 @@ class Telemetry(Process):
                 logger.warning("Unknown block type")
 
     def parse_rn2483_transmission(self, data: str):
-        """ Parses RN2483 Packets and extracts our telemetry payload blocks"""
+        """Parses RN2483 Packets and extracts our telemetry payload blocks"""
         # Extract the packet header
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
 
@@ -437,18 +440,18 @@ class Telemetry(Process):
         logger.info(f"{call_sign} - sent you a packet")
 
         # Parse through all blocks
-        while blocks != '':
+        while blocks != "":
             # Parse block header
             block_header = blocks[:8]
             block_len, crypto_signature, block_type, block_subtype, dest_addr = _parse_block_header(block_header)
 
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
-            block_contents = blocks[8: 8 + block_len]
+            block_contents = blocks[8 : 8 + block_len]
 
             self.parse_rn2483_payload(block_type, block_subtype, block_contents)
 
             # Remove the data we processed from the whole set, and move onto the next data block
-            blocks = blocks[8 + block_len:]
+            blocks = blocks[8 + block_len :]
 
 
 def _parse_packet_header(header: str) -> PacketHeader:
@@ -487,21 +490,21 @@ def _parse_block_header(header: str) -> BlockHeader:
     message_subtype: int
     destination_addr: int
     """
-    header = unpack('<I', bytes.fromhex(header))[0]
+    header = unpack("<I", bytes.fromhex(header))[0]
     logger.debug(f"Block header {hex(header)} -> {bin(header)}")
     bits_header = bin(header)[2:]
-    
+
     block_len = (int(bits_header[:5], 2) + 1) * 4
     crypto_signature = int(bits_header[5:6], 2)
     message_type = int(bits_header[6:10], 2)
     message_subtype = int(bits_header[10:16], 2)
     destination_addr = int(bits_header[16:20], 2)
 
-    #block_len = ((header & 0x1f) + 1) * 4  # Length of the data block
-    #crypto_signature = bool((header >> 5) & 0x1)
-    #message_type = ((header >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
-    #message_subtype = ((header >> 10) & 0x3f)
-    #destination_addr = ((header >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
+    # block_len = ((header & 0x1f) + 1) * 4  # Length of the data block
+    # crypto_signature = bool((header >> 5) & 0x1)
+    # message_type = ((header >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
+    # message_subtype = ((header >> 10) & 0x3f)
+    # destination_addr = ((header >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
     logger.debug(f"{block_len:=}, {crypto_signature:=}, {message_type:=}, {message_subtype:=}, {destination_addr:=}")
 
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
