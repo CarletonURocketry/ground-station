@@ -19,7 +19,7 @@ from typing import Any
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
-from modules.telemetry.block import RadioBlockType
+from modules.telemetry.block import RadioBlockType, CommandBlockSubtype, ControlBlockSubtype
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.sd_block import TelemetryDataBlock, LoggingMetadataSpacerBlock
@@ -396,7 +396,7 @@ class Telemetry(Process):
         match radio_block:
             case RadioBlockType.CONTROL:
                 # CONTROL BLOCK DETECTED
-                logger.info("Control block received")
+                logger.info(f"Control block received of subtype {ControlBlockSubtype(block_subtype)}")
                 # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
                 self.rn2483_radio_input.put("radio get snr")
                 # self.rn2483_radio_input.put("radio get rssi")
@@ -466,6 +466,7 @@ def _parse_packet_header(header: str) -> PacketHeader:
     """
 
     # Extract call sign in utf-8
+    logger.debug(f"Packet header: {header}")
     call_sign: str = bytes.fromhex(header[0:12]).decode("utf-8")
 
     # Convert header from hex to binary
@@ -476,6 +477,7 @@ def _parse_packet_header(header: str) -> PacketHeader:
     version: int = int(header[53:58], 2)
     src_addr: int = int(header[63:67], 2)
     packet_num: int = int(header[67:79], 2)
+    logger.debug(f"{length:=}, {version:=}, {src_addr:=}, {packet_num:=}")
 
     return call_sign, length, version, src_addr, packet_num
 
