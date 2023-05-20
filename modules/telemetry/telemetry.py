@@ -10,6 +10,7 @@ import math
 from ast import literal_eval
 from multiprocessing import Queue, Process, active_children
 from pathlib import Path
+
 # Imports
 from signal import signal, SIGTERM
 from struct import unpack
@@ -142,7 +143,7 @@ class Telemetry(Process):
 
             while not self.radio_signal_report.empty():
                 # TODO set radio SNR
-                logger.info("SIGNAL DATA", self.radio_signal_report.get())
+                logger.info(f"SIGNAL DATA {self.radio_signal_report.get()}")
 
             while not self.serial_status.empty():
                 x = self.serial_status.get().split(" ", maxsplit=1)
@@ -382,22 +383,29 @@ class Telemetry(Process):
 
         # Working with hex strings until this point.
         # Hex/Bytes Demarcation point
+        logger.debug(f"Block contents: {block_contents}")
         block_contents = bytes.fromhex(block_contents)
-        match RadioBlockType(block_type):
+        try:
+            radio_block = RadioBlockType(block_type)
+        except Exception:
+            logger.info(f"Received invalid radio block type of {block_type}.")
+            return
+        match radio_block:
             case RadioBlockType.CONTROL:
                 # CONTROL BLOCK DETECTED
                 logger.info("Control block received")
                 # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
                 self.rn2483_radio_input.put("radio get snr")
                 # self.rn2483_radio_input.put("radio get rssi")
-
+                return
             case RadioBlockType.COMMAND:
                 # COMMAND BLOCK DETECTED
                 logger.info("Command block received")
+                self.rn2483_radio_input.put("radio get snr")
+                return
             case RadioBlockType.DATA:
                 # DATA BLOCK DETECTED
                 block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
-                logger.info(block_data)
                 # Increase the last mission time
                 if block_data.mission_time > self.status.mission.last_mission_time:
                     self.status.mission.last_mission_time = block_data.mission_time
@@ -479,12 +487,21 @@ def _parse_block_header(header: str) -> BlockHeader:
     message_subtype: int
     destination_addr: int
     """
-    header = unpack('<I', bytes.fromhex(header))
+    header = unpack('<I', bytes.fromhex(header))[0]
+    logger.debug(f"Block header {hex(header)} -> {bin(header)}")
+    bits_header = bin(header)[2:]
+    
+    block_len = (int(bits_header[:5], 2) + 1) * 4
+    crypto_signature = int(bits_header[5:6], 2)
+    message_type = int(bits_header[6:10], 2)
+    message_subtype = int(bits_header[10:16], 2)
+    destination_addr = int(bits_header[16:20], 2)
 
-    block_len = ((header[0] & 0x1f) + 1) * 4  # Length of the data block
-    crypto_signature = bool((header[0] >> 5) & 0x1)
-    message_type = ((header[0] >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
-    message_subtype = ((header[0] >> 10) & 0x3f)
-    destination_addr = ((header[0] >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
+    #block_len = ((header & 0x1f) + 1) * 4  # Length of the data block
+    #crypto_signature = bool((header >> 5) & 0x1)
+    #message_type = ((header >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
+    #message_subtype = ((header >> 10) & 0x3f)
+    #destination_addr = ((header >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
+    logger.debug(f"{block_len:=}, {crypto_signature:=}, {message_type:=}, {message_subtype:=}, {destination_addr:=}")
 
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
