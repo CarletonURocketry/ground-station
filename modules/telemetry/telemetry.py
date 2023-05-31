@@ -24,6 +24,7 @@ from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.sd_block import TelemetryDataBlock, LoggingMetadataSpacerBlock
 from modules.telemetry.superblock import SuperBlock, Flight
+from modules.misc.config import Config
 
 # Types
 BlockHeader = tuple[int, bool, int, int, int]
@@ -100,8 +101,10 @@ class Telemetry(Process):
         radio_signal_report: Queue,
         telemetry_json_output: Queue,
         telemetry_ws_commands: Queue,
+        config: Config
     ):
         super().__init__()
+        self.config = config
 
         self.radio_payloads = radio_payloads
         self.telemetry_json_output = telemetry_json_output
@@ -429,15 +432,20 @@ class Telemetry(Process):
 
     def parse_rn2483_transmission(self, data: str):
         """Parses RN2483 Packets and extracts our telemetry payload blocks"""
+        
         # Extract the packet header
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
+        call_sign = call_sign.upper()  # Uppercase formatting because that's standard
 
         if length <= 24:  # If this packet nothing more than just the header
             logger.info(call_sign, length, version, srs_addr, packet_num)
 
         blocks = data[24:]  # Remove the packet header
-
-        logger.info(f"{call_sign} - sent you a packet")
+        
+        if call_sign in self.config.approved_callsigns:
+            logger.info(f"Incoming packet from {call_sign} ({self.config.approved_callsigns.get(call_sign)})")
+        else:
+            logger.warning(f"Incoming packet from unauthorized callsign {call_sign}")
 
         # Parse through all blocks
         while blocks != "":

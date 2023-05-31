@@ -87,7 +87,8 @@ def main():
             rn2483_radio_input,
             radio_signal_report,
             telemetry_json_output,
-            telemetry_ws_commands
+            telemetry_ws_commands,
+            config
         )
     )
     telemetry.start()
