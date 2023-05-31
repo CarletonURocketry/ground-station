@@ -4,9 +4,10 @@
 
 # Imports
 import datetime as dt
+import os
 
 # Constants
-ART_FILE: str = "launch.txt"
+ART_FILE: str = os.path.join(os.path.dirname(__file__), "launch.txt")
 FIELDS: dict[str, str] = {"rocket name": "ROCKET_NAME", "version": "VERSION", "date": "DATE"}
 
 
@@ -22,7 +23,8 @@ def populate_fields(art: str, rocket_name: str, version: str) -> str:
 
     art = art.replace(FIELDS["rocket name"], rocket_name)
     art = art.replace(FIELDS["version"], version)
-    art = art.replace(FIELDS["date"], dt.date.today().strftime("%d %m, %Y"))
+    art = art.replace(FIELDS["date"], dt.date.today().strftime("%d %B, %Y"))
+    return art
 
 
 def print_cu_rocket(rocket_name: str, version: str) -> None:
