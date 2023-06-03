@@ -1,0 +1,22 @@
+
+    *      ^
+          / \                                   *
+         /___\              *                          
+        |=   =|             
+        |     |                           Matteo Golin         *
+        | C U |             
+        | I N |             
+        |SPACE|             
+   *    |     |            Samuel Dewan   *
+        |     |             
+       /|##!##|\                                      *
+      / |##!##| \           
+     /  |##!##|  \                               Thomas Selwyn 
+    |  / ^ | ^ \  |         *              *
+    | /  ( | )  \ |         
+    |/   ( | )   \|                                 *
+        ((   ))
+       ((  :  ))      *     CUInSpace Avionics Telemetry Server
+       ((  :  ))            Launching: ROCKET_NAME
+        ((   ))             Version: VERSION
+          ( )               Today: DATE                *
