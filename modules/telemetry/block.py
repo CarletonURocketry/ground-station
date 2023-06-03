@@ -48,7 +48,7 @@ class SDBlockClassType(IntEnum):
     RESERVED = 0x3F
 
 
-class CommandBlockSubtype(IntEnum):
+class ControlBlockSubtype(IntEnum):
     """ Lists the subtypes of telemetry command blocks. """
 
     SIGNAL_REPORT = 0x00
@@ -60,7 +60,7 @@ class CommandBlockSubtype(IntEnum):
     RESERVED = 0x3F
 
 
-class ControlBlockSubtype(IntEnum):
+class CommandBlockSubtype(IntEnum):
     """ Lists the subtypes of telemetry control blocks. """
 
     RESET_ROCKET_AVIONICS = 0x00

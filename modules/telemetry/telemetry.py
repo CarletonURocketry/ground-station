@@ -101,7 +101,7 @@ class Telemetry(Process):
         radio_signal_report: Queue,
         telemetry_json_output: Queue,
         telemetry_ws_commands: Queue,
-        config: Config
+        config: Config,
     ):
         super().__init__()
         self.config = config
@@ -432,8 +432,9 @@ class Telemetry(Process):
 
     def parse_rn2483_transmission(self, data: str):
         """Parses RN2483 Packets and extracts our telemetry payload blocks"""
-        
+
         # Extract the packet header
+        data = data.strip()  # Sometimes some extra whitespace
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
         call_sign = call_sign.upper()  # Uppercase formatting because that's standard
 
@@ -441,7 +442,7 @@ class Telemetry(Process):
             logger.info(call_sign, length, version, srs_addr, packet_num)
 
         blocks = data[24:]  # Remove the packet header
-        
+
         if call_sign in self.config.approved_callsigns:
             logger.info(f"Incoming packet from {call_sign} ({self.config.approved_callsigns.get(call_sign)})")
         else:
@@ -450,6 +451,8 @@ class Telemetry(Process):
         # Parse through all blocks
         while blocks != "":
             # Parse block header
+            logger.debug(f"Blocks: {blocks}")
+            logger.debug(f"Block header: {blocks[:8]}")
             block_header = blocks[:8]
             block_len, crypto_signature, block_type, block_subtype, dest_addr = _parse_block_header(block_header)
 
@@ -500,21 +503,20 @@ def _parse_block_header(header: str) -> BlockHeader:
     message_subtype: int
     destination_addr: int
     """
-    header = unpack("<I", bytes.fromhex(header))[0]
-    logger.debug(f"Block header {hex(header)} -> {bin(header)}")
-    bits_header = bin(header)[2:]
+    bits_header = bin(int(header, 16))[2:]  # Convert header to binary
+    logger.debug(f"Block header {header} -> {bits_header}")
 
-    block_len = (int(bits_header[:5], 2) + 1) * 4
-    crypto_signature = int(bits_header[5:6], 2)
-    message_type = int(bits_header[6:10], 2)
+    block_len = (int(bits_header[:5], 2) + 1) * 4  # Length of the data block
+    crypto_signature = int(bits_header[5], 2)
+    message_type = int(bits_header[6:10], 2)  # 0 - Control, 1 - Command, 2 - Data
     message_subtype = int(bits_header[10:16], 2)
-    destination_addr = int(bits_header[16:20], 2)
+    destination_addr = int(bits_header[16:20], 2)  # 0 - GStation, 1 - Rocket
 
-    # block_len = ((header & 0x1f) + 1) * 4  # Length of the data block
+    # block_len = ((header & 0x1f) + 1) * 4
     # crypto_signature = bool((header >> 5) & 0x1)
-    # message_type = ((header >> 6) & 0xf)  # 0 - Control, 1 - Command, 2 - Data
+    # message_type = ((header >> 6) & 0xf)
     # message_subtype = ((header >> 10) & 0x3f)
-    # destination_addr = ((header >> 16) & 0xf)  # 0 - GStation, 1 - Rocket
+    # destination_addr = ((header >> 16) & 0xf)
     logger.debug(f"{block_len:=}, {crypto_signature:=}, {message_type:=}, {message_subtype:=}, {destination_addr:=}")
 
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
