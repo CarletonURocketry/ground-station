@@ -396,45 +396,49 @@ class Telemetry(Process):
         except Exception:
             logger.info(f"Received invalid radio block type of {block_type}.")
             return
-        match radio_block:
-            case RadioBlockType.CONTROL:
-                # CONTROL BLOCK DETECTED
-                logger.info(f"Control block received of subtype {ControlBlockSubtype(block_subtype)}")
-                # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
-                self.rn2483_radio_input.put("radio get snr")
-                # self.rn2483_radio_input.put("radio get rssi")
-                return
-            case RadioBlockType.COMMAND:
-                # COMMAND BLOCK DETECTED
-                logger.info(f"Command block received of subtype {CommandBlockSubtype(block_subtype)}")
-                self.rn2483_radio_input.put("radio get snr")
-                return
-            case RadioBlockType.DATA:
-                # DATA BLOCK DETECTED
-                block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
-                # Increase the last mission time
-                if block_data.mission_time > self.status.mission.last_mission_time:
-                    self.status.mission.last_mission_time = block_data.mission_time
+        try:
+            match radio_block:
+                case RadioBlockType.CONTROL:
+                    # CONTROL BLOCK DETECTED
+                    logger.info(f"Control block received of subtype {ControlBlockSubtype(block_subtype)}")
+                    # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
+                    self.rn2483_radio_input.put("radio get snr")
+                    # self.rn2483_radio_input.put("radio get rssi")
+                    return
+                case RadioBlockType.COMMAND:
+                    # COMMAND BLOCK DETECTED
+                    logger.info(f"Command block received of subtype {CommandBlockSubtype(block_subtype)}")
+                    self.rn2483_radio_input.put("radio get snr")
+                    return
+                case RadioBlockType.DATA:
+                    # DATA BLOCK DETECTED
+                    block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
+                    # Increase the last mission time
+                    if block_data.mission_time > self.status.mission.last_mission_time:
+                        self.status.mission.last_mission_time = block_data.mission_time
 
-                # Write data to file when recording
-                if self.status.mission.recording:
-                    self.mission_recording_buffer += TelemetryDataBlock(data=block_data).to_bytes()
-                    if len(self.mission_recording_buffer) >= 512:
-                        buffer_length = len(self.mission_recording_buffer)
-                        self.recording_write_bytes(buffer_length - (buffer_length % 512))
+                    # Write data to file when recording
+                    if self.status.mission.recording:
+                        self.mission_recording_buffer += TelemetryDataBlock(data=block_data).to_bytes()
+                        if len(self.mission_recording_buffer) >= 512:
+                            buffer_length = len(self.mission_recording_buffer)
+                            self.recording_write_bytes(buffer_length - (buffer_length % 512))
 
-                if block_subtype == DataBlockSubtype.STATUS:
-                    self.status.rocket = jsp.RocketData.from_data_block(block_data)
-                else:
-                    self.telemetry[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
-            case _:
-                logger.warning("Unknown block type")
+                    if block_subtype == DataBlockSubtype.STATUS:
+                        self.status.rocket = jsp.RocketData.from_data_block(block_data)
+                    else:
+                        self.telemetry[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
+                case _:
+                    logger.warning("Unknown block type.")
+        except Exception as e:
+            logger.error(f"Problem parsing RadioBlock: {e}")
 
     def parse_rn2483_transmission(self, data: str):
         """Parses RN2483 Packets and extracts our telemetry payload blocks"""
 
         # Extract the packet header
         data = data.strip()  # Sometimes some extra whitespace
+        logger.debug(f"Full data string: {data}")
         call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
         call_sign = call_sign.upper()  # Uppercase formatting because that's standard
 
@@ -478,10 +482,10 @@ def _parse_packet_header(header: str) -> PacketHeader:
 
     # Extract call sign in utf-8
     logger.debug(f"Packet header: {header}")
-    call_sign: str = bytes.fromhex(header[0:12]).decode("utf-8")
+    call_sign: str = bytes.fromhex(header[:12]).decode("utf-8")
 
     # Convert header from hex to binary
-    header = bin(int(header, 16))
+    header = bin(int(header, 16))[2:]
 
     # Extract values and then convert them to ints
     length: int = (int(header[47:53], 2) + 1) * 4
