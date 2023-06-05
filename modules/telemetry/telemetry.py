@@ -516,11 +516,12 @@ def _parse_block_header(header: str) -> BlockHeader:
     message_subtype = int(bits_header[10:16], 2)
     destination_addr = int(bits_header[16:20], 2)  # 0 - GStation, 1 - Rocket
 
-    # block_len = ((header & 0x1f) + 1) * 4
-    # crypto_signature = bool((header >> 5) & 0x1)
-    # message_type = ((header >> 6) & 0xf)
-    # message_subtype = ((header >> 10) & 0x3f)
-    # destination_addr = ((header >> 16) & 0xf)
+    int_header = unpack("<I", bytes.fromhex(header))[0]
+    block_len = ((int_header & 0x1F) + 1) * 4
+    crypto_signature = bool((int_header >> 5) & 0x1)
+    message_type = (int_header >> 6) & 0xF
+    message_subtype = (int_header >> 10) & 0x3F
+    destination_addr = (int_header >> 16) & 0xF
     logger.debug(f"{block_len:=}, {crypto_signature:=}, {message_type:=}, {message_subtype:=}, {destination_addr:=}")
 
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
