@@ -307,7 +307,7 @@ class Telemetry(Process):
         )
         logger.info(f"REPLAY {mission_name} PLAYING")
 
-    def start_recording(self, mission_name: str = None) -> None:
+    def start_recording(self, mission_name: str | None = None) -> None:
         """Starts recording the current mission. If no mission name is given, the recording epoch is used."""
 
         # Do not record if already recording or if replay is active
@@ -384,13 +384,14 @@ class Telemetry(Process):
             self.mission_recording_file.write(spacer_block.to_bytes())
 
     def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents: str) -> None:
-        """Parses telemetry payload blocks from either parsed packets or stored replays."""
-        """ Block contents are a hex string. """
+        """
+        Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
+        """
 
         # Working with hex strings until this point.
         # Hex/Bytes Demarcation point
         logger.debug(f"Block contents: {block_contents}")
-        block_contents = bytes.fromhex(block_contents)
+        block_contents: bytes = bytes.fromhex(block_contents)
         try:
             radio_block = RadioBlockType(block_type)
         except Exception:
@@ -510,18 +511,18 @@ def _parse_block_header(header: str) -> BlockHeader:
     bits_header = bin(int(header, 16))[2:]  # Convert header to binary
     logger.debug(f"Block header {header} -> {bits_header}")
 
-    block_len = (int(bits_header[:5], 2) + 1) * 4  # Length of the data block
-    crypto_signature = int(bits_header[5], 2)
-    message_type = int(bits_header[6:10], 2)  # 0 - Control, 1 - Command, 2 - Data
-    message_subtype = int(bits_header[10:16], 2)
-    destination_addr = int(bits_header[16:20], 2)  # 0 - GStation, 1 - Rocket
+    # block_len = (int(bits_header[:5], 2) + 1) * 4
+    # crypto_signature = int(bits_header[5], 2)
+    # message_type = int(bits_header[6:10], 2)
+    # message_subtype = int(bits_header[10:16], 2)
+    # destination_addr = int(bits_header[16:20], 2)
 
     int_header = unpack("<I", bytes.fromhex(header))[0]
-    block_len = ((int_header & 0x1F) + 1) * 4
+    block_len = ((int_header & 0x1F) + 1) * 4  # Length of the data block
     crypto_signature = bool((int_header >> 5) & 0x1)
-    message_type = (int_header >> 6) & 0xF
+    message_type = (int_header >> 6) & 0xF  # 0 - Control, 1 - Command, 2 - Data
     message_subtype = (int_header >> 10) & 0x3F
-    destination_addr = (int_header >> 16) & 0xF
+    destination_addr = (int_header >> 16) & 0xF  # 0 - GStation, 1 - Rocket
     logger.debug(f"{block_len:=}, {crypto_signature:=}, {message_type:=}, {message_subtype:=}, {destination_addr:=}")
 
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
