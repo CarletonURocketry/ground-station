@@ -5,6 +5,7 @@
 # Authors:
 # Thomas Selwyn (Devil)
 # Matteo Golin (linguini1)
+from io import BufferedWriter
 import logging
 import math
 from ast import literal_eval
@@ -120,10 +121,10 @@ class Telemetry(Process):
         # Mission System
         self.missions_dir = Path.cwd().joinpath("missions")
         self.missions_dir.mkdir(parents=True, exist_ok=True)
-        self.mission_path = None
+        self.mission_path: Path | None = None
 
         # Mission Recording
-        self.mission_recording_file = None
+        self.mission_recording_file: BufferedWriter | None = None
         self.mission_recording_sb: SuperBlock = SuperBlock()
         self.mission_recording_buffer: bytearray = bytearray(b"")
 
@@ -133,7 +134,7 @@ class Telemetry(Process):
         self.replay_output = Queue()
 
         # Handle program closing to ensure no orphan processes
-        signal(SIGTERM, shutdown_sequence)
+        signal(SIGTERM, shutdown_sequence)  # type:ignore
 
         # Start Telemetry
         self.update_websocket()
@@ -279,9 +280,13 @@ class Telemetry(Process):
         # Empty replay output
         self.replay_output = Queue()
 
-    def play_mission(self, mission_name: str) -> None:
+    def play_mission(self, mission_name: str | None) -> None:
         """Plays the desired mission recording."""
+
         if self.status.mission.recording:
+            raise ReplayPlaybackError
+
+        if mission_name is None:
             raise ReplayPlaybackError
 
         mission_file = mission_path(mission_name, self.missions_dir)
@@ -340,6 +345,9 @@ class Telemetry(Process):
 
         logger.info("RECORDING STOP")
 
+        if self.mission_recording_file is None:
+            raise ValueError("mission_recording_file attribute not initialized to a file.")
+
         # Flush buffer and close off file
         self.recording_write_bytes(len(self.mission_recording_buffer), spacer=True)
         self.mission_recording_file.flush()
@@ -383,15 +391,15 @@ class Telemetry(Process):
             spacer_block = LoggingMetadataSpacerBlock(512 - (num_bytes % 512))
             self.mission_recording_file.write(spacer_block.to_bytes())
 
-    def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents: str) -> None:
+    def parse_rn2483_payload(self, block_type: int, block_subtype: int, contents: str) -> None:
         """
         Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
         """
 
         # Working with hex strings until this point.
         # Hex/Bytes Demarcation point
-        logger.debug(f"Block contents: {block_contents}")
-        block_contents: bytes = bytes.fromhex(block_contents)
+        logger.debug(f"Block contents: {contents}")
+        block_contents: bytes = bytes.fromhex(contents)
         try:
             radio_block = RadioBlockType(block_type)
         except Exception:
@@ -459,7 +467,7 @@ class Telemetry(Process):
             logger.debug(f"Blocks: {blocks}")
             logger.debug(f"Block header: {blocks[:8]}")
             block_header = blocks[:8]
-            block_len, crypto_signature, block_type, block_subtype, dest_addr = _parse_block_header(block_header)
+            block_len, _, block_type, block_subtype, _ = _parse_block_header(block_header)
 
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
             block_contents = blocks[8 : 8 + block_len]
