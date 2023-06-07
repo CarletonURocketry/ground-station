@@ -34,9 +34,14 @@ class ShutdownException(Exception):
 args = vars(parser.parse_args())
 
 # Set up logging
+
+log_handlers: list = [logging.StreamHandler()]  # Always print to stdout
+if args.get("o") is not None:
+    log_handlers.append(logging.FileHandler(args.get("o", "logfile.log")))
+
 logging.basicConfig(
-    level=STR_TO_LOGGING_MODE[args.get("l")],
-    filename=args.get("o"),
+    level=STR_TO_LOGGING_MODE[args.get("l", "info")],
+    handlers=log_handlers,
 )
 logger = logging.getLogger(__name__)
 
