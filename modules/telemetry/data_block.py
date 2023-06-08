@@ -37,7 +37,7 @@ class DataBlock(ABC):
         """Marshal block to a bytes object."""
 
     @classmethod
-    def parse(cls, block_subtype, payload) -> Self:
+    def parse(cls, block_subtype: DataBlockSubtype, payload: bytes) -> Self:
         """Unmarshal a bytes object to appropriate block class."""
         match block_subtype:
             case DataBlockSubtype.DEBUG_MESSAGE:
@@ -74,7 +74,7 @@ class DebugMessageDataBlock(DataBlock):
         return ((len(self.debug_msg.encode("utf-8")) + 3) & ~0x3) + 4
 
     @classmethod
-    def from_payload(cls, payload) -> Self:
+    def from_payload(cls, payload: bytes) -> Self:
         mission_time = struct.unpack("<I", payload[0:4])[0]
         return DebugMessageDataBlock(mission_time, payload[4:].decode("utf-8"))
 
@@ -100,7 +100,7 @@ class StartupMessageDataBlock(DataBlock):
         return ((len(self.startup_msg.encode("utf-8")) + 3) & ~0x3) + 4
 
     @classmethod
-    def from_payload(cls, payload):
+    def from_payload(cls, payload: bytes):
         mission_time = struct.unpack("<I", payload[0:4])[0]
         return StartupMessageDataBlock(mission_time, payload[4:].decode("utf-8"))
 
@@ -227,7 +227,7 @@ class StatusDataBlock(DataBlock):
         return 16
 
     @classmethod
-    def from_payload(cls, payload):
+    def from_payload(cls, payload: bytes):
         parts = struct.unpack("<IIII", payload)
 
         try:
@@ -304,7 +304,7 @@ class AltitudeDataBlock(DataBlock):
         return 16
 
     @classmethod
-    def from_payload(cls, payload):
+    def from_payload(cls, payload: bytes):
         parts = struct.unpack("<Iiii", payload)
         return AltitudeDataBlock(parts[0], parts[1], parts[2] / 1000, parts[3] / 1000)
 
@@ -342,7 +342,7 @@ class AccelerationDataBlock(DataBlock):
         return 12
 
     @classmethod
-    def from_payload(cls, payload):
+    def from_payload(cls, payload: bytes):
         parts = struct.unpack("<IBBhhh", payload)
         fsr = parts[1]
         x = parts[3] * (fsr / (2**15))
@@ -385,7 +385,7 @@ class AngularVelocityDataBlock(DataBlock):
         return 12
 
     @classmethod
-    def from_payload(cls, payload):
+    def from_payload(cls, payload: bytes):
         parts = struct.unpack("<IHhhh", payload)
         fsr = parts[1]
         x = parts[2] * (fsr / (2**15))
@@ -456,7 +456,7 @@ class GNSSLocationBlock(DataBlock):
         return 32
 
     @classmethod
-    def from_payload(cls, payload):
+    def from_payload(cls, payload: bytes):
         parts = struct.unpack("<IiiIihhHHHBB", payload)
 
         try:
@@ -557,8 +557,8 @@ class GNSSSatInfo:
         self.azimuth: int = azimuth
 
     @classmethod
-    def from_payload(cls, data):
-        parts = struct.unpack("<BBH", data)
+    def from_payload(cls, payload: bytes):
+        parts = struct.unpack("<BBH", payload)
         identifier = parts[2] & 0x1F
 
         try:
@@ -617,7 +617,7 @@ class GNSSMetadataBlock(DataBlock):
         return 12 + (len(self.sats_in_view) * 4)
 
     @classmethod
-    def from_payload(cls, payload):
+    def from_payload(cls, payload: bytes):
         # There are 3 uint32_t variables, one for time, gps sats in use, and glonass sats in use
         # The remaining of the payload is an array for sats in view, each 4 bytes being a unique GNSSSatInfo struct
         # 12 bytes is 96 bits (3 x 32)
@@ -774,7 +774,7 @@ class KX134AccelerometerDataBlock(DataBlock):
         return (sample_bytes + 6 + 3) & ~0x3
 
     @classmethod
-    def from_payload(cls, payload):
+    def from_payload(cls, payload: bytes):
         parts = struct.unpack("<IH", payload[0:6])
 
         try:
@@ -1130,7 +1130,7 @@ class MPU9250IMUDataBlock(DataBlock):
         return (sample_bytes + 8 + 3) & ~0x3
 
     @classmethod
-    def from_payload(cls, payload):
+    def from_payload(cls, payload: bytes):
         parts = struct.unpack("<II", payload[0:8])
 
         ag_sample_rate = 1000 / ((parts[1] & 0xFF) + 1)
