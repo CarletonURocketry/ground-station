@@ -9,7 +9,7 @@ from __future__ import annotations
 import struct
 from abc import ABC, abstractmethod
 from enum import Enum, IntEnum
-from typing import Self, Type
+from typing import Generator, Self, Type
 from modules.telemetry.block import DataBlockSubtype, BlockException, BlockUnknownException
 from modules.misc import converter
 
@@ -939,29 +939,29 @@ class MPU9250MagResolution(IntEnum):
 class MPU9250Sample:
     def __init__(
         self,
-        accel_x: int,
-        accel_y: int,
-        accel_z: int,
-        temperature: int,
-        gyro_x: int,
-        gyro_y: int,
-        gyro_z: int,
-        mag_x: int,
-        mag_y: int,
-        mag_z: int,
+        accel_x: float,
+        accel_y: float,
+        accel_z: float,
+        temperature: float,
+        gyro_x: float,
+        gyro_y: float,
+        gyro_z: float,
+        mag_x: float,
+        mag_y: float,
+        mag_z: float,
         mag_ovf: int,
         mag_res: MPU9250MagResolution,
     ):
-        self.accel_x: int = accel_x
-        self.accel_y: int = accel_y
-        self.accel_z: int = accel_z
-        self.temperature: int = temperature
-        self.gyro_x: int = gyro_x
-        self.gyro_y: int = gyro_y
-        self.gyro_z: int = gyro_z
-        self.mag_x: int = mag_x
-        self.mag_y: int = mag_y
-        self.mag_z: int = mag_z
+        self.accel_x: float = accel_x
+        self.accel_y: float = accel_y
+        self.accel_z: float = accel_z
+        self.temperature: float = temperature
+        self.gyro_x: float = gyro_x
+        self.gyro_y: float = gyro_y
+        self.gyro_z: float = gyro_z
+        self.mag_x: float = mag_x
+        self.mag_y: float = mag_y
+        self.mag_z: float = mag_z
         self.mag_ovf: int = mag_ovf
         self.mag_res: MPU9250MagResolution = mag_res
 
@@ -1011,7 +1011,7 @@ class MPU9250Sample:
         mag_bytes = struct.pack("<hhhB", mag_x, mag_y, mag_z, mag_flags)
         return ag_bytes + mag_bytes
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[tuple[str, float], None, None]:
         yield "accel_x", self.accel_x
         yield "accel_y", self.accel_y
         yield "accel_z", self.accel_z
@@ -1131,7 +1131,7 @@ class MPU9250IMUDataBlock(DataBlock):
 
         return payload + (b"\x00" * padding)
 
-    def gen_samples(self):
+    def gen_samples(self) -> Generator[tuple[float, MPU9250Sample], None, None]:
         count = len(self.samples)
         for i, samp in enumerate(self.samples):
             time = (self.mission_time * (1000 / 1024)) - ((count - i) * self.sample_period)
@@ -1173,7 +1173,7 @@ def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
     mag_ovf = data_samples[0].mag_ovf
     mag_res = data_samples[0].mag_res
 
-    avg = dict.fromkeys(dict(data_samples[0]).keys(), 0)
+    avg: dict[str, float] = dict.fromkeys(dict(data_samples[0]).keys(), 0)
 
     for sample in data_samples:
         data = dict(sample)
