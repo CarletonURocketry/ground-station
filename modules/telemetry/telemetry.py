@@ -421,6 +421,8 @@ class Telemetry(Process):
                     return
                 case RadioBlockType.DATA:
                     # DATA BLOCK DETECTED
+                    logger.debug(f"Content length: {len(block_contents)}")
+                    logger.debug(f"Content in bytes: {block_contents}")
                     block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
                     # Increase the last mission time
                     if block_data.mission_time > self.status.mission.last_mission_time:
