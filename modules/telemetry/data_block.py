@@ -8,7 +8,7 @@
 from __future__ import annotations
 import struct
 from abc import ABC, abstractmethod
-from enum import IntEnum
+from enum import Enum, IntEnum
 from typing import Self, Type
 from modules.telemetry.block import DataBlockSubtype, BlockException, BlockUnknownException
 from modules.misc import converter
@@ -37,8 +37,8 @@ class DataBlock(ABC):
     def to_payload(self) -> bytes:
         """Marshal block to a bytes object."""
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def from_payload(cls, payload: bytes) -> Type[Self]:
         """Returns a DataBlock initialized from a payload of bytes."""
 
@@ -63,7 +63,7 @@ class DataBlock(ABC):
 
         if subtype is None:
             raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype}")
-        
+
         return subtype.from_payload(payload=payload)
 
 
@@ -71,7 +71,7 @@ class DataBlock(ABC):
 class DebugMessageDataBlock(DataBlock):
     def __init__(self, mission_time: int, debug_msg: str):
         super().__init__(DataBlockSubtype.DEBUG_MESSAGE, mission_time)
-        self.debug_msg = debug_msg
+        self.debug_msg: str = debug_msg
 
     def __len__(self) -> int:
         return ((len(self.debug_msg.encode("utf-8")) + 3) & ~0x3) + 4
@@ -95,9 +95,9 @@ class DebugMessageDataBlock(DataBlock):
 
 
 class StartupMessageDataBlock(DataBlock):
-    def __init__(self, mission_time: int, startup_msg):
+    def __init__(self, mission_time: int, startup_msg: str):
         super().__init__(DataBlockSubtype.STARTUP_MESSAGE, mission_time)
-        self.startup_msg = startup_msg
+        self.startup_msg: str = startup_msg
 
     def __len__(self) -> int:
         return ((len(self.startup_msg.encode("utf-8")) + 3) & ~0x3) + 4
@@ -129,19 +129,13 @@ class SensorStatus(IntEnum):
     SENSOR_STATUS_FAILED = 0x4
 
     def __str__(self):
-        match self:
-            case SensorStatus.SENSOR_STATUS_NONE:
-                return "none"
-            case SensorStatus.SENSOR_STATUS_INITIALIZING:
-                return "initializing"
-            case SensorStatus.SENSOR_STATUS_RUNNING:
-                return "running"
-            case SensorStatus.SENSOR_STATUS_SELF_TEST_FAILED:
-                return "self test failed"
-            case SensorStatus.SENSOR_STATUS_FAILED:
-                return "failed"
-            case _:
-                return "unknown"
+        return {
+            SensorStatus.SENSOR_STATUS_NONE: "none",
+            SensorStatus.SENSOR_STATUS_INITIALIZING: "initializing",
+            SensorStatus.SENSOR_STATUS_RUNNING: "running",
+            SensorStatus.SENSOR_STATUS_SELF_TEST_FAILED: "self test failed",
+            SensorStatus.SENSOR_STATUS_FAILED: "failed",
+        }.get(self, "unknown")
 
 
 class SDCardStatus(IntEnum):
@@ -151,17 +145,12 @@ class SDCardStatus(IntEnum):
     SD_CARD_STATUS_FAILED = 0x3
 
     def __str__(self):
-        match self:
-            case SDCardStatus.SD_CARD_STATUS_NOT_PRESENT:
-                return "card not present"
-            case SDCardStatus.SD_CARD_STATUS_INITIALIZING:
-                return "initializing"
-            case SDCardStatus.SD_CARD_STATUS_READY:
-                return "ready"
-            case SDCardStatus.SD_CARD_STATUS_FAILED:
-                return "failed"
-            case _:
-                return "unknown"
+        return {
+            SDCardStatus.SD_CARD_STATUS_NOT_PRESENT: "card not present",
+            SDCardStatus.SD_CARD_STATUS_INITIALIZING: "initializing",
+            SDCardStatus.SD_CARD_STATUS_READY: "ready",
+            SDCardStatus.SD_CARD_STATUS_FAILED: "failed",
+        }.get(self, "unknown")
 
 
 class DeploymentState(IntEnum):
@@ -177,32 +166,20 @@ class DeploymentState(IntEnum):
     DEPLOYMENT_STATE_RECOVERY = 0x8
 
     def __str__(self):
-        match self:
-            case DeploymentState.DEPLOYMENT_STATE_IDLE:
-                return "idle"
-            case DeploymentState.DEPLOYMENT_STATE_ARMED:
-                return "armed"
-            case DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT:
-                return "powered ascent"
-            case DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT:
-                return "coasting ascent"
-            case DeploymentState.DEPLOYMENT_STATE_DROGUE_DEPLOY:
-                return "drogue deployed"
-            case DeploymentState.DEPLOYMENT_STATE_DROGUE_DESCENT:
-                return "drogue descent"
-            case DeploymentState.DEPLOYMENT_STATE_MAIN_DEPLOY:
-                return "main deployed"
-            case DeploymentState.DEPLOYMENT_STATE_MAIN_DESCENT:
-                return "main descent"
-            case DeploymentState.DEPLOYMENT_STATE_RECOVERY:
-                return "recovery"
-            case DeploymentState.DEPLOYMENT_STATE_DNE:
-                return ""
-            case _:
-                return "unknown"
+        return {
+            DeploymentState.DEPLOYMENT_STATE_IDLE: "idle",
+            DeploymentState.DEPLOYMENT_STATE_ARMED: "armed",
+            DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT: "powered ascent",
+            DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT: "coasting ascent",
+            DeploymentState.DEPLOYMENT_STATE_DROGUE_DEPLOY: "drogue deployed",
+            DeploymentState.DEPLOYMENT_STATE_DROGUE_DESCENT: "drogue descent",
+            DeploymentState.DEPLOYMENT_STATE_MAIN_DEPLOY: "main deployed",
+            DeploymentState.DEPLOYMENT_STATE_MAIN_DESCENT: "main descent",
+            DeploymentState.DEPLOYMENT_STATE_RECOVERY: "recovery",
+            DeploymentState.DEPLOYMENT_STATE_DNE: "",
+        }.get(self, "unknown")
 
 
-# TODO type hint some of this stuff lol. //// nou
 class StatusDataBlock(DataBlock):
     """Encapsulates the status data."""
 
@@ -373,9 +350,7 @@ class AccelerationDataBlock(DataBlock):
         yield "z", self.y
 
 
-#
-#   Angular Velocity
-#
+# Angular Velocity
 class AngularVelocityDataBlock(DataBlock):
     def __init__(self, mission_time: int, fsr: int, x: int, y: int, z: int):
         super().__init__(DataBlockSubtype.ANGULAR_VELOCITY, mission_time)
@@ -702,31 +677,21 @@ class KX134ODR(IntEnum):
         return 25600.0 / (2 ** (15 - self))
 
     def __str__(self):
-        return f"{self.samples_per_sec} Hz"
+        return f"{self.samples_per_sec}Hz"
 
 
 class KX134Range(IntEnum):
-    ACCEL_8G = 0
-    ACCEL_16G = 1
-    ACCEL_32G = 2
-    ACCEL_64G = 3
+    ACCEL_8G = 8
+    ACCEL_16G = 16
+    ACCEL_32G = 32
+    ACCEL_64G = 64
 
     @property
     def acceleration(self):
-        match self:
-            case KX134Range.ACCEL_8G:
-                return 8
-            case KX134Range.ACCEL_16G:
-                return 16
-            case KX134Range.ACCEL_32G:
-                return 32
-            case KX134Range.ACCEL_64G:
-                return 64
-            case _:
-                return 0
+        return self.value
 
     def __str__(self):
-        return f"±{self.acceleration} g"
+        return f"+/-{self.value}g"
 
 
 class KX134LPFRolloff(IntEnum):
@@ -738,19 +703,15 @@ class KX134LPFRolloff(IntEnum):
 
 
 class KX134Resolution(IntEnum):
-    RES_8_BIT = 0
-    RES_16_BIT = 1
+    RES_8_BIT = 8
+    RES_16_BIT = 16
 
     @property
-    def bits(self):
-        if self == KX134Resolution.RES_8_BIT:
-            return 8
-        elif self == KX134Resolution.RES_16_BIT:
-            return 16
-        return 0
+    def bits(self) -> int:
+        return self.value
 
     def __str__(self):
-        return f"{self.bits} bits per sample"
+        return f"{self.value} bits per sample"
 
 
 class KX134AccelerometerDataBlock(DataBlock):
@@ -872,8 +833,8 @@ class KX134AccelerometerDataBlock(DataBlock):
 
 
 class MPU9250MagSR(IntEnum):
-    SR_8 = 0
-    SR_100 = 1
+    SR_8 = 8
+    SR_100 = 100
 
     @property
     def samples_per_sec(self):
@@ -884,10 +845,10 @@ class MPU9250MagSR(IntEnum):
 
 
 class MPU9250AccelFSR(IntEnum):
-    ACCEL_2G = 0
-    ACCEL_4G = 1
-    ACCEL_8G = 2
-    ACCEL_16G = 3
+    ACCEL_2G = 2
+    ACCEL_4G = 4
+    ACCEL_8G = 8
+    ACCEL_16G = 16
 
     @property
     def acceleration(self):
@@ -898,14 +859,14 @@ class MPU9250AccelFSR(IntEnum):
         return 32768 / self.value
 
     def __str__(self):
-        return f"+/-{self.value} g"
+        return f"+/-{self.value}g"
 
 
 class MPU9250GyroFSR(IntEnum):
-    AV_250DPS = 0
-    AV_500DPS = 1
-    AV_1000DPS = 2
-    AV_2000DPS = 3
+    AV_250DPS = 250
+    AV_500DPS = 500
+    AV_1000DPS = 1000
+    AV_2000DPS = 2000
 
     @property
     def angular_velocity(self):
@@ -919,85 +880,47 @@ class MPU9250GyroFSR(IntEnum):
         return f"+/-{self.value} deg/s"
 
 
-class MPU9250AccelBW(IntEnum):
-    BW_5_HZ = 0
-    BW_10_HZ = 1
-    BW_21_HZ = 2
-    BW_45_HZ = 3
-    BW_99_HZ = 4
-    BW_218_HZ = 5
-    BW_420_HZ = 6
+class MPU9250AccelBW(Enum):
+    BW_5_HZ = 5.05
+    BW_10_HZ = 10.2
+    BW_21_HZ = 21.2
+    BW_45_HZ = 44.8
+    BW_99_HZ = 99.0
+    BW_218_HZ = 218.1
+    BW_420_HZ = 420.0
 
     @property
-    def bandwidth(self):
-        match self:
-            case MPU9250AccelBW.BW_5_HZ:
-                return 5.05
-            case MPU9250AccelBW.BW_10_HZ:
-                return 10.2
-            case MPU9250AccelBW.BW_21_HZ:
-                return 21.2
-            case MPU9250AccelBW.BW_45_HZ:
-                return 44.8
-            case MPU9250AccelBW.BW_99_HZ:
-                return 99
-            case MPU9250AccelBW.BW_218_HZ:
-                return 218.1
-            case MPU9250AccelBW.BW_420_HZ:
-                return 420
-            case _:
-                return 0
+    def bandwidth(self) -> float:
+        return self.value
 
     def __str__(self):
-        return f"{self.bandwidth} Hz"
+        return f"{self.bandwidth}Hz"
 
 
 class MPU9250GyroBW(IntEnum):
-    BW_5_HZ = 0
-    BW_10_HZ = 1
-    BW_20_HZ = 2
-    BW_41_HZ = 3
-    BW_92_HZ = 4
-    BW_184_HZ = 5
-    BW_250_HZ = 6
+    BW_5_HZ = 5
+    BW_10_HZ = 10
+    BW_20_HZ = 20
+    BW_41_HZ = 41
+    BW_92_HZ = 92
+    BW_184_HZ = 184
+    BW_250_HZ = 250
 
     @property
     def bandwidth(self):
-        match self:
-            case MPU9250GyroBW.BW_5_HZ:
-                return 5
-            case MPU9250GyroBW.BW_10_HZ:
-                return 10
-            case MPU9250GyroBW.BW_20_HZ:
-                return 20
-            case MPU9250GyroBW.BW_41_HZ:
-                return 41
-            case MPU9250GyroBW.BW_92_HZ:
-                return 92
-            case MPU9250GyroBW.BW_184_HZ:
-                return 184
-            case MPU9250GyroBW.BW_250_HZ:
-                return 250
-            case _:
-                return 0
+        return self.value
 
     def __str__(self):
-        return f"{self.bandwidth} Hz"
+        return f"{self.bandwidth}Hz"
 
 
 class MPU9250MagResolution(IntEnum):
-    RES_14_BIT = 0
-    RES_16_BIT = 1
+    RES_14_BIT = 14
+    RES_16_BIT = 16
 
     @property
     def bits(self):
-        match self:
-            case MPU9250MagResolution.RES_14_BIT:
-                return 14
-            case MPU9250MagResolution.RES_16_BIT:
-                return 16
-            case _:
-                return 0
+        return self.value
 
     @property
     def sensitivity(self):
@@ -1007,7 +930,7 @@ class MPU9250MagResolution(IntEnum):
             case MPU9250MagResolution.RES_16_BIT:
                 return 1 / 0.15
             case _:
-                return 0
+                raise NotImplementedError(f"Resolution of type {type(self)} invalid.")
 
     def __str__(self):
         return f"{self.bits} bits per sample"
@@ -1043,7 +966,7 @@ class MPU9250Sample:
         self.mag_res: MPU9250MagResolution = mag_res
 
     @classmethod
-    def from_bytes(cls, payload, accel_sense, gyro_sense):
+    def from_bytes(cls, payload: bytes, accel_sense: float, gyro_sense: float) -> Self:
         ag_parts = struct.unpack(">hhhhhhh", payload[0:14])
         mag_parts = struct.unpack("<hhhB", payload[14:21])
 
@@ -1189,11 +1112,11 @@ class MPU9250IMUDataBlock(DataBlock):
         ag_sr_div = (1000 // self.ag_sample_rate) - 1
         info = (
             (int(ag_sr_div) & 0xFF)
-            | ((self.mag_sample_rate.value & 0x1) << 8)
-            | ((self.accel_fsr.value & 0x3) << 9)
-            | ((self.gyro_fsr.value & 0x3) << 11)
-            | ((self.accel_bw.value & 0x7) << 13)
-            | ((self.gyro_bw.value & 0x7) << 16)
+            | ((self.mag_sample_rate.samples_per_sec & 0x1) << 8)
+            | ((self.accel_fsr.acceleration & 0x3) << 9)
+            | ((self.gyro_fsr.angular_velocity & 0x3) << 11)
+            | ((int(self.accel_bw.bandwidth) & 0x7) << 13)
+            | ((self.gyro_bw.bandwidth & 0x7) << 16)
         )
 
         content_length = 8 + (21 * len(self.samples))
