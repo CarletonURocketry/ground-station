@@ -17,7 +17,6 @@ from modules.telemetry.superblock import SuperBlock
 # Constants
 MISSION_EXTENSION: str = "mission"
 MISSIONS_DIR: str = "missions"
-MISSION_ENTRY = dict["name": "", "length": 0, "blocks": 0, "timestamp": 0]
 
 
 # Helper classes
@@ -38,10 +37,28 @@ class ReplayState(IntEnum):
     FINISHED = 2
 
 
+@dataclass
+class MissionEntry:
+    """Represents an available mission for replay."""
+
+    name: str
+    length: int = 0
+    epoch: int = 0
+
+    def __iter__(self):
+        yield "name", self.name
+        yield "length", self.length
+        yield "epoch", self.epoch
+
+    def __len__(self) -> int:
+        return self.length
+
+
 # Status packet classes
 @dataclass
 class SerialData:
     """The serial data packet for the telemetry process."""
+
     available_ports: list[str] = field(default_factory=list)
 
     def __iter__(self):
@@ -105,7 +122,7 @@ class RocketData:
             sd_driver_state=data.sd_state,
             deployment_state=data.deployment_state,
             blocks_recorded=data.sd_blocks_recorded,
-            checkouts_missed=data.sd_checkouts_missed
+            checkouts_missed=data.sd_checkouts_missed,
         )
 
     def __iter__(self):
@@ -128,7 +145,7 @@ class ReplayData:
     speed: float = 1.0
     last_played_speed = 1.0
     mission_files_list = [""]
-    mission_list: list[MISSION_ENTRY] = field(default_factory=list)
+    mission_list: list[MissionEntry] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         # Update the mission list on creation
@@ -163,14 +180,15 @@ class ReplayData:
                     mission_time += get_last_mission_time(file, flight.num_blocks)
 
                 # Output mission to mission list
-                mission_entry = {"name": filename.stem, "length": mission_time,
-                                 "epoch": mission_sb.flights[0].timestamp}
+                mission_entry = MissionEntry(
+                    name=filename.stem, length=mission_time, epoch=mission_sb.flights[0].timestamp
+                )
                 self.mission_list.append(mission_entry)
 
     def __iter__(self):
         yield "state", self.state
         yield "speed", self.speed,
-        yield "mission_list", self.mission_list
+        yield "mission_list", [dict(e) for e in self.mission_list]
 
 
 @dataclass
@@ -196,7 +214,7 @@ class ParsingException(Exception):
 
 
 def get_last_mission_time(file, num_blocks) -> int:
-    """ Obtains last recorded telemetry mission time from a flight"""
+    """Obtains last recorded telemetry mission time from a flight"""
 
     # If flight is empty, return
     if num_blocks == 0:
@@ -206,18 +224,18 @@ def get_last_mission_time(file, num_blocks) -> int:
     last_mission_time = 0
 
     while count <= ((num_blocks * 512) - 4):
-
         try:
             block_header = file.read(4)
-            block_class, block_subtype, block_length = parse_sd_block_header(block_header)
+            block_class, _, block_length = parse_sd_block_header(block_header)
             block_data = file.read(block_length - 4)
         except SDBlockException:
             return last_mission_time
 
         count += block_length
         if count > (num_blocks * 512):
-            raise ParsingException(f"Read block of length {block_length} would read {count} bytes "
-                                   f"from {num_blocks * 512} byte flight")
+            raise ParsingException(
+                f"Read block of length {block_length} would read {count} bytes " f"from {num_blocks * 512} byte flight"
+            )
 
         # Do not unnecessarily parse blocks unless close to end of flight
         if count > ((num_blocks - 1) * 512) and block_class == SDBlockClassType.TELEMETRY_DATA:
