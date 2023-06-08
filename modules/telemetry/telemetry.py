@@ -452,7 +452,7 @@ class Telemetry(Process):
         call_sign = call_sign.upper()  # Uppercase formatting because that's standard
 
         if length <= 24:  # If this packet nothing more than just the header
-            logger.info(call_sign, length, version, srs_addr, packet_num)
+            logger.info(f"{call_sign, length, version, srs_addr, packet_num}")
 
         blocks = data[24:]  # Remove the packet header
 
