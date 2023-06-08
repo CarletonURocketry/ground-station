@@ -3,11 +3,12 @@
 # Authors:
 # Samuel Dewan
 # Thomas Selwyn (Devil)
-# Matteo Golin (linguin1)
+# Matteo Golin
 
 import struct
 from abc import ABC, abstractmethod
 from enum import IntEnum
+from typing import Self
 from modules.telemetry.block import DataBlockSubtype, BlockException, BlockUnknownException
 from modules.misc import converter
 
@@ -23,27 +24,30 @@ class DataBlockUnknownException(BlockUnknownException):
 class DataBlock(ABC):
     """Interface for all telemetry data blocks."""
 
+    def __init__(self, mission_time: int):
+        self.mission_time: int = mission_time
+
     @property
     @abstractmethod
     def length(self):
-        """ Length of block, not including header """
+        """Length of block, not including header"""
 
     @property
     @abstractmethod
     def subtype(self):
-        """ Subtype of block """
+        """Subtype of block"""
 
     @abstractmethod
     def to_payload(self):
-        """ Marshal block to a bytes object """
+        """Marshal block to a bytes object"""
 
     @staticmethod
     def type_desc():
-        """ Type description of block"""
+        """Type description of block"""
 
     @classmethod
-    def parse(cls, block_subtype, payload):
-        """ Unmarshal a bytes object to appropriate block class """
+    def parse(cls, block_subtype, payload) -> Self:
+        """Unmarshal a bytes object to appropriate block class."""
         match block_subtype:
             case DataBlockSubtype.DEBUG_MESSAGE:
                 return DebugMessageDataBlock.from_payload(payload)
@@ -75,18 +79,15 @@ class DataBlock(ABC):
         yield ""
 
 
-#
-#   Debug Message
-#
+# Debug Message
 class DebugMessageDataBlock(DataBlock):
-    def __init__(self, mission_time, debug_msg):
-        super().__init__()
-        self.mission_time = mission_time
+    def __init__(self, mission_time: int, debug_msg: str):
+        super().__init__(mission_time)
         self.debug_msg = debug_msg
 
     @property
     def length(self):
-        return ((len(self.debug_msg.encode('utf-8')) + 3) & ~0x3) + 4
+        return ((len(self.debug_msg.encode("utf-8")) + 3) & ~0x3) + 4
 
     @property
     def subtype(self):
@@ -99,15 +100,15 @@ class DebugMessageDataBlock(DataBlock):
     @classmethod
     def from_payload(cls, payload):
         mission_time = struct.unpack("<I", payload[0:4])[0]
-        return DebugMessageDataBlock(mission_time, payload[4:].decode('utf-8'))
+        return DebugMessageDataBlock(mission_time, payload[4:].decode("utf-8"))
 
     def to_payload(self):
-        b = self.debug_msg.encode('utf-8')
-        b = b + (b'\x00' * (((len(b) + 3) & ~0x3) - len(b)))
+        b = self.debug_msg.encode("utf-8")
+        b = b + (b"\x00" * (((len(b) + 3) & ~0x3) - len(b)))
         return struct.pack("<I", self.mission_time) + b
 
     def __str__(self):
-        return f"{self.type_desc()} -> time: {self.mission_time} ms, message: \"{self.debug_msg}\""
+        return f'{self.type_desc()} -> time: {self.mission_time} ms, message: "{self.debug_msg}"'
 
     def __iter__(self):
         yield "mission_time", self.mission_time
@@ -115,14 +116,13 @@ class DebugMessageDataBlock(DataBlock):
 
 
 class StartupMessageDataBlock(DataBlock):
-    def __init__(self, mission_time, startup_msg):
-        super().__init__()
-        self.mission_time = mission_time
+    def __init__(self, mission_time: int, startup_msg):
+        super().__init__(mission_time)
         self.startup_msg = startup_msg
 
     @property
     def length(self):
-        return ((len(self.startup_msg.encode('utf-8')) + 3) & ~0x3) + 4
+        return ((len(self.startup_msg.encode("utf-8")) + 3) & ~0x3) + 4
 
     @property
     def subtype(self):
@@ -135,25 +135,22 @@ class StartupMessageDataBlock(DataBlock):
     @classmethod
     def from_payload(cls, payload):
         mission_time = struct.unpack("<I", payload[0:4])[0]
-        return StartupMessageDataBlock(mission_time, payload[4:].decode('utf-8'))
+        return StartupMessageDataBlock(mission_time, payload[4:].decode("utf-8"))
 
     def to_payload(self):
-        b = self.startup_msg.encode('utf-8')
-        b = b + (b'\x00' * (((len(b) + 3) & ~0x3) - len(b)))
+        b = self.startup_msg.encode("utf-8")
+        b = b + (b"\x00" * (((len(b) + 3) & ~0x3) - len(b)))
         return struct.pack("<I", self.mission_time) + b
 
     def __str__(self):
-        return f"{self.type_desc()} -> time: {self.mission_time} ms, message: \"{self.startup_msg}\""
+        return f'{self.type_desc()} -> time: {self.mission_time} ms, message: "{self.startup_msg}"'
 
     def __iter__(self):
         yield "mission_time", self.mission_time
         yield "message", self.startup_msg
 
 
-#
-#   Software Status
-#
-
+# Software Status
 class SensorStatus(IntEnum):
     SENSOR_STATUS_NONE = 0x0
     SENSOR_STATUS_INITIALIZING = 0x1
@@ -239,11 +236,18 @@ class DeploymentState(IntEnum):
 class StatusDataBlock(DataBlock):
     """Encapsulates the status data."""
 
-    def __init__(self, mission_time: int, kx134_state: SensorStatus, alt_state: SensorStatus,
-                 imu_state: SensorStatus, sd_state: SDCardStatus, deployment_state: DeploymentState,
-                 sd_blocks_recorded: int, sd_checkouts_missed: int):
-        super().__init__()
-        self.mission_time: int = mission_time
+    def __init__(
+        self,
+        mission_time: int,
+        kx134_state: SensorStatus,
+        alt_state: SensorStatus,
+        imu_state: SensorStatus,
+        sd_state: SDCardStatus,
+        deployment_state: DeploymentState,
+        sd_blocks_recorded: int,
+        sd_checkouts_missed: int,
+    ):
+        super().__init__(mission_time)
         self.kx134_state: SensorStatus = kx134_state
         self.alt_state: SensorStatus = alt_state
         self.imu_state: SensorStatus = imu_state
@@ -285,33 +289,37 @@ class StatusDataBlock(DataBlock):
             raise DataBlockException(f"Invalid SD card state: {(parts[1] >> 25) & 0x7}") from error
 
         try:
-            deployment_state = DeploymentState((parts[1] >> 28) & 0xf)
+            deployment_state = DeploymentState((parts[1] >> 28) & 0xF)
         except ValueError as error:
             raise DataBlockException(f"Invalid deployment state: {(parts[1] >> 28) & 0xf}") from error
 
-        return StatusDataBlock(parts[0], kx134_state, alt_state, imu_state, sd_state,
-                               deployment_state, parts[2], parts[3])
+        return StatusDataBlock(
+            parts[0], kx134_state, alt_state, imu_state, sd_state, deployment_state, parts[2], parts[3]
+        )
 
     def to_payload(self):
-        states = (((self.kx134_state.value & 0x7) << 16) |
-                  ((self.alt_state.value & 0x7) << 19) |
-                  ((self.imu_state.value & 0x7) << 22) |
-                  ((self.sd_state.value & 0x7) << 25) |
-                  ((self.deployment_state.value & 0x7) << 28))
+        states = (
+            ((self.kx134_state.value & 0x7) << 16)
+            | ((self.alt_state.value & 0x7) << 19)
+            | ((self.imu_state.value & 0x7) << 22)
+            | ((self.sd_state.value & 0x7) << 25)
+            | ((self.deployment_state.value & 0x7) << 28)
+        )
 
-        return struct.pack("<IIII", self.mission_time, states, self.sd_blocks_recorded,
-                           self.sd_checkouts_missed)
+        return struct.pack("<IIII", self.mission_time, states, self.sd_blocks_recorded, self.sd_checkouts_missed)
 
     @staticmethod
     def type_desc():
         return "Status"
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time} ms, kx134 state: "
-                f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
-                f"IMU state: {str(self.imu_state)}, SD driver state: {str(self.sd_state)}, "
-                f"deployment state: {str(self.deployment_state)}, blocks recorded: "
-                f" {self.sd_blocks_recorded}, checkouts missed: {self.sd_checkouts_missed}")
+        return (
+            f"{self.type_desc()} -> time: {self.mission_time} ms, kx134 state: "
+            f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
+            f"IMU state: {str(self.imu_state)}, SD driver state: {str(self.sd_state)}, "
+            f"deployment state: {str(self.deployment_state)}, blocks recorded: "
+            f" {self.sd_blocks_recorded}, checkouts missed: {self.sd_checkouts_missed}"
+        )
 
     def __iter__(self):
         yield "mission_time", self.mission_time
@@ -324,15 +332,12 @@ class StatusDataBlock(DataBlock):
         yield "checkouts_missed", self.sd_checkouts_missed
 
 
-#
-#   Altitude
-#
+# Altitude
 class AltitudeDataBlock(DataBlock):
     """Contains the data pertaining to the altitude block."""
 
     def __init__(self, mission_time: int, pressure: int, temperature: int, altitude: int):
-        super().__init__()
-        self.mission_time: int = mission_time
+        super().__init__(mission_time)
         self.pressure: int = pressure
         self.temperature: int = temperature
         self.altitude: int = altitude
@@ -351,28 +356,33 @@ class AltitudeDataBlock(DataBlock):
         return AltitudeDataBlock(parts[0], parts[1], parts[2] / 1000, parts[3] / 1000)
 
     def to_payload(self):
-        return struct.pack("<Iiii", self.mission_time, int(self.pressure),
-                           int(self.temperature * 1000), int(self.altitude * 1000))
+        return struct.pack(
+            "<Iiii", self.mission_time, int(self.pressure), int(self.temperature * 1000), int(self.altitude * 1000)
+        )
 
     @staticmethod
     def type_desc():
         return "Altitude"
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time} ms, pressure: {self.pressure} Pa, "
-                f"temperature: {self.temperature} C, altitude: {self.altitude} m")
+        return (
+            f"{self.type_desc()} -> time: {self.mission_time} ms, pressure: {self.pressure} Pa, "
+            f"temperature: {self.temperature} C, altitude: {self.altitude} m"
+        )
 
     def __iter__(self):
         yield "mission_time", self.mission_time
         yield "pressure", {"pascals": self.pressure, "psi": converter.pascals_to_psi(self.pressure)}
         yield "altitude", {"metres": self.altitude, "feet": converter.metres_to_feet(self.altitude)}
-        yield "temperature", {"celsius": self.temperature,
-                              "fahrenheit": converter.celsius_to_fahrenheit(self.temperature)}
+        yield "temperature", {
+            "celsius": self.temperature,
+            "fahrenheit": converter.celsius_to_fahrenheit(self.temperature),
+        }
 
 
 class AccelerationDataBlock(DataBlock):
     def __init__(self, mission_time: int, fsr: int, x: int, y: int, z: int):
-        super().__init__()
+        super().__init__(mission_time)
         self.mission_time: int = mission_time
         self.fsr: int = fsr
         self.x: int = x
@@ -391,15 +401,15 @@ class AccelerationDataBlock(DataBlock):
     def from_payload(cls, payload):
         parts = struct.unpack("<IBBhhh", payload)
         fsr = parts[1]
-        x = parts[3] * (fsr / (2 ** 15))
-        y = parts[4] * (fsr / (2 ** 15))
-        z = parts[5] * (fsr / (2 ** 15))
+        x = parts[3] * (fsr / (2**15))
+        y = parts[4] * (fsr / (2**15))
+        z = parts[5] * (fsr / (2**15))
         return AccelerationDataBlock(parts[0], fsr, x, y, z)
 
     def to_payload(self):
-        x = round(self.x * ((2 ** 15) / self.fsr))
-        y = round(self.y * ((2 ** 15) / self.fsr))
-        z = round(self.z * ((2 ** 15) / self.fsr))
+        x = round(self.x * ((2**15) / self.fsr))
+        y = round(self.y * ((2**15) / self.fsr))
+        z = round(self.z * ((2**15) / self.fsr))
         return struct.pack("<IBBhhh", self.mission_time, self.fsr, 0, x, y, z)
 
     @staticmethod
@@ -407,8 +417,10 @@ class AccelerationDataBlock(DataBlock):
         return "Acceleration"
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time}, fsr: {self.fsr}, "
-                f"x: {self.x} g, y: {self.y} g, z: {self.z} g")
+        return (
+            f"{self.type_desc()} -> time: {self.mission_time}, fsr: {self.fsr}, "
+            f"x: {self.x} g, y: {self.y} g, z: {self.z} g"
+        )
 
     def __iter__(self):
         yield "mission_time", self.mission_time
@@ -422,13 +434,12 @@ class AccelerationDataBlock(DataBlock):
 #   Angular Velocity
 #
 class AngularVelocityDataBlock(DataBlock):
-    def __init__(self, mission_time, fsr, x, y, z):
-        super().__init__()
-        self.mission_time = mission_time
-        self.fsr = fsr
-        self.x = x
-        self.y = y
-        self.z = z
+    def __init__(self, mission_time: int, fsr: int, x: int, y: int, z: int):
+        super().__init__(mission_time)
+        self.fsr: int = fsr
+        self.x: int = x
+        self.y: int = y
+        self.z: int = z
 
     @property
     def length(self):
@@ -446,20 +457,22 @@ class AngularVelocityDataBlock(DataBlock):
     def from_payload(cls, payload):
         parts = struct.unpack("<IHhhh", payload)
         fsr = parts[1]
-        x = parts[2] * (fsr / (2 ** 15))
-        y = parts[3] * (fsr / (2 ** 15))
-        z = parts[4] * (fsr / (2 ** 15))
+        x = parts[2] * (fsr / (2**15))
+        y = parts[3] * (fsr / (2**15))
+        z = parts[4] * (fsr / (2**15))
         return AngularVelocityDataBlock(parts[0], fsr, x, y, z)
 
     def to_payload(self):
-        x = round(self.x * ((2 ** 15) / self.fsr))
-        y = round(self.y * ((2 ** 15) / self.fsr))
-        z = round(self.z * ((2 ** 15) / self.fsr))
+        x = round(self.x * ((2**15) / self.fsr))
+        y = round(self.y * ((2**15) / self.fsr))
+        z = round(self.z * ((2**15) / self.fsr))
         return struct.pack("<IHhhh", self.mission_time, self.fsr, x, y, z)
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time}, fsr: {self.fsr}, "
-                f"x: {self.x} g, y: {self.y} g, z: {self.z} g")
+        return (
+            f"{self.type_desc()} -> time: {self.mission_time}, fsr: {self.fsr}, "
+            f"x: {self.x} g, y: {self.y} g, z: {self.z} g"
+        )
 
     def __iter__(self):
         yield "mission_time", self.mission_time
@@ -469,9 +482,7 @@ class AngularVelocityDataBlock(DataBlock):
         yield "z", self.z
 
 
-#
-#   GNSS Location
-#
+# GNSS Location
 class GNSSLocationFixType(IntEnum):
     UNKNOWN = 0
     NOT_AVAILABLE = 1
@@ -482,21 +493,22 @@ class GNSSLocationFixType(IntEnum):
 class GNSSLocationBlock(DataBlock):
     """The data for GNSS location."""
 
-    def __init__(self,
-                 mission_time: int,
-                 latitude: int,
-                 longitude: int,
-                 utc_time: int,
-                 altitude: int,
-                 speed: int,
-                 course: int,
-                 pdop: int,
-                 hdop: int,
-                 vdop: int,
-                 sats: int,
-                 fix_type: GNSSLocationFixType):
-        super().__init__()
-        self.mission_time: int = mission_time
+    def __init__(
+        self,
+        mission_time: int,
+        latitude: int,
+        longitude: int,
+        utc_time: int,
+        altitude: int,
+        speed: int,
+        course: int,
+        pdop: int,
+        hdop: int,
+        vdop: int,
+        sats: int,
+        fix_type: GNSSLocationFixType,
+    ):
+        super().__init__(mission_time)
         self.latitude: int = latitude
         self.longitude: int = longitude
         self.utc_time: int = utc_time
@@ -526,15 +538,37 @@ class GNSSLocationBlock(DataBlock):
         except ValueError as error:
             raise DataBlockException(f"Invalid GNSS fix type: {parts[11] >> 6:04x}") from error
 
-        return GNSSLocationBlock(parts[0], parts[1], parts[2], parts[3], parts[4] / 1000,
-                                 parts[5] / 100, parts[6] / 100, parts[7] / 100, parts[8] / 100,
-                                 parts[9] / 100, parts[10], fix_type)
+        return GNSSLocationBlock(
+            parts[0],
+            parts[1],
+            parts[2],
+            parts[3],
+            parts[4] / 1000,
+            parts[5] / 100,
+            parts[6] / 100,
+            parts[7] / 100,
+            parts[8] / 100,
+            parts[9] / 100,
+            parts[10],
+            fix_type,
+        )
 
     def to_payload(self):
-        return struct.pack("<IiiIihhHHHBB", self.mission_time, self.latitude, self.longitude,
-                           self.utc_time, int(self.altitude * 1000), int(self.speed * 100),
-                           int(self.course * 100), int(self.pdop * 100), int(self.hdop * 100),
-                           int(self.vdop * 100), self.sats, self.fix_type & 0x3)
+        return struct.pack(
+            "<IiiIihhHHHBB",
+            self.mission_time,
+            self.latitude,
+            self.longitude,
+            self.utc_time,
+            int(self.altitude * 1000),
+            int(self.speed * 100),
+            int(self.course * 100),
+            int(self.pdop * 100),
+            int(self.hdop * 100),
+            int(self.vdop * 100),
+            self.sats,
+            self.fix_type & 0x3,
+        )
 
     @staticmethod
     def coord_to_str(coord, ew=False):
@@ -558,16 +592,17 @@ class GNSSLocationBlock(DataBlock):
         return "GNSS Location"
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time}, position: "
-                f"{(self.latitude / 600000)} {(self.longitude / 600000)}, utc time: "
-                f"{self.utc_time}, altitude: {self.altitude} m, speed: {self.speed} knots, "
-                f"course: {self.course} degs, pdop: {self.pdop}, hdop: {self.hdop}, vdop: "
-                f"{self.vdop}, sats in use: {self.sats}, type: {self.fix_type.name}")
+        return (
+            f"{self.type_desc()} -> time: {self.mission_time}, position: "
+            f"{(self.latitude / 600000)} {(self.longitude / 600000)}, utc time: "
+            f"{self.utc_time}, altitude: {self.altitude} m, speed: {self.speed} knots, "
+            f"course: {self.course} degs, pdop: {self.pdop}, hdop: {self.hdop}, vdop: "
+            f"{self.vdop}, sats in use: {self.sats}, type: {self.fix_type.name}"
+        )
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "position", {"latitude": (self.latitude / 600000),
-                           "longitude": (self.longitude / 600000)}
+        yield "position", {"latitude": (self.latitude / 600000), "longitude": (self.longitude / 600000)}
         yield "utc_time", self.utc_time
         yield "altitude", self.altitude
         yield "speed", self.speed
@@ -582,8 +617,8 @@ class GNSSLocationBlock(DataBlock):
 class GNSSSatType(IntEnum):
     """The types of GNSS satellites."""
 
-    GPS: int = 0
-    GLONASS: int = 1
+    GPS = 0
+    GLONASS = 1
 
 
 class GNSSSatInfo:
@@ -602,7 +637,7 @@ class GNSSSatInfo:
     @classmethod
     def from_payload(cls, data):
         parts = struct.unpack("<BBH", data)
-        identifier = parts[2] & 0x1f
+        identifier = parts[2] & 0x1F
 
         try:
             sat_type = GNSSSatType((parts[2] >> 15) & 0x1)
@@ -614,7 +649,7 @@ class GNSSSatInfo:
         elif sat_type == GNSSSatType.GLONASS:
             identifier = identifier + GNSSSatInfo.GLONASS_SV_OFFSET
 
-        azimuth = (parts[2] << 5) & 0x1ff
+        azimuth = (parts[2] << 5) & 0x1FF
 
         return GNSSSatInfo(sat_type, parts[0], parts[1], identifier, azimuth)
 
@@ -624,15 +659,16 @@ class GNSSSatInfo:
         else:
             id_adjusted = self.identifier - GNSSSatInfo.GLONASS_SV_OFFSET
 
-        id_and_azimuth = ((id_adjusted & 0x1f) | ((self.azimuth & 0x1ff) << 5) |
-                          (self.sat_type << 15))
+        id_and_azimuth = (id_adjusted & 0x1F) | ((self.azimuth & 0x1FF) << 5) | (self.sat_type << 15)
 
         return struct.pack("<BBH", self.elevation, self.snr, id_and_azimuth)
 
     def __str__(self):
-        return (f"{self.sat_type.name} sat -> elevation: "
-                f"{self.elevation} degs, SNR: {self.snr} dB-Hz, id: {self.identifier}, "
-                f"azimuth: {self.azimuth} degs")
+        return (
+            f"{self.sat_type.name} sat -> elevation: "
+            f"{self.elevation} degs, SNR: {self.snr} dB-Hz, id: {self.identifier}, "
+            f"azimuth: {self.azimuth} degs"
+        )
 
     def __iter__(self):
         yield "sat_type", self.sat_type.name
@@ -643,13 +679,14 @@ class GNSSSatInfo:
 
 
 class GNSSMetadataBlock(DataBlock):
-    def __init__(self,
-                 mission_time: int,
-                 gps_sats_in_use: list[int],
-                 glonass_sats_in_use: list[int],
-                 sats_in_view: list[GNSSSatInfo]):
-        super().__init__()
-        self.mission_time: int = mission_time
+    def __init__(
+        self,
+        mission_time: int,
+        gps_sats_in_use: list[int],
+        glonass_sats_in_use: list[int],
+        sats_in_view: list[GNSSSatInfo],
+    ):
+        super().__init__(mission_time)
         self.gps_sats_in_use: list[int] = gps_sats_in_use
         self.glonass_sats_in_use: list[int] = glonass_sats_in_use
         self.sats_in_view: list[GNSSSatInfo] = sats_in_view
@@ -684,7 +721,7 @@ class GNSSMetadataBlock(DataBlock):
 
         # Check satellites in view array
         while offset < len(payload):
-            sats_in_view.append(GNSSSatInfo.from_payload(payload[offset:offset + 4]))
+            sats_in_view.append(GNSSSatInfo.from_payload(payload[offset : offset + 4]))
             offset += 4
 
         return GNSSMetadataBlock(payload_time, gps_sats_in_use, glonass_sats_in_use, sats_in_view)
@@ -692,14 +729,13 @@ class GNSSMetadataBlock(DataBlock):
     def to_payload(self):
         gps_sats_in_use_bitfield = 0
         for n in self.gps_sats_in_use:
-            gps_sats_in_use_bitfield |= (1 << (n - GNSSSatInfo.GPS_SV_OFFSET))
+            gps_sats_in_use_bitfield |= 1 << (n - GNSSSatInfo.GPS_SV_OFFSET)
 
         glonass_sats_in_use_bitfield = 0
         for n in self.glonass_sats_in_use:
-            glonass_sats_in_use_bitfield |= (1 << (n - GNSSSatInfo.GLONASS_SV_OFFSET))
+            glonass_sats_in_use_bitfield |= 1 << (n - GNSSSatInfo.GLONASS_SV_OFFSET)
 
-        payload = struct.pack("<III", self.mission_time, gps_sats_in_use_bitfield,
-                              glonass_sats_in_use_bitfield)
+        payload = struct.pack("<III", self.mission_time, gps_sats_in_use_bitfield, glonass_sats_in_use_bitfield)
 
         for sat in self.sats_in_view:
             payload = payload + sat.to_payload()
@@ -711,9 +747,11 @@ class GNSSMetadataBlock(DataBlock):
         return "GNSS Metadata"
 
     def __str__(self):
-        s = (f"{self.type_desc()} -> time: {self.mission_time}, GPS sats in use: "
-             f"{self.gps_sats_in_use}, GLONASS sats in use: {self.glonass_sats_in_use}\n"
-             f"Sats in view:")
+        s = (
+            f"{self.type_desc()} -> time: {self.mission_time}, GPS sats in use: "
+            f"{self.gps_sats_in_use}, GLONASS sats in use: {self.glonass_sats_in_use}\n"
+            f"Sats in view:"
+        )
         for sat in self.sats_in_view:
             s += f"\n\t{str(sat)} " if dict(sat)["snr"] != 0 else ""
         return s
@@ -800,16 +838,16 @@ class KX134Resolution(IntEnum):
 
 
 class KX134AccelerometerDataBlock(DataBlock):
-
-    def __init__(self,
-                 mission_time: int,
-                 odr: KX134ODR,
-                 accel_range: KX134Range,
-                 rolloff: KX134LPFRolloff,
-                 resolution: KX134Resolution,
-                 samples: list):
-        super().__init__()
-        self.mission_time: int = mission_time
+    def __init__(
+        self,
+        mission_time: int,
+        odr: KX134ODR,
+        accel_range: KX134Range,
+        rolloff: KX134LPFRolloff,
+        resolution: KX134Resolution,
+        samples: list,
+    ):
+        super().__init__(mission_time)
         self.odr: KX134ODR = odr
         self.accel_range: KX134Range = accel_range
         self.rolloff: KX134LPFRolloff = rolloff
@@ -832,7 +870,7 @@ class KX134AccelerometerDataBlock(DataBlock):
         parts = struct.unpack("<IH", payload[0:6])
 
         try:
-            odr = KX134ODR(parts[1] & 0xf)
+            odr = KX134ODR(parts[1] & 0xF)
         except ValueError as error:
             raise DataBlockException(f"Invalid KX134 ODR: {parts[1] & 0xf}") from error
 
@@ -859,10 +897,10 @@ class KX134AccelerometerDataBlock(DataBlock):
         for i in range(num_samples):
             if resolution == KX134Resolution.RES_8_BIT:
                 samp_start = 6 + (i * 3)
-                samp_parts = struct.unpack("<bbb", payload[samp_start:samp_start + 3])
+                samp_parts = struct.unpack("<bbb", payload[samp_start : samp_start + 3])
             else:
                 samp_start = 6 + (i * 6)
-                samp_parts = struct.unpack("<hhh", payload[samp_start:samp_start + 6])
+                samp_parts = struct.unpack("<hhh", payload[samp_start : samp_start + 6])
 
             x = samp_parts[0] / sensitivity
             y = samp_parts[1] / sensitivity
@@ -878,9 +916,13 @@ class KX134AccelerometerDataBlock(DataBlock):
         sample_bytes = len(self.samples) * int(self.resolution.bits // 8) * 3
         padding = self.length - (sample_bytes + 6)
 
-        settings = ((self.odr & 0xf) | ((self.accel_range & 0x3) << 4) |
-                    ((self.rolloff & 0x1) << 6) | ((self.resolution & 0x1) << 7) |
-                    ((padding & 0x3) << 14))
+        settings = (
+            (self.odr & 0xF)
+            | ((self.accel_range & 0x3) << 4)
+            | ((self.rolloff & 0x1) << 6)
+            | ((self.resolution & 0x1) << 7)
+            | ((padding & 0x3) << 14)
+        )
         head = struct.pack("<IH", self.mission_time, settings)
 
         sensitivity = (2 ** (self.resolution.bits - 1)) // self.accel_range.acceleration
@@ -894,7 +936,7 @@ class KX134AccelerometerDataBlock(DataBlock):
             else:
                 head = head + struct.pack("<hhh", x, y, z)
 
-        return head + (b'\x00' * padding)
+        return head + (b"\x00" * padding)
 
     def gen_samples(self):
         count = len(self.samples)
@@ -907,9 +949,11 @@ class KX134AccelerometerDataBlock(DataBlock):
         return "KX134 Accelerometer"
 
     def __str__(self):
-        return (f"{self.type_desc()} -> time: {self.mission_time}, samples: {len(self.samples)}, "
-                f"ODR: {self.odr}, range: {self.accel_range}, rolloff: {self.rolloff}, "
-                f"resolution: {self.resolution}")
+        return (
+            f"{self.type_desc()} -> time: {self.mission_time}, samples: {len(self.samples)}, "
+            f"ODR: {self.odr}, range: {self.accel_range}, rolloff: {self.rolloff}, "
+            f"resolution: {self.resolution}"
+        )
 
     def __iter__(self):
         yield "mission_time", self.mission_time
@@ -1063,9 +1107,21 @@ class MPU9250MagResolution(IntEnum):
 
 
 class MPU9250Sample:
-    def __init__(self, accel_x: int, accel_y: int, accel_z: int, temperature: int, gyro_x: int, gyro_y: int,
-                 gyro_z: int, mag_x: int,
-                 mag_y: int, mag_z: int, mag_ovf: int, mag_res: MPU9250MagResolution):
+    def __init__(
+        self,
+        accel_x: int,
+        accel_y: int,
+        accel_z: int,
+        temperature: int,
+        gyro_x: int,
+        gyro_y: int,
+        gyro_z: int,
+        mag_x: int,
+        mag_y: int,
+        mag_z: int,
+        mag_ovf: int,
+        mag_res: MPU9250MagResolution,
+    ):
         self.accel_x: int = accel_x
         self.accel_y: int = accel_y
         self.accel_z: int = accel_z
@@ -1101,8 +1157,9 @@ class MPU9250Sample:
         mag_y = mag_parts[1] / mag_res.sensitivity
         mag_z = mag_parts[2] / mag_res.sensitivity
 
-        return MPU9250Sample(accel_x, accel_y, accel_z, temperature, gyro_x, gyro_y, gyro_z,
-                             mag_x, mag_y, mag_z, mag_ovf, mag_res)
+        return MPU9250Sample(
+            accel_x, accel_y, accel_z, temperature, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z, mag_ovf, mag_res
+        )
 
     def to_payload(self, accel_sense, gyro_sense):
         accel_x = int(self.accel_x * accel_sense)
@@ -1120,8 +1177,7 @@ class MPU9250Sample:
         mag_z = int(self.mag_z * self.mag_res.sensitivity)
         mag_flags = (int(self.mag_ovf) << 4) | (self.mag_res.value << 3)
 
-        ag_bytes = struct.pack(">hhhhhhh", accel_x, accel_y, accel_z,
-                               temperature, gyro_x, gyro_y, gyro_z)
+        ag_bytes = struct.pack(">hhhhhhh", accel_x, accel_y, accel_z, temperature, gyro_x, gyro_y, gyro_z)
         mag_bytes = struct.pack("<hhhB", mag_x, mag_y, mag_z, mag_flags)
         return ag_bytes + mag_bytes
 
@@ -1141,18 +1197,18 @@ class MPU9250Sample:
 
 
 class MPU9250IMUDataBlock(DataBlock):
-
-    def __init__(self,
-                 mission_time: int,
-                 ag_sample_rate: int,
-                 mag_sample_rate: MPU9250MagSR,
-                 accel_fsr: MPU9250AccelFSR,
-                 gyro_fsr: MPU9250GyroFSR,
-                 accel_bw: MPU9250AccelBW,
-                 gyro_bw: MPU9250GyroBW,
-                 samples: list[MPU9250Sample]):
-        super().__init__()
-        self.mission_time: int = mission_time
+    def __init__(
+        self,
+        mission_time: int,
+        ag_sample_rate: int,
+        mag_sample_rate: MPU9250MagSR,
+        accel_fsr: MPU9250AccelFSR,
+        gyro_fsr: MPU9250GyroFSR,
+        accel_bw: MPU9250AccelBW,
+        gyro_bw: MPU9250GyroBW,
+        samples: list[MPU9250Sample],
+    ):
+        super().__init__(mission_time)
         self.ag_sample_rate: int = ag_sample_rate
         self.mag_sample_rate: MPU9250MagSR = mag_sample_rate
         self.accel_fsr: MPU9250AccelFSR = accel_fsr
@@ -1182,56 +1238,65 @@ class MPU9250IMUDataBlock(DataBlock):
     def from_payload(cls, payload):
         parts = struct.unpack("<II", payload[0:8])
 
-        ag_sample_rate = 1000 / ((parts[1] & 0xff) + 1)
+        ag_sample_rate = 1000 / ((parts[1] & 0xFF) + 1)
 
         try:
             mag_sample_rate = MPU9250MagSR((parts[1] >> 8) & 0x1)
         except ValueError as error:
-            raise DataBlockException(f"Invalid MPU9250 magnetometer sample "
-                                     f"rate: {(parts[1] >> 8) & 0x1}") from error
+            raise DataBlockException(
+                f"Invalid MPU9250 magnetometer sample " f"rate: {(parts[1] >> 8) & 0x1}"
+            ) from error
 
         try:
             accel_fsr = MPU9250AccelFSR((parts[1] >> 9) & 0x3)
         except ValueError as error:
-            raise DataBlockException(f"Invalid MPU9250 accelerometer full scale "
-                                     f"range: {(parts[1] >> 9) & 0x3}") from error
+            raise DataBlockException(
+                f"Invalid MPU9250 accelerometer full scale " f"range: {(parts[1] >> 9) & 0x3}"
+            ) from error
 
         try:
             gyro_fsr = MPU9250GyroFSR((parts[1] >> 11) & 0x3)
         except ValueError as error:
-            raise DataBlockException(f"Invalid MPU9250 gyroscope full scale "
-                                     f"range: {(parts[1] >> 11) & 0x3}") from error
+            raise DataBlockException(
+                f"Invalid MPU9250 gyroscope full scale " f"range: {(parts[1] >> 11) & 0x3}"
+            ) from error
 
         try:
             accel_bw = MPU9250AccelBW((parts[1] >> 13) & 0x7)
         except ValueError as error:
-            raise DataBlockException(f"Invalid MPU9250 accelerometer bandwidth: "
-                                     f"{(parts[1] >> 13) & 0x7}") from error
+            raise DataBlockException(
+                f"Invalid MPU9250 accelerometer bandwidth: " f"{(parts[1] >> 13) & 0x7}"
+            ) from error
 
         try:
             gyro_bw = MPU9250GyroBW((parts[1] >> 16) & 0x7)
         except ValueError as error:
-            raise DataBlockException(f"Invalid MPU9250 gyroscope bandwidth: "
-                                     f"{(parts[1] >> 16) & 0x7}") from error
+            raise DataBlockException(f"Invalid MPU9250 gyroscope bandwidth: " f"{(parts[1] >> 16) & 0x7}") from error
 
         num_samples = (len(payload) - 8) // 21
 
         samples = list()
         for i in range(num_samples):
             sample_start = 8 + (i * 21)
-            sample = MPU9250Sample.from_bytes(payload[sample_start:sample_start + 21],
-                                              accel_fsr.sensitivity, gyro_fsr.sensitivity)
+            sample = MPU9250Sample.from_bytes(
+                payload[sample_start : sample_start + 21], accel_fsr.sensitivity, gyro_fsr.sensitivity
+            )
             samples.append(sample)
 
-        return MPU9250IMUDataBlock(parts[0], ag_sample_rate, mag_sample_rate,
-                                   accel_fsr, gyro_fsr, accel_bw, gyro_bw,
-                                   samples)
+        return MPU9250IMUDataBlock(
+            parts[0], ag_sample_rate, mag_sample_rate, accel_fsr, gyro_fsr, accel_bw, gyro_bw, samples
+        )
 
     def to_payload(self):
         ag_sr_div = (1000 // self.ag_sample_rate) - 1
-        info = ((int(ag_sr_div) & 0xff) | ((self.mag_sample_rate.value & 0x1) << 8) |
-                ((self.accel_fsr.value & 0x3) << 9) | ((self.gyro_fsr.value & 0x3) << 11) |
-                ((self.accel_bw.value & 0x7) << 13) | ((self.gyro_bw.value & 0x7) << 16))
+        info = (
+            (int(ag_sr_div) & 0xFF)
+            | ((self.mag_sample_rate.value & 0x1) << 8)
+            | ((self.accel_fsr.value & 0x3) << 9)
+            | ((self.gyro_fsr.value & 0x3) << 11)
+            | ((self.accel_bw.value & 0x7) << 13)
+            | ((self.gyro_bw.value & 0x7) << 16)
+        )
 
         content_length = 8 + (21 * len(self.samples))
         total_length = (content_length + 3) & ~0x3
@@ -1240,11 +1305,10 @@ class MPU9250IMUDataBlock(DataBlock):
         payload = struct.pack("<II", self.mission_time, info)
 
         for sample in self.samples:
-            this_sample = sample.to_payload(self.accel_fsr.sensitivity,
-                                          self.gyro_fsr.sensitivity)
+            this_sample = sample.to_payload(self.accel_fsr.sensitivity, self.gyro_fsr.sensitivity)
             payload += this_sample
 
-        return payload + (b'\x00' * padding)
+        return payload + (b"\x00" * padding)
 
     def gen_samples(self):
         count = len(self.samples)
@@ -1258,7 +1322,8 @@ class MPU9250IMUDataBlock(DataBlock):
             f"gyro: ({self.sensor.gyro_x},{self.sensor.gyro_y},{self.sensor.gyro_z}), "
             f"samples: {len(self.samples)}, "
             f"sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "
-            f"gyro fsr: {self.gyro_fsr}")
+            f"gyro fsr: {self.gyro_fsr}"
+        )
 
     def __iter__(self):
         yield "mission_time", self.mission_time
@@ -1294,6 +1359,17 @@ def avg_mpu9250_samples(data_samples: list[MPU9250Sample]) -> MPU9250Sample:
         for key in data.keys():
             avg[key] += data[key] / len(data_samples)
 
-    return MPU9250Sample(avg["accel_x"], avg["accel_y"], avg["accel_z"], avg["temperature"],
-                         avg["gyro_x"], avg["gyro_y"], avg["gyro_z"], avg["mag_x"], avg["mag_y"], avg["mag_z"],
-                         mag_ovf, mag_res)
+    return MPU9250Sample(
+        avg["accel_x"],
+        avg["accel_y"],
+        avg["accel_z"],
+        avg["temperature"],
+        avg["gyro_x"],
+        avg["gyro_y"],
+        avg["gyro_z"],
+        avg["mag_x"],
+        avg["mag_y"],
+        avg["mag_z"],
+        mag_ovf,
+        mag_res,
+    )

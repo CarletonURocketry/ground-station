@@ -469,12 +469,12 @@ class Telemetry(Process):
 
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
             logger.debug(f"Calculated block len in hex: {block_len}")
-            block_contents = blocks[8 : block_len]
+            block_contents = blocks[8:block_len]
 
             self.parse_rn2483_payload(block_type, block_subtype, block_contents)
 
             # Remove the data we processed from the whole set, and move onto the next data block
-            blocks = blocks[block_len :]
+            blocks = blocks[block_len:]
 
 
 def _parse_packet_header(header: str) -> PacketHeader:
@@ -515,21 +515,14 @@ def _parse_block_header(header: str) -> BlockHeader:
     message_subtype: int
     destination_addr: int
     """
-    bits_header = bin(int(header, 16))[2:]  # Convert header to binary
-    logger.debug(f"Block header {header} -> {bits_header}")
 
-    # block_len = (int(bits_header[:5], 2) + 1) * 4
-    # crypto_signature = int(bits_header[5], 2)
-    # message_type = int(bits_header[6:10], 2)
-    # message_subtype = int(bits_header[10:16], 2)
-    # destination_addr = int(bits_header[16:20], 2)
+    unpacked_header: int = unpack("<I", bytes.fromhex(header))[0]
+    block_len = ((unpacked_header & 0x1F) + 1) * 4  # Length of the data block
+    crypto_signature = bool((unpacked_header >> 5) & 0x1)
+    message_type = (unpacked_header >> 6) & 0xF  # 0 - Control, 1 - Command, 2 - Data
+    message_subtype = (unpacked_header >> 10) & 0x3F
+    destination_addr = (unpacked_header >> 16) & 0xF  # 0 - GStation, 1 - Rocket
 
-    int_header = unpack("<I", bytes.fromhex(header))[0]
-    block_len = ((int_header & 0x1F) + 1) * 4  # Length of the data block
-    crypto_signature = bool((int_header >> 5) & 0x1)
-    message_type = (int_header >> 6) & 0xF  # 0 - Control, 1 - Command, 2 - Data
-    message_subtype = (int_header >> 10) & 0x3F
-    destination_addr = (int_header >> 16) & 0xF  # 0 - GStation, 1 - Rocket
     logger.debug(f"{block_len:=}, {crypto_signature:=}, {message_type:=}, {message_subtype:=}, {destination_addr:=}")
 
     return block_len, crypto_signature, message_type, message_subtype, destination_addr
