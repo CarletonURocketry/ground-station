@@ -8,7 +8,7 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Self
 
-import modules.telemetry.data_block as data_block
+import modules.telemetry.data_block as db
 from modules.telemetry.block import SDBlockClassType
 from modules.telemetry.sd_block import SDBlockException
 from modules.telemetry.replay import parse_sd_block_header
@@ -106,12 +106,12 @@ class RocketData:
     altimeter_state: int = -1
     imu_state: int = -1
     sd_driver_state: int = -1
-    deployment_state: data_block.DeploymentState = data_block.DeploymentState.DEPLOYMENT_STATE_DNE
+    deployment_state: db.DeploymentState = db.DeploymentState.DEPLOYMENT_STATE_DNE
     blocks_recorded: int = -1
     checkouts_missed: int = -1
 
     @classmethod
-    def from_data_block(cls, data: data_block.StatusDataBlock) -> Self:
+    def from_data_block(cls, data: db.StatusDataBlock) -> Self:
         """Creates a rocket data packet from a StatusDataBlock class."""
 
         return cls(
@@ -143,8 +143,8 @@ class ReplayData:
 
     state: ReplayState = ReplayState.DNE
     speed: float = 1.0
-    last_played_speed = 1.0
-    mission_files_list = [""]
+    last_played_speed: float = 1.0
+    mission_files_list: list = field(default_factory=list)
     mission_list: list[MissionEntry] = field(default_factory=list)
 
     def __post_init__(self) -> None:
