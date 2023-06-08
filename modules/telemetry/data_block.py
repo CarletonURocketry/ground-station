@@ -24,17 +24,13 @@ class DataBlockUnknownException(BlockUnknownException):
 class DataBlock(ABC):
     """Interface for all telemetry data blocks."""
 
-    def __init__(self, mission_time: int):
+    def __init__(self, subtype: DataBlockSubtype, mission_time: int):
         self.mission_time: int = mission_time
+        self.subtype: DataBlockSubtype = subtype
 
     def __len__(self) -> int:
         """Returns the length of the datablock, not including the header."""
         return 0
-
-    @property
-    @abstractmethod
-    def subtype(self):
-        """Subtype of block"""
 
     @abstractmethod
     def to_payload(self):
@@ -71,15 +67,11 @@ class DataBlock(ABC):
 # Debug Message
 class DebugMessageDataBlock(DataBlock):
     def __init__(self, mission_time: int, debug_msg: str):
-        super().__init__(mission_time)
+        super().__init__(DataBlockSubtype.DEBUG_MESSAGE, mission_time)
         self.debug_msg = debug_msg
 
     def __len__(self) -> int:
         return ((len(self.debug_msg.encode("utf-8")) + 3) & ~0x3) + 4
-
-    @property
-    def subtype(self):
-        return DataBlockSubtype.DEBUG_MESSAGE
 
     @classmethod
     def from_payload(cls, payload):
@@ -101,15 +93,11 @@ class DebugMessageDataBlock(DataBlock):
 
 class StartupMessageDataBlock(DataBlock):
     def __init__(self, mission_time: int, startup_msg):
-        super().__init__(mission_time)
+        super().__init__(DataBlockSubtype.STARTUP_MESSAGE, mission_time)
         self.startup_msg = startup_msg
 
     def __len__(self) -> int:
         return ((len(self.startup_msg.encode("utf-8")) + 3) & ~0x3) + 4
-
-    @property
-    def subtype(self):
-        return DataBlockSubtype.STARTUP_MESSAGE
 
     @classmethod
     def from_payload(cls, payload):
@@ -226,7 +214,7 @@ class StatusDataBlock(DataBlock):
         sd_blocks_recorded: int,
         sd_checkouts_missed: int,
     ):
-        super().__init__(mission_time)
+        super().__init__(DataBlockSubtype.STATUS, mission_time)
         self.kx134_state: SensorStatus = kx134_state
         self.alt_state: SensorStatus = alt_state
         self.imu_state: SensorStatus = imu_state
@@ -237,10 +225,6 @@ class StatusDataBlock(DataBlock):
 
     def __len__(self) -> int:
         return 16
-
-    @property
-    def subtype(self):
-        return DataBlockSubtype.STATUS
 
     @classmethod
     def from_payload(cls, payload):
@@ -311,17 +295,13 @@ class AltitudeDataBlock(DataBlock):
     """Contains the data pertaining to the altitude block."""
 
     def __init__(self, mission_time: int, pressure: int, temperature: int, altitude: int):
-        super().__init__(mission_time)
+        super().__init__(DataBlockSubtype.ALTITUDE, mission_time)
         self.pressure: int = pressure
         self.temperature: int = temperature
         self.altitude: int = altitude
 
     def __len__(self) -> int:
         return 16
-
-    @property
-    def subtype(self):
-        return DataBlockSubtype.ALTITUDE
 
     @classmethod
     def from_payload(cls, payload):
@@ -351,7 +331,7 @@ class AltitudeDataBlock(DataBlock):
 
 class AccelerationDataBlock(DataBlock):
     def __init__(self, mission_time: int, fsr: int, x: int, y: int, z: int):
-        super().__init__(mission_time)
+        super().__init__(DataBlockSubtype.ACCELERATION, mission_time)
         self.mission_time: int = mission_time
         self.fsr: int = fsr
         self.x: int = x
@@ -360,10 +340,6 @@ class AccelerationDataBlock(DataBlock):
 
     def __len__(self) -> int:
         return 12
-
-    @property
-    def subtype(self):
-        return DataBlockSubtype.ACCELERATION
 
     @classmethod
     def from_payload(cls, payload):
@@ -399,7 +375,7 @@ class AccelerationDataBlock(DataBlock):
 #
 class AngularVelocityDataBlock(DataBlock):
     def __init__(self, mission_time: int, fsr: int, x: int, y: int, z: int):
-        super().__init__(mission_time)
+        super().__init__(DataBlockSubtype.ANGULAR_VELOCITY, mission_time)
         self.fsr: int = fsr
         self.x: int = x
         self.y: int = y
@@ -407,10 +383,6 @@ class AngularVelocityDataBlock(DataBlock):
 
     def __len__(self) -> int:
         return 12
-
-    @property
-    def subtype(self):
-        return DataBlockSubtype.ANGULAR_VELOCITY
 
     @classmethod
     def from_payload(cls, payload):
@@ -467,7 +439,7 @@ class GNSSLocationBlock(DataBlock):
         sats: int,
         fix_type: GNSSLocationFixType,
     ):
-        super().__init__(mission_time)
+        super().__init__(DataBlockSubtype.GNSS, mission_time)
         self.latitude: int = latitude
         self.longitude: int = longitude
         self.utc_time: int = utc_time
@@ -482,10 +454,6 @@ class GNSSLocationBlock(DataBlock):
 
     def __len__(self) -> int:
         return 32
-
-    @property
-    def subtype(self):
-        return DataBlockSubtype.GNSS
 
     @classmethod
     def from_payload(cls, payload):
@@ -640,17 +608,13 @@ class GNSSMetadataBlock(DataBlock):
         glonass_sats_in_use: list[int],
         sats_in_view: list[GNSSSatInfo],
     ):
-        super().__init__(mission_time)
+        super().__init__(DataBlockSubtype.GNSS_META, mission_time)
         self.gps_sats_in_use: list[int] = gps_sats_in_use
         self.glonass_sats_in_use: list[int] = glonass_sats_in_use
         self.sats_in_view: list[GNSSSatInfo] = sats_in_view
 
     def __len__(self) -> int:
         return 12 + (len(self.sats_in_view) * 4)
-
-    @property
-    def subtype(self) -> DataBlockSubtype:
-        return DataBlockSubtype.GNSS_META
 
     @classmethod
     def from_payload(cls, payload):
@@ -796,7 +760,7 @@ class KX134AccelerometerDataBlock(DataBlock):
         resolution: KX134Resolution,
         samples: list,
     ):
-        super().__init__(mission_time)
+        super().__init__(DataBlockSubtype.KX134_1211_ACCEL, mission_time)
         self.odr: KX134ODR = odr
         self.accel_range: KX134Range = accel_range
         self.rolloff: KX134LPFRolloff = rolloff
@@ -808,10 +772,6 @@ class KX134AccelerometerDataBlock(DataBlock):
     def __len__(self) -> int:
         sample_bytes = len(self.samples) * int(self.resolution.bits / 8) * 3
         return (sample_bytes + 6 + 3) & ~0x3
-
-    @property
-    def subtype(self):
-        return DataBlockSubtype.KX134_1211_ACCEL
 
     @classmethod
     def from_payload(cls, payload):
@@ -1152,7 +1112,7 @@ class MPU9250IMUDataBlock(DataBlock):
         gyro_bw: MPU9250GyroBW,
         samples: list[MPU9250Sample],
     ):
-        super().__init__(mission_time)
+        super().__init__(DataBlockSubtype.MPU9250_IMU, mission_time)
         self.ag_sample_rate: int = ag_sample_rate
         self.mag_sample_rate: MPU9250MagSR = mag_sample_rate
         self.accel_fsr: MPU9250AccelFSR = accel_fsr
@@ -1168,10 +1128,6 @@ class MPU9250IMUDataBlock(DataBlock):
     def __len__(self) -> int:
         sample_bytes = len(self.samples) * 21
         return (sample_bytes + 8 + 3) & ~0x3
-
-    @property
-    def subtype(self):
-        return DataBlockSubtype.MPU9250_IMU
 
     @classmethod
     def from_payload(cls, payload):
