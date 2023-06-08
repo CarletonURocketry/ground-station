@@ -472,7 +472,8 @@ class Telemetry(Process):
             block_len, _, block_type, block_subtype, _ = _parse_block_header(block_header)
 
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
-            block_contents = blocks[8 : 8 + block_len]
+            logger.debug(f"Calculated block len in hex: {block_len}")
+            block_contents = blocks[8 : block_len]  # Removed 8 +
 
             self.parse_rn2483_payload(block_type, block_subtype, block_contents)
 
