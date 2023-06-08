@@ -36,6 +36,10 @@ class DataBlock(ABC):
     def to_payload(self) -> bytes:
         """Marshal block to a bytes object."""
 
+    @abstractmethod
+    def from_payload(self, payload: bytes) -> Self:
+        """Returns a DataBlock initialized from a payload of bytes."""
+
     @classmethod
     def parse(cls, block_subtype: DataBlockSubtype, payload: bytes) -> Self:
         """Unmarshal a bytes object to appropriate block class."""
