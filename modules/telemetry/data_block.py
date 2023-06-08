@@ -41,10 +41,6 @@ class DataBlock(ABC):
     def to_payload(self):
         """Marshal block to a bytes object"""
 
-    @staticmethod
-    def type_desc():
-        """Type description of block"""
-
     @classmethod
     def parse(cls, block_subtype, payload) -> Self:
         """Unmarshal a bytes object to appropriate block class."""
@@ -93,10 +89,6 @@ class DebugMessageDataBlock(DataBlock):
     def subtype(self):
         return DataBlockSubtype.DEBUG_MESSAGE
 
-    @staticmethod
-    def type_desc():
-        return "Debug Message"
-
     @classmethod
     def from_payload(cls, payload):
         mission_time = struct.unpack("<I", payload[0:4])[0]
@@ -108,7 +100,7 @@ class DebugMessageDataBlock(DataBlock):
         return struct.pack("<I", self.mission_time) + b
 
     def __str__(self):
-        return f'{self.type_desc()} -> time: {self.mission_time} ms, message: "{self.debug_msg}"'
+        return f'{self.__class__.__name__} -> time: {self.mission_time} ms, message: "{self.debug_msg}"'
 
     def __iter__(self):
         yield "mission_time", self.mission_time
@@ -128,10 +120,6 @@ class StartupMessageDataBlock(DataBlock):
     def subtype(self):
         return DataBlockSubtype.STARTUP_MESSAGE
 
-    @staticmethod
-    def type_desc():
-        return "Startup Message"
-
     @classmethod
     def from_payload(cls, payload):
         mission_time = struct.unpack("<I", payload[0:4])[0]
@@ -143,7 +131,7 @@ class StartupMessageDataBlock(DataBlock):
         return struct.pack("<I", self.mission_time) + b
 
     def __str__(self):
-        return f'{self.type_desc()} -> time: {self.mission_time} ms, message: "{self.startup_msg}"'
+        return f'{self.__class__.__name__} -> time: {self.mission_time} ms, message: "{self.startup_msg}"'
 
     def __iter__(self):
         yield "mission_time", self.mission_time
@@ -308,13 +296,9 @@ class StatusDataBlock(DataBlock):
 
         return struct.pack("<IIII", self.mission_time, states, self.sd_blocks_recorded, self.sd_checkouts_missed)
 
-    @staticmethod
-    def type_desc():
-        return "Status"
-
     def __str__(self):
         return (
-            f"{self.type_desc()} -> time: {self.mission_time} ms, kx134 state: "
+            f"{self.__class__.__name__} -> time: {self.mission_time} ms, kx134 state: "
             f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
             f"IMU state: {str(self.imu_state)}, SD driver state: {str(self.sd_state)}, "
             f"deployment state: {str(self.deployment_state)}, blocks recorded: "
@@ -360,13 +344,9 @@ class AltitudeDataBlock(DataBlock):
             "<Iiii", self.mission_time, int(self.pressure), int(self.temperature * 1000), int(self.altitude * 1000)
         )
 
-    @staticmethod
-    def type_desc():
-        return "Altitude"
-
     def __str__(self):
         return (
-            f"{self.type_desc()} -> time: {self.mission_time} ms, pressure: {self.pressure} Pa, "
+            f"{self.__class__.__name__} -> time: {self.mission_time} ms, pressure: {self.pressure} Pa, "
             f"temperature: {self.temperature} C, altitude: {self.altitude} m"
         )
 
@@ -412,13 +392,9 @@ class AccelerationDataBlock(DataBlock):
         z = round(self.z * ((2**15) / self.fsr))
         return struct.pack("<IBBhhh", self.mission_time, self.fsr, 0, x, y, z)
 
-    @staticmethod
-    def type_desc():
-        return "Acceleration"
-
     def __str__(self):
         return (
-            f"{self.type_desc()} -> time: {self.mission_time}, fsr: {self.fsr}, "
+            f"{self.__class__.__name__} -> time: {self.mission_time}, fsr: {self.fsr}, "
             f"x: {self.x} g, y: {self.y} g, z: {self.z} g"
         )
 
@@ -449,10 +425,6 @@ class AngularVelocityDataBlock(DataBlock):
     def subtype(self):
         return DataBlockSubtype.ANGULAR_VELOCITY
 
-    @staticmethod
-    def type_desc():
-        return "Angular Velocity"
-
     @classmethod
     def from_payload(cls, payload):
         parts = struct.unpack("<IHhhh", payload)
@@ -470,7 +442,7 @@ class AngularVelocityDataBlock(DataBlock):
 
     def __str__(self):
         return (
-            f"{self.type_desc()} -> time: {self.mission_time}, fsr: {self.fsr}, "
+            f"{self.__class__.__name__} -> time: {self.mission_time}, fsr: {self.fsr}, "
             f"x: {self.x} g, y: {self.y} g, z: {self.z} g"
         )
 
@@ -587,13 +559,9 @@ class GNSSLocationBlock(DataBlock):
 
         return f"{degrees}°{minutes}'{seconds:.3f}{direction_char}"
 
-    @staticmethod
-    def type_desc():
-        return "GNSS Location"
-
     def __str__(self):
         return (
-            f"{self.type_desc()} -> time: {self.mission_time}, position: "
+            f"{self.__class__.__name__} -> time: {self.mission_time}, position: "
             f"{(self.latitude / 600000)} {(self.longitude / 600000)}, utc time: "
             f"{self.utc_time}, altitude: {self.altitude} m, speed: {self.speed} knots, "
             f"course: {self.course} degs, pdop: {self.pdop}, hdop: {self.hdop}, vdop: "
@@ -742,13 +710,9 @@ class GNSSMetadataBlock(DataBlock):
 
         return payload
 
-    @staticmethod
-    def type_desc():
-        return "GNSS Metadata"
-
     def __str__(self):
         s = (
-            f"{self.type_desc()} -> time: {self.mission_time}, GPS sats in use: "
+            f"{self.__class__.__name__} -> time: {self.mission_time}, GPS sats in use: "
             f"{self.gps_sats_in_use}, GLONASS sats in use: {self.glonass_sats_in_use}\n"
             f"Sats in view:"
         )
@@ -944,13 +908,9 @@ class KX134AccelerometerDataBlock(DataBlock):
             time = (self.mission_time * (1000 / 1024)) - ((count - i) * (self.sample_period * 1024))
             yield time, samp[0], samp[1], samp[2]
 
-    @staticmethod
-    def type_desc():
-        return "KX134 Accelerometer"
-
     def __str__(self):
         return (
-            f"{self.type_desc()} -> time: {self.mission_time}, samples: {len(self.samples)}, "
+            f"{self.__class__.__name__} -> time: {self.mission_time}, samples: {len(self.samples)}, "
             f"ODR: {self.odr}, range: {self.accel_range}, rolloff: {self.rolloff}, "
             f"resolution: {self.resolution}"
         )
@@ -1230,10 +1190,6 @@ class MPU9250IMUDataBlock(DataBlock):
     def subtype(self):
         return DataBlockSubtype.MPU9250_IMU
 
-    @staticmethod
-    def type_desc():
-        return "MPU9250"
-
     @classmethod
     def from_payload(cls, payload):
         parts = struct.unpack("<II", payload[0:8])
@@ -1318,7 +1274,7 @@ class MPU9250IMUDataBlock(DataBlock):
 
     def __str__(self):
         return (
-            f"{self.type_desc()} -> time: {self.mission_time} ms, accel: ({self.sensor.accel_x},{self.sensor.accel_y},{self.sensor.accel_z}), temp: {self.sensor.temperature}, "
+            f"{self.__class__.__name__} -> time: {self.mission_time} ms, accel: ({self.sensor.accel_x},{self.sensor.accel_y},{self.sensor.accel_z}), temp: {self.sensor.temperature}, "
             f"gyro: ({self.sensor.gyro_x},{self.sensor.gyro_y},{self.sensor.gyro_z}), "
             f"samples: {len(self.samples)}, "
             f"sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "
