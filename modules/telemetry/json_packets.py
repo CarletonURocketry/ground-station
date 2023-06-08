@@ -155,12 +155,12 @@ class ReplayData:
         """Gets the available mission recordings from the mission folder."""
 
         # TODO change this so that mission_extension and directory are not defined in multiple files
-        self.mission_files_list = [name for name in missions_dir.glob(f"*.{MISSION_EXTENSION}") if name.is_file()]
+        self.mission_files_list = [file for file in missions_dir.glob(f"*.{MISSION_EXTENSION}") if file.is_file()]
 
         # Check each file to output its misc details
         self.mission_list = []
         for filename in self.mission_files_list:
-            with open(f"{missions_dir.joinpath(filename)}", "rb") as file:
+            with open(f"{missions_dir.joinpath(filename.name)}", "rb") as file:
                 # Reads superblock for flight details
                 superblock_bytes = file.read(512)
                 if len(superblock_bytes) != 512:
