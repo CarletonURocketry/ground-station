@@ -2,8 +2,8 @@
 __author__ = "Matteo Golin"
 
 # Imports
-from enum import StrEnum, Enum, EnumType
-from typing import Type
+from enum import StrEnum, Enum
+from typing import Any, Type
 
 
 # Classes
