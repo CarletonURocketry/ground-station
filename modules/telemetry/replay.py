@@ -12,7 +12,7 @@ from multiprocessing import Queue
 from pathlib import Path
 from typing import BinaryIO
 
-from modules.telemetry.block import RadioBlockType, SDBlockClassType
+from modules.telemetry.block import RadioBlockType, SDBlockSubtype
 from modules.telemetry.superblock import SuperBlock
 
 
@@ -92,7 +92,7 @@ class TelemetryReplay:
                 return
 
             # TODO Change block_type to use a matrix that compares SDBlockTypes and Radio blocks
-            if block_class != SDBlockClassType.TELEMETRY_DATA:
+            if block_class != SDBlockSubtype.TELEMETRY_DATA:
                 return
 
             # The telemetry file assumes everything is in radio format

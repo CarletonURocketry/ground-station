@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Self
 
 import modules.telemetry.data_block as db
-from modules.telemetry.block import SDBlockClassType
+from modules.telemetry.block import SDBlockSubtype
 from modules.telemetry.sd_block import SDBlockException
 from modules.telemetry.replay import parse_sd_block_header
 from modules.telemetry.superblock import SuperBlock
@@ -238,7 +238,7 @@ def get_last_mission_time(file, num_blocks) -> int:
             )
 
         # Do not unnecessarily parse blocks unless close to end of flight
-        if count > ((num_blocks - 1) * 512) and block_class == SDBlockClassType.TELEMETRY_DATA:
+        if count > ((num_blocks - 1) * 512) and block_class == SDBlockSubtype.TELEMETRY_DATA:
             # First four bytes in block data is always mission time.
             block_time = struct.unpack("<I", block_data[:4])[0]
             last_mission_time = block_time if block_time > last_mission_time else last_mission_time

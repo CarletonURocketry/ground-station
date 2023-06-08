@@ -11,7 +11,8 @@ class BlockUnknownException(BlockException):
 
 
 class DeviceAddress(IntEnum):
-    """ Lists the different device addresses packets can be sent from. """
+    """Lists the different device addresses packets can be sent from."""
+
     GROUND_STATION = 0x0
     ROCKET = 0x1
     MULTICAST = 0xF
@@ -29,7 +30,7 @@ class DeviceAddress(IntEnum):
 
 
 class RadioBlockType(IntEnum):
-    """ Lists the different radio block classes. """
+    """Lists the different radio block classes."""
 
     CONTROL = 0x0
     COMMAND = 0x1
@@ -37,8 +38,8 @@ class RadioBlockType(IntEnum):
     RESERVED = 0xF
 
 
-class SDBlockClassType(IntEnum):
-    """ Lists the different SD Block classes. """
+class SDBlockSubtype(IntEnum):
+    """Lists the different SD Block classes."""
 
     LOGGING_METADATA = 0x0
     TELEMETRY_DATA = 0x1
@@ -49,7 +50,7 @@ class SDBlockClassType(IntEnum):
 
 
 class ControlBlockSubtype(IntEnum):
-    """ Lists the subtypes of telemetry command blocks. """
+    """Lists the subtypes of telemetry command blocks."""
 
     SIGNAL_REPORT = 0x00
     COMMAND_ACKNOWLEDGEMENT = 0x01
@@ -61,7 +62,7 @@ class ControlBlockSubtype(IntEnum):
 
 
 class CommandBlockSubtype(IntEnum):
-    """ Lists the subtypes of telemetry control blocks. """
+    """Lists the subtypes of telemetry control blocks."""
 
     RESET_ROCKET_AVIONICS = 0x00
     REQUEST_TELEMETRY_DATA = 0x01
@@ -71,7 +72,7 @@ class CommandBlockSubtype(IntEnum):
 
 
 class DataBlockSubtype(IntEnum):
-    """ Lists the subtypes of telemetry data blocks. """
+    """Lists the subtypes of telemetry data blocks."""
 
     DEBUG_MESSAGE = 0x00
     STATUS = 0x01
@@ -89,12 +90,14 @@ class DataBlockSubtype(IntEnum):
 
 
 class LoggingMetadataBlockSubtype(IntEnum):
-    """ Lists the subtypes of logging meta blocks. """
+    """Lists the subtypes of logging meta blocks."""
+
     SPACER = 0x0
 
 
 class DiagnosticDataBlockSubtype(IntEnum):
-    """ Lists the subtypes of diagnostic blocks. """
+    """Lists the subtypes of diagnostic blocks."""
+
     LOG_MESSAGE = 0x0
     OUTGOING_RADIO_PACKET = 0x1
     INCOMING_RADIO_PACKET = 0x2
