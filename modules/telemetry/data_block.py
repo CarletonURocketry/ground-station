@@ -27,10 +27,9 @@ class DataBlock(ABC):
     def __init__(self, mission_time: int):
         self.mission_time: int = mission_time
 
-    @property
-    @abstractmethod
-    def length(self):
-        """Length of block, not including header"""
+    def __len__(self) -> int:
+        """Returns the length of the datablock, not including the header."""
+        return 0
 
     @property
     @abstractmethod
@@ -68,12 +67,6 @@ class DataBlock(ABC):
 
         raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype}")
 
-    def __str__(self):
-        return ""
-
-    def __iter__(self):
-        yield ""
-
 
 # Debug Message
 class DebugMessageDataBlock(DataBlock):
@@ -81,8 +74,7 @@ class DebugMessageDataBlock(DataBlock):
         super().__init__(mission_time)
         self.debug_msg = debug_msg
 
-    @property
-    def length(self):
+    def __len__(self) -> int:
         return ((len(self.debug_msg.encode("utf-8")) + 3) & ~0x3) + 4
 
     @property
@@ -112,8 +104,7 @@ class StartupMessageDataBlock(DataBlock):
         super().__init__(mission_time)
         self.startup_msg = startup_msg
 
-    @property
-    def length(self):
+    def __len__(self) -> int:
         return ((len(self.startup_msg.encode("utf-8")) + 3) & ~0x3) + 4
 
     @property
@@ -244,8 +235,7 @@ class StatusDataBlock(DataBlock):
         self.sd_blocks_recorded: int = sd_blocks_recorded
         self.sd_checkouts_missed: int = sd_checkouts_missed
 
-    @property
-    def length(self):
+    def __len__(self) -> int:
         return 16
 
     @property
@@ -326,8 +316,7 @@ class AltitudeDataBlock(DataBlock):
         self.temperature: int = temperature
         self.altitude: int = altitude
 
-    @property
-    def length(self):
+    def __len__(self) -> int:
         return 16
 
     @property
@@ -369,8 +358,7 @@ class AccelerationDataBlock(DataBlock):
         self.y: int = y
         self.z: int = z
 
-    @property
-    def length(self):
+    def __len__(self) -> int:
         return 12
 
     @property
@@ -417,8 +405,7 @@ class AngularVelocityDataBlock(DataBlock):
         self.y: int = y
         self.z: int = z
 
-    @property
-    def length(self):
+    def __len__(self) -> int:
         return 12
 
     @property
@@ -493,8 +480,7 @@ class GNSSLocationBlock(DataBlock):
         self.sats: int = sats
         self.fix_type = fix_type
 
-    @property
-    def length(self):
+    def __len__(self) -> int:
         return 32
 
     @property
@@ -659,8 +645,7 @@ class GNSSMetadataBlock(DataBlock):
         self.glonass_sats_in_use: list[int] = glonass_sats_in_use
         self.sats_in_view: list[GNSSSatInfo] = sats_in_view
 
-    @property
-    def length(self) -> int:
+    def __len__(self) -> int:
         return 12 + (len(self.sats_in_view) * 4)
 
     @property
@@ -820,8 +805,7 @@ class KX134AccelerometerDataBlock(DataBlock):
 
         self.sample_period = 1 / self.odr.samples_per_sec
 
-    @property
-    def length(self):
+    def __len__(self) -> int:
         sample_bytes = len(self.samples) * int(self.resolution.bits / 8) * 3
         return (sample_bytes + 6 + 3) & ~0x3
 
@@ -878,7 +862,7 @@ class KX134AccelerometerDataBlock(DataBlock):
 
     def to_payload(self):
         sample_bytes = len(self.samples) * int(self.resolution.bits // 8) * 3
-        padding = self.length - (sample_bytes + 6)
+        padding = len(self) - (sample_bytes + 6)
 
         settings = (
             (self.odr & 0xF)
@@ -948,10 +932,10 @@ class MPU9250AccelFSR(IntEnum):
 
     @property
     def sensitivity(self):
-        return 32768 / self.acceleration
+        return 32768 / self.value
 
     def __str__(self):
-        return f"+/-{self.acceleration} g"
+        return f"+/-{self.value} g"
 
 
 class MPU9250GyroFSR(IntEnum):
@@ -966,10 +950,10 @@ class MPU9250GyroFSR(IntEnum):
 
     @property
     def sensitivity(self):
-        return 32768 / self.angular_velocity
+        return 32768 / self.value
 
     def __str__(self):
-        return f"+/-{self.angular_velocity} deg/s"
+        return f"+/-{self.value} deg/s"
 
 
 class MPU9250AccelBW(IntEnum):
@@ -1181,8 +1165,7 @@ class MPU9250IMUDataBlock(DataBlock):
 
         self.sensor = avg_mpu9250_samples(self.samples)
 
-    @property
-    def length(self):
+    def __len__(self) -> int:
         sample_bytes = len(self.samples) * 21
         return (sample_bytes + 8 + 3) & ~0x3
 
