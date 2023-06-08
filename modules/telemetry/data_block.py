@@ -5,10 +5,11 @@
 # Thomas Selwyn (Devil)
 # Matteo Golin
 
+from __future__ import annotations
 import struct
 from abc import ABC, abstractmethod
 from enum import IntEnum
-from typing import Self
+from typing import Self, Type
 from modules.telemetry.block import DataBlockSubtype, BlockException, BlockUnknownException
 from modules.misc import converter
 
@@ -37,35 +38,33 @@ class DataBlock(ABC):
         """Marshal block to a bytes object."""
 
     @abstractmethod
-    def from_payload(self, payload: bytes) -> Self:
+    @classmethod
+    def from_payload(cls, payload: bytes) -> Type[Self]:
         """Returns a DataBlock initialized from a payload of bytes."""
 
-    @classmethod
-    def parse(cls, block_subtype: DataBlockSubtype, payload: bytes) -> Self:
+    @staticmethod
+    def parse(block_subtype: DataBlockSubtype, payload: bytes) -> Type[DataBlock]:
         """Unmarshal a bytes object to appropriate block class."""
-        match block_subtype:
-            case DataBlockSubtype.DEBUG_MESSAGE:
-                return DebugMessageDataBlock.from_payload(payload)
-            case DataBlockSubtype.STATUS:
-                return StatusDataBlock.from_payload(payload)
-            case DataBlockSubtype.STARTUP_MESSAGE:
-                return StartupMessageDataBlock.from_payload(payload)
-            case DataBlockSubtype.ALTITUDE:
-                return AltitudeDataBlock.from_payload(payload)
-            case DataBlockSubtype.ACCELERATION:
-                return AccelerationDataBlock.from_payload(payload)
-            case DataBlockSubtype.GNSS:
-                return GNSSLocationBlock.from_payload(payload)
-            case DataBlockSubtype.GNSS_META:
-                return GNSSMetadataBlock.from_payload(payload)
-            case DataBlockSubtype.MPU9250_IMU:
-                return MPU9250IMUDataBlock.from_payload(payload)
-            case DataBlockSubtype.KX134_1211_ACCEL:
-                return KX134AccelerometerDataBlock.from_payload(payload)
-            case DataBlockSubtype.ANGULAR_VELOCITY:
-                return AngularVelocityDataBlock.from_payload(payload)
 
-        raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype}")
+        SUBTYPE_CLASSES: dict[DataBlockSubtype, Type[DataBlock]] = {
+            DataBlockSubtype.DEBUG_MESSAGE: DebugMessageDataBlock,
+            DataBlockSubtype.STATUS: StatusDataBlock,
+            DataBlockSubtype.STARTUP_MESSAGE: StartupMessageDataBlock,
+            DataBlockSubtype.ALTITUDE: AltitudeDataBlock,
+            DataBlockSubtype.ACCELERATION: AccelerationDataBlock,
+            DataBlockSubtype.GNSS: GNSSLocationBlock,
+            DataBlockSubtype.GNSS_META: GNSSMetadataBlock,
+            DataBlockSubtype.MPU9250_IMU: MPU9250IMUDataBlock,
+            DataBlockSubtype.KX134_1211_ACCEL: KX134AccelerometerDataBlock,
+            DataBlockSubtype.ANGULAR_VELOCITY: AngularVelocityDataBlock,
+        }
+
+        subtype = SUBTYPE_CLASSES.get(block_subtype)
+
+        if subtype is None:
+            raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype}")
+        
+        return subtype.from_payload(payload=payload)
 
 
 # Debug Message
