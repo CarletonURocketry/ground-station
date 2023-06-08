@@ -1,16 +1,20 @@
+# Contains the implementation for SD card blocks
+# Matteo Golin
+
+# Imports
 import struct
 from abc import ABC, abstractmethod
 
 from modules.telemetry.data_block import DataBlock
-from modules.telemetry.block import SDBlockClassType, DiagnosticDataBlockSubtype, LoggingMetadataBlockSubtype, \
-    BlockUnknownException, BlockException, DataBlockSubtype
+import modules.telemetry.block as blk
 
 
-class SDBlockException(BlockException):
+# Custom Exceptions
+class SDBlockException(blk.BlockException):
     pass
 
 
-class SDBlockUnknownException(BlockUnknownException):
+class SDBlockUnknownException(blk.BlockUnknownException):
     pass
 
 
@@ -61,18 +65,18 @@ class SDBlock(ABC):
 
         block_head = struct.unpack("<HH", data[0:4])
         try:
-            block_class = SDBlockClassType(block_head[0] & 0x3f)
+            block_class = blk.SDBlockClassType(block_head[0] & 0x3f)
         except ValueError as error:
             raise SDBlockUnknownException(f"Invalid block class: {block_head[0] & 0x3f:04x}") from error
 
         block_subtype = block_head[0] >> 6
         block_length = block_head[1]
         match block_class:
-            case SDBlockClassType.LOGGING_METADATA:
+            case blk.SDBlockClassType.LOGGING_METADATA:
                 return LoggingMetadataBlock.from_payload(block_subtype, block_length, data[4:])
-            case SDBlockClassType.TELEMETRY_DATA:
+            case blk.SDBlockClassType.TELEMETRY_DATA:
                 return TelemetryDataBlock.from_payload(block_subtype, block_length, data[4:])
-            case SDBlockClassType.DIAGNOSTIC_DATA:
+            case blk.SDBlockClassType.DIAGNOSTIC_DATA:
                 return DiagnosticDataBlock.from_payload(block_subtype, block_length, data[4:])
 
         raise SDBlockUnknownException(f"Unknown block class: {block_class}")
@@ -95,17 +99,17 @@ class SDBlock(ABC):
 
 class LoggingMetadataBlock(SDBlock, ABC):
     @property
-    def block_class(self) -> SDBlockClassType:
-        return SDBlockClassType.LOGGING_METADATA
+    def block_class(self) -> blk.SDBlockClassType:
+        return blk.SDBlockClassType.LOGGING_METADATA
 
     @classmethod
     def from_payload(cls, block_subtype, length, payload):
         try:
-            logging_meta_type = LoggingMetadataBlockSubtype(block_subtype)
+            logging_meta_type = blk.LoggingMetadataBlockSubtype(block_subtype)
         except ValueError as error:
             raise SDBlockUnknownException(f"Invalid logging metadata block subtype: {block_subtype:04x}") from error
 
-        if logging_meta_type == LoggingMetadataBlockSubtype.SPACER:
+        if logging_meta_type == blk.LoggingMetadataBlockSubtype.SPACER:
             return LoggingMetadataSpacerBlock.from_payload(logging_meta_type, length, payload)
 
         raise SDBlockUnknownException(f"Unknown logging metadata block type: {logging_meta_type}")
@@ -117,8 +121,8 @@ class LoggingMetadataSpacerBlock(LoggingMetadataBlock):
         self.length_without_header = length - 4
 
     @property
-    def block_subtype(self) -> LoggingMetadataBlockSubtype:
-        return LoggingMetadataBlockSubtype.SPACER
+    def block_subtype(self) -> blk.LoggingMetadataBlockSubtype:
+        return blk.LoggingMetadataBlockSubtype.SPACER
 
     @property
     def length(self) -> int:
@@ -148,11 +152,11 @@ class TelemetryDataBlock(SDBlock):
         self.data = data
 
     @property
-    def block_class(self) -> SDBlockClassType:
-        return SDBlockClassType.TELEMETRY_DATA
+    def block_class(self) -> blk.SDBlockClassType:
+        return blk.SDBlockClassType.TELEMETRY_DATA
 
     @property
-    def block_subtype(self) -> DataBlockSubtype:
+    def block_subtype(self) -> blk.DataBlockSubtype:
         return self.data.subtype
 
     @property
@@ -187,15 +191,15 @@ class DiagnosticDataBlock(SDBlock):
     @classmethod
     def from_payload(cls, block_type, length, payload):
         try:
-            diag_data_type = DiagnosticDataBlockSubtype(block_type)
+            diag_data_type = blk.DiagnosticDataBlockSubtype(block_type)
         except ValueError as error:
             raise SDBlockUnknownException(f"Invalid diagnostic data block type: {block_type:04x}") from error
 
-        if diag_data_type == DiagnosticDataBlockSubtype.LOG_MESSAGE:
+        if diag_data_type == blk.DiagnosticDataBlockSubtype.LOG_MESSAGE:
             return DiagnosticDataLogMessageBlock.from_payload(diag_data_type, length, payload)
-        if diag_data_type == DiagnosticDataBlockSubtype.OUTGOING_RADIO_PACKET:
+        if diag_data_type == blk.DiagnosticDataBlockSubtype.OUTGOING_RADIO_PACKET:
             return DiagnosticDataOutgoingRadioPacketBlock.from_payload(diag_data_type, length, payload)
-        if diag_data_type == DiagnosticDataBlockSubtype.INCOMING_RADIO_PACKET:
+        if diag_data_type == blk.DiagnosticDataBlockSubtype.INCOMING_RADIO_PACKET:
             return DiagnosticDataIncomingRadioPacketBlock.from_payload(diag_data_type, length, payload)
 
         raise SDBlockUnknownException(f"Unknown diagnostic data block type: {diag_data_type}")
@@ -208,7 +212,7 @@ class DiagnosticDataRadioPacketBlock(DiagnosticDataBlock):
 
     @property
     def block_class(self):
-        return SDBlockClassType.DIAGNOSTIC_DATA
+        return blk.SDBlockClassType.DIAGNOSTIC_DATA
 
     @property
     def length(self):
@@ -227,11 +231,11 @@ class DiagnosticDataLogMessageBlock(DiagnosticDataBlock):
 
     @property
     def block_class(self):
-        return SDBlockClassType.DIAGNOSTIC_DATA
+        return blk.SDBlockClassType.DIAGNOSTIC_DATA
 
     @property
     def block_type(self):
-        return DiagnosticDataBlockSubtype.LOG_MESSAGE
+        return blk.DiagnosticDataBlockSubtype.LOG_MESSAGE
 
     @property
     def length(self):
@@ -244,7 +248,7 @@ class DiagnosticDataLogMessageBlock(DiagnosticDataBlock):
     @classmethod
     def from_payload(cls, block_type, length, payload):
         mission_time = struct.unpack("<I", payload[0:4])[0]
-        return DiagnosticDataLogMessageBlock(mission_time, payload[4:].decode('utf-8'))
+        return cls(mission_time, payload[4:].decode('utf-8'))
 
     def _payload_bytes(self):
         b = self.msg.encode('utf-8')
@@ -261,7 +265,7 @@ class DiagnosticDataOutgoingRadioPacketBlock(DiagnosticDataRadioPacketBlock):
 
     @property
     def subtype(self):
-        return DiagnosticDataBlockSubtype.OUTGOING_RADIO_PACKET
+        return blk.DiagnosticDataBlockSubtype.OUTGOING_RADIO_PACKET
 
     @staticmethod
     def type_desc():
@@ -281,7 +285,7 @@ class DiagnosticDataIncomingRadioPacketBlock(DiagnosticDataRadioPacketBlock):
 
     @property
     def subtype(self):
-        return DiagnosticDataBlockSubtype.INCOMING_RADIO_PACKET
+        return blk.DiagnosticDataBlockSubtype.INCOMING_RADIO_PACKET
 
     @staticmethod
     def type_desc():

@@ -2,8 +2,6 @@
 __author__ = "Matteo Golin"
 
 # Imports
-import os
-from pathlib import Path
 import modules.telemetry.json_packets as jsp
 from modules.telemetry.data_block import DeploymentState, SDCardStatus, SensorStatus, StatusDataBlock
 
