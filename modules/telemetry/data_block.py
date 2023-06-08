@@ -347,7 +347,7 @@ class AltitudeDataBlock(DataBlock):
 
     @classmethod
     def from_payload(cls, payload):
-        parts = struct.unpack("<Iiiii", payload)
+        parts = struct.unpack("<Iiii", payload)
         return AltitudeDataBlock(parts[0], parts[1], parts[2] / 1000, parts[3] / 1000)
 
     def to_payload(self):
