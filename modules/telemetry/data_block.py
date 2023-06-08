@@ -33,8 +33,8 @@ class DataBlock(ABC):
         return 0
 
     @abstractmethod
-    def to_payload(self):
-        """Marshal block to a bytes object"""
+    def to_payload(self) -> bytes:
+        """Marshal block to a bytes object."""
 
     @classmethod
     def parse(cls, block_subtype, payload) -> Self:
@@ -74,11 +74,11 @@ class DebugMessageDataBlock(DataBlock):
         return ((len(self.debug_msg.encode("utf-8")) + 3) & ~0x3) + 4
 
     @classmethod
-    def from_payload(cls, payload):
+    def from_payload(cls, payload) -> Self:
         mission_time = struct.unpack("<I", payload[0:4])[0]
         return DebugMessageDataBlock(mission_time, payload[4:].decode("utf-8"))
 
-    def to_payload(self):
+    def to_payload(self) -> bytes:
         b = self.debug_msg.encode("utf-8")
         b = b + (b"\x00" * (((len(b) + 3) & ~0x3) - len(b)))
         return struct.pack("<I", self.mission_time) + b
@@ -104,7 +104,7 @@ class StartupMessageDataBlock(DataBlock):
         mission_time = struct.unpack("<I", payload[0:4])[0]
         return StartupMessageDataBlock(mission_time, payload[4:].decode("utf-8"))
 
-    def to_payload(self):
+    def to_payload(self) -> bytes:
         b = self.startup_msg.encode("utf-8")
         b = b + (b"\x00" * (((len(b) + 3) & ~0x3) - len(b)))
         return struct.pack("<I", self.mission_time) + b
@@ -259,7 +259,7 @@ class StatusDataBlock(DataBlock):
             parts[0], kx134_state, alt_state, imu_state, sd_state, deployment_state, parts[2], parts[3]
         )
 
-    def to_payload(self):
+    def to_payload(self) -> bytes:
         states = (
             ((self.kx134_state.value & 0x7) << 16)
             | ((self.alt_state.value & 0x7) << 19)
@@ -308,7 +308,7 @@ class AltitudeDataBlock(DataBlock):
         parts = struct.unpack("<Iiii", payload)
         return AltitudeDataBlock(parts[0], parts[1], parts[2] / 1000, parts[3] / 1000)
 
-    def to_payload(self):
+    def to_payload(self) -> bytes:
         return struct.pack(
             "<Iiii", self.mission_time, int(self.pressure), int(self.temperature * 1000), int(self.altitude * 1000)
         )
@@ -350,7 +350,7 @@ class AccelerationDataBlock(DataBlock):
         z = parts[5] * (fsr / (2**15))
         return AccelerationDataBlock(parts[0], fsr, x, y, z)
 
-    def to_payload(self):
+    def to_payload(self) -> bytes:
         x = round(self.x * ((2**15) / self.fsr))
         y = round(self.y * ((2**15) / self.fsr))
         z = round(self.z * ((2**15) / self.fsr))
@@ -393,7 +393,7 @@ class AngularVelocityDataBlock(DataBlock):
         z = parts[4] * (fsr / (2**15))
         return AngularVelocityDataBlock(parts[0], fsr, x, y, z)
 
-    def to_payload(self):
+    def to_payload(self) -> bytes:
         x = round(self.x * ((2**15) / self.fsr))
         y = round(self.y * ((2**15) / self.fsr))
         z = round(self.z * ((2**15) / self.fsr))
@@ -479,7 +479,7 @@ class GNSSLocationBlock(DataBlock):
             fix_type,
         )
 
-    def to_payload(self):
+    def to_payload(self) -> bytes:
         return struct.pack(
             "<IiiIihhHHHBB",
             self.mission_time,
@@ -575,7 +575,7 @@ class GNSSSatInfo:
 
         return GNSSSatInfo(sat_type, parts[0], parts[1], identifier, azimuth)
 
-    def to_payload(self):
+    def to_payload(self) -> bytes:
         if self.sat_type == GNSSSatType.GPS:
             id_adjusted = self.identifier - GNSSSatInfo.GPS_SV_OFFSET
         else:
@@ -643,7 +643,7 @@ class GNSSMetadataBlock(DataBlock):
 
         return GNSSMetadataBlock(payload_time, gps_sats_in_use, glonass_sats_in_use, sats_in_view)
 
-    def to_payload(self):
+    def to_payload(self) -> bytes:
         gps_sats_in_use_bitfield = 0
         for n in self.gps_sats_in_use:
             gps_sats_in_use_bitfield |= 1 << (n - GNSSSatInfo.GPS_SV_OFFSET)
@@ -820,7 +820,7 @@ class KX134AccelerometerDataBlock(DataBlock):
 
         return KX134AccelerometerDataBlock(parts[0], odr, accel_range, rolloff, resolution, samples)
 
-    def to_payload(self):
+    def to_payload(self) -> bytes:
         sample_bytes = len(self.samples) * int(self.resolution.bits // 8) * 3
         padding = len(self) - (sample_bytes + 6)
 
@@ -1065,7 +1065,7 @@ class MPU9250Sample:
             accel_x, accel_y, accel_z, temperature, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z, mag_ovf, mag_res
         )
 
-    def to_payload(self, accel_sense, gyro_sense):
+    def to_payload(self, accel_sense: float, gyro_sense: float) -> bytes:
         accel_x = int(self.accel_x * accel_sense)
         accel_y = int(self.accel_y * accel_sense)
         accel_z = int(self.accel_z * accel_sense)
@@ -1182,7 +1182,7 @@ class MPU9250IMUDataBlock(DataBlock):
             parts[0], ag_sample_rate, mag_sample_rate, accel_fsr, gyro_fsr, accel_bw, gyro_bw, samples
         )
 
-    def to_payload(self):
+    def to_payload(self) -> bytes:
         ag_sr_div = (1000 // self.ag_sample_rate) - 1
         info = (
             (int(ag_sr_div) & 0xFF)
