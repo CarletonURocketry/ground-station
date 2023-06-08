@@ -47,7 +47,6 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-
     # Set up queues
     serial_status = Queue()
     ws_commands = Queue()
@@ -61,7 +60,7 @@ def main():
 
     # Print display screen
     print_cu_rocket("No Name (Gas Propelled Launching Device)", VERSION)
-    
+
     # Load config file
     config = load_config("config.json")
 
@@ -71,12 +70,13 @@ def main():
     serial = Process(
         target=SerialManager,
         args=(
-            serial_status, serial_ws_commands,
+            serial_status,
+            serial_ws_commands,
             radio_signal_report,
             rn2483_radio_input,
             rn2483_radio_payloads,
             config,
-        )
+        ),
     )
     serial.start()
     logger.info(f"{'Serial':.<16} started.")
@@ -93,8 +93,8 @@ def main():
             radio_signal_report,
             telemetry_json_output,
             telemetry_ws_commands,
-            config
-        )
+            config,
+        ),
     )
     telemetry.start()
     logger.info(f"{'Telemetry':.<16} started.")
@@ -103,11 +103,7 @@ def main():
     # This is PURELY a pass through of data for connectivity. No format conversion is done here.
     # Incoming information comes from telemetry_json_output from telemetry
     # Outputs information to connected websocket clients
-    websocket = Process(
-        target=WebSocketHandler,
-        args=(telemetry_json_output, ws_commands),
-        daemon=True
-    )
+    websocket = Process(target=WebSocketHandler, args=(telemetry_json_output, ws_commands), daemon=True)
     websocket.start()
     logger.info(f"{'WebSocket':.<16} started.")
 
@@ -127,24 +123,25 @@ def main():
                 exit(0)
 
 
-def parse_ws_command(ws_cmd: str, serial_commands: Queue, telemetry_commands: Queue):
+def parse_ws_command(ws_cmd: str, serial_commands: Queue, telemetry_commands: Queue) -> None:
+    """Parses a websocket command and places it on the correct process queue (telemetry or serial)."""
+
     # Remove special characters
-    ws_cmd = sub(r"[^\da-zA-Z_./\s-]+", "", ws_cmd).split(" ")
+    parsed_command = sub(r"[^\da-zA-Z_./\s-]+", "", ws_cmd).split(" ")
 
-    try:
-        match ws_cmd[0].lower():
-            case "serial":
-                serial_commands.put(ws_cmd[1:])
-            case "telemetry":
-                telemetry_commands.put(ws_cmd[1:])
-            case "shutdown":
-                raise ShutdownException
-            case _:
-                logger.error(f"WS: Invalid command. {ws_cmd}")
-
-    except IndexError:
+    if not parsed_command:
         logger.error("WS: Error parsing command")
 
+    match parsed_command[0].lower():
+        case "serial":
+            serial_commands.put(parsed_command[1:])
+        case "telemetry":
+            telemetry_commands.put(parsed_command[1:])
+        case "shutdown":
+            raise ShutdownException
+        case _:
+            logger.error(f"Invalid websocket command: {ws_cmd}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
