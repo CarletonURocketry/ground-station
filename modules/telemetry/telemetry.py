@@ -469,12 +469,12 @@ class Telemetry(Process):
 
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
             logger.debug(f"Calculated block len in hex: {block_len}")
-            block_contents = blocks[8 : block_len]  # Removed 8 +
+            block_contents = blocks[8 : block_len]
 
             self.parse_rn2483_payload(block_type, block_subtype, block_contents)
 
             # Remove the data we processed from the whole set, and move onto the next data block
-            blocks = blocks[8 + block_len :]
+            blocks = blocks[block_len :]
 
 
 def _parse_packet_header(header: str) -> PacketHeader:
