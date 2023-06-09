@@ -20,4 +20,4 @@ jobs:
         pip install flake8
     - name: Analysing the code with flake8
       run: |
-        py -m flake8
+        flake8
