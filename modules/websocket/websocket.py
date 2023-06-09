@@ -19,7 +19,7 @@ import tornado.web
 import tornado.websocket
 
 # Constants
-ws_commands_queue = Queue
+ws_commands_queue: Queue
 
 # Logger
 logger = logging.getLogger(__name__)
@@ -88,17 +88,18 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
         TornadoWSServer.clients.remove(self)
         logger.info(f"WebSocket: Client disconnected")
 
-    def on_message(self, message: str) -> None:
+    @staticmethod
+    def on_message(message: str) -> None:
         ws_commands_queue.put(message)
 
-    def check_origin(self, origin) -> bool:
-        """Authenticates clients from any host origin"""
+    def check_origin(self, _) -> bool:
+        """Authenticates clients from any host origin (_ parameter)."""
         return True
 
     @classmethod
-    def send_message(cls, message: str) -> None:
+    def send_message(cls, message: str | None) -> None:
 
-        if message == "null":
+        if message is None or message == "null":
             return
 
         cls.last_msg_send = message
