@@ -1,3 +1,4 @@
+from typing import Self, Generator
 from abc import ABC, abstractmethod
 from modules.telemetry.block import ControlBlockSubtype, BlockException, BlockUnknownException
 
@@ -11,80 +12,48 @@ class ControlBlockUnknownException(BlockUnknownException):
 
 
 class ControlBlock(ABC):
+    """Defines the interface for control blocks."""
 
-    @property
-    @abstractmethod
-    def length(self):
-        """ Length of block """
-
-    @property
-    @abstractmethod
-    def subtype(self):
-        """ Subtype of block """
+    def __init__(self, subtype: ControlBlockSubtype) -> None:
+        self.subtype: ControlBlockSubtype = subtype
 
     @abstractmethod
-    def to_payload(self):
-        """ Marshal block to a bytes object """
-
-    @staticmethod
-    @abstractmethod
-    def type_desc():
-        """ String description of block type """
+    def to_payload(self) -> bytes:
+        """Marshal block to a bytes object."""
 
     @classmethod
-    def parse_block(cls, block_subtype, payload):
-        """ Unmarshal a bytes object to appropriate block class """
+    def parse_block(cls, block_subtype: ControlBlockSubtype) -> Self:
+        """Unmarshal a bytes object to appropriate block class."""
         match block_subtype:
-            case ControlBlockSubtype.SIGNAL_REPORT:
-                print("")
-                return SignalReportControlBlock.from_payload(payload)
-            case ControlBlockSubtype.COMMAND_ACKNOWLEDGEMENT:
-                print("")
-            case ControlBlockSubtype.COMMAND_NONCE_REQUEST:
-                print("")
-            case ControlBlockSubtype.COMMAND_NONCE:
-                print("")
-            case ControlBlockSubtype.BEACON:
-                print("")
-            case ControlBlockSubtype.BEACON_RESPONSE:
-                print("")
-
-        raise ControlBlockUnknownException(f"Unknown control block subtype: {block_subtype}")
-
-    def __str__(self):
-        return ""
-
-    def __iter__(self):
-        yield ""
+            case _:
+                raise NotImplementedError(
+                    f"Block parsing is not yet implemented for ControlBlock of subtype {block_subtype}"
+                )
 
 
 class SignalReportControlBlock(ControlBlock):
+    """Represents a control block requesting a signal report."""
+
     def __init__(self):
-        self.mission_time = None
-        self.snr = 0
-        self.tx_power = 0
+        super().__init__(ControlBlockSubtype.SIGNAL_REPORT)
+        self.mission_time: int = 0
+        self.snr: int = 0
+        self.tx_power: int = 0
 
-    @staticmethod
-    def type_desc():
-        return "Signal Report"
-
-    def length(self):
+    def __len__(self) -> int:
         return 16
 
-    def to_payload(self):
-        return ""
-
-    def subtype(self):
-        return ""
+    def to_payload(self) -> bytes:
+        raise NotImplementedError()
 
     @classmethod
-    def from_payload(cls, payload):
-        return ""
+    def from_payload(cls) -> Self:
+        raise NotImplementedError()
 
-    def __str__(self):
-        return f"{self.type_desc()} -> time: {self.mission_time}, snr: {self.snr}, power: {self.tx_power}"
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__} -> time: {self.mission_time}, snr: {self.snr}, power: {self.tx_power}"
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[tuple[str, int], None, None]:
         yield "mission_time", self.mission_time
         yield "snr", self.snr
         yield "power", self.tx_power
