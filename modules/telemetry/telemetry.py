@@ -5,6 +5,7 @@
 # Authors:
 # Thomas Selwyn (Devil)
 # Matteo Golin (linguini1)
+from io import BufferedWriter
 import logging
 import math
 from ast import literal_eval
@@ -120,10 +121,10 @@ class Telemetry(Process):
         # Mission System
         self.missions_dir = Path.cwd().joinpath("missions")
         self.missions_dir.mkdir(parents=True, exist_ok=True)
-        self.mission_path = None
+        self.mission_path: Path | None = None
 
         # Mission Recording
-        self.mission_recording_file = None
+        self.mission_recording_file: BufferedWriter | None = None
         self.mission_recording_sb: SuperBlock = SuperBlock()
         self.mission_recording_buffer: bytearray = bytearray(b"")
 
@@ -133,7 +134,7 @@ class Telemetry(Process):
         self.replay_output = Queue()
 
         # Handle program closing to ensure no orphan processes
-        signal(SIGTERM, shutdown_sequence)
+        signal(SIGTERM, shutdown_sequence)  # type:ignore
 
         # Start Telemetry
         self.update_websocket()
@@ -279,9 +280,13 @@ class Telemetry(Process):
         # Empty replay output
         self.replay_output = Queue()
 
-    def play_mission(self, mission_name: str) -> None:
+    def play_mission(self, mission_name: str | None) -> None:
         """Plays the desired mission recording."""
+
         if self.status.mission.recording:
+            raise ReplayPlaybackError
+
+        if mission_name is None:
             raise ReplayPlaybackError
 
         mission_file = mission_path(mission_name, self.missions_dir)
@@ -291,7 +296,7 @@ class Telemetry(Process):
         if self.replay is None:
             self.status.mission.name = mission_name
             self.status.mission.epoch = [
-                mission["epoch"] for mission in self.status.replay.mission_list if mission["name"] == mission_name
+                mission.epoch for mission in self.status.replay.mission_list if mission.name == mission_name
             ][0]
             self.status.mission.state = jsp.MissionState.RECORDED
             self.status.mission.recording = False
@@ -307,7 +312,7 @@ class Telemetry(Process):
         )
         logger.info(f"REPLAY {mission_name} PLAYING")
 
-    def start_recording(self, mission_name: str = None) -> None:
+    def start_recording(self, mission_name: str | None = None) -> None:
         """Starts recording the current mission. If no mission name is given, the recording epoch is used."""
 
         # Do not record if already recording or if replay is active
@@ -339,6 +344,9 @@ class Telemetry(Process):
         """Stops the current recording."""
 
         logger.info("RECORDING STOP")
+
+        if self.mission_recording_file is None:
+            raise ValueError("mission_recording_file attribute not initialized to a file.")
 
         # Flush buffer and close off file
         self.recording_write_bytes(len(self.mission_recording_buffer), spacer=True)
@@ -383,55 +391,54 @@ class Telemetry(Process):
             spacer_block = LoggingMetadataSpacerBlock(512 - (num_bytes % 512))
             self.mission_recording_file.write(spacer_block.to_bytes())
 
-    def parse_rn2483_payload(self, block_type: int, block_subtype: int, block_contents: str) -> None:
-        """Parses telemetry payload blocks from either parsed packets or stored replays."""
-        """ Block contents are a hex string. """
+    def parse_rn2483_payload(self, block_type: int, block_subtype: int, contents: str) -> None:
+        """
+        Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
+        """
 
         # Working with hex strings until this point.
         # Hex/Bytes Demarcation point
-        logger.debug(f"Block contents: {block_contents}")
-        block_contents = bytes.fromhex(block_contents)
+        logger.debug(f"Block contents: {contents}")
+        block_contents: bytes = bytes.fromhex(contents)
         try:
             radio_block = RadioBlockType(block_type)
         except Exception:
             logger.info(f"Received invalid radio block type of {block_type}.")
             return
-        try:
-            match radio_block:
-                case RadioBlockType.CONTROL:
-                    # CONTROL BLOCK DETECTED
-                    logger.info(f"Control block received of subtype {ControlBlockSubtype(block_subtype)}")
-                    # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
-                    self.rn2483_radio_input.put("radio get snr")
-                    # self.rn2483_radio_input.put("radio get rssi")
-                    return
-                case RadioBlockType.COMMAND:
-                    # COMMAND BLOCK DETECTED
-                    logger.info(f"Command block received of subtype {CommandBlockSubtype(block_subtype)}")
-                    self.rn2483_radio_input.put("radio get snr")
-                    return
-                case RadioBlockType.DATA:
-                    # DATA BLOCK DETECTED
-                    block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
-                    # Increase the last mission time
-                    if block_data.mission_time > self.status.mission.last_mission_time:
-                        self.status.mission.last_mission_time = block_data.mission_time
+        match radio_block:
+            case RadioBlockType.CONTROL:
+                # CONTROL BLOCK DETECTED
+                logger.info(f"Control block received of subtype {ControlBlockSubtype(block_subtype)}")
+                # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
+                self.rn2483_radio_input.put("radio get snr")
+                # self.rn2483_radio_input.put("radio get rssi")
+                return
+            case RadioBlockType.COMMAND:
+                # COMMAND BLOCK DETECTED
+                logger.info(f"Command block received of subtype {CommandBlockSubtype(block_subtype)}")
+                self.rn2483_radio_input.put("radio get snr")
+                return
+            case RadioBlockType.DATA:
+                # DATA BLOCK DETECTED
+                logger.debug(f"Content length: {len(block_contents)}")
+                block = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
+                # Increase the last mission time
+                if block.mission_time > self.status.mission.last_mission_time:
+                    self.status.mission.last_mission_time = block.mission_time
 
-                    # Write data to file when recording
-                    if self.status.mission.recording:
-                        self.mission_recording_buffer += TelemetryDataBlock(data=block_data).to_bytes()
-                        if len(self.mission_recording_buffer) >= 512:
-                            buffer_length = len(self.mission_recording_buffer)
-                            self.recording_write_bytes(buffer_length - (buffer_length % 512))
+                # Write data to file when recording
+                if self.status.mission.recording:
+                    self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
+                    if len(self.mission_recording_buffer) >= 512:
+                        buffer_length = len(self.mission_recording_buffer)
+                        self.recording_write_bytes(buffer_length - (buffer_length % 512))
 
-                    if block_subtype == DataBlockSubtype.STATUS:
-                        self.status.rocket = jsp.RocketData.from_data_block(block_data)
-                    else:
-                        self.telemetry[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
-                case _:
-                    logger.warning("Unknown block type.")
-        except Exception as e:
-            logger.error(f"Problem parsing RadioBlock: {e}")
+                if block.subtype == DataBlockSubtype.STATUS:
+                    self.status.rocket = jsp.RocketData.from_data_block(block)  # type:ignore
+                else:
+                    self.telemetry[block.subtype.name.lower()] = dict(block)  # type:ignore
+            case _:
+                logger.warning("Unknown block type.")
 
     def parse_rn2483_transmission(self, data: str):
         """Parses RN2483 Packets and extracts our telemetry payload blocks"""
@@ -443,7 +450,7 @@ class Telemetry(Process):
         call_sign = call_sign.upper()  # Uppercase formatting because that's standard
 
         if length <= 24:  # If this packet nothing more than just the header
-            logger.info(call_sign, length, version, srs_addr, packet_num)
+            logger.info(f"{call_sign, length, version, srs_addr, packet_num}")
 
         blocks = data[24:]  # Remove the packet header
 
@@ -458,15 +465,16 @@ class Telemetry(Process):
             logger.debug(f"Blocks: {blocks}")
             logger.debug(f"Block header: {blocks[:8]}")
             block_header = blocks[:8]
-            block_len, crypto_signature, block_type, block_subtype, dest_addr = _parse_block_header(block_header)
+            block_len, _, block_type, block_subtype, _ = _parse_block_header(block_header)
 
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
-            block_contents = blocks[8 : 8 + block_len]
+            logger.debug(f"Calculated block len in hex: {block_len}")
+            block_contents = blocks[8:block_len]
 
             self.parse_rn2483_payload(block_type, block_subtype, block_contents)
 
             # Remove the data we processed from the whole set, and move onto the next data block
-            blocks = blocks[8 + block_len :]
+            blocks = blocks[block_len:]
 
 
 def _parse_packet_header(header: str) -> PacketHeader:
@@ -507,20 +515,14 @@ def _parse_block_header(header: str) -> BlockHeader:
     message_subtype: int
     destination_addr: int
     """
-    bits_header = bin(int(header, 16))[2:]  # Convert header to binary
-    logger.debug(f"Block header {header} -> {bits_header}")
 
-    block_len = (int(bits_header[:5], 2) + 1) * 4  # Length of the data block
-    crypto_signature = int(bits_header[5], 2)
-    message_type = int(bits_header[6:10], 2)  # 0 - Control, 1 - Command, 2 - Data
-    message_subtype = int(bits_header[10:16], 2)
-    destination_addr = int(bits_header[16:20], 2)  # 0 - GStation, 1 - Rocket
+    unpacked_header: int = unpack("<I", bytes.fromhex(header))[0]
+    block_len = ((unpacked_header & 0x1F) + 1) * 4  # Length of the data block
+    crypto_signature = bool((unpacked_header >> 5) & 0x1)
+    message_type = (unpacked_header >> 6) & 0xF  # 0 - Control, 1 - Command, 2 - Data
+    message_subtype = (unpacked_header >> 10) & 0x3F
+    destination_addr = (unpacked_header >> 16) & 0xF  # 0 - GStation, 1 - Rocket
 
-    # block_len = ((header & 0x1f) + 1) * 4
-    # crypto_signature = bool((header >> 5) & 0x1)
-    # message_type = ((header >> 6) & 0xf)
-    # message_subtype = ((header >> 10) & 0x3f)
-    # destination_addr = ((header >> 16) & 0xf)
     logger.debug(f"{block_len:=}, {crypto_signature:=}, {message_type:=}, {message_subtype:=}, {destination_addr:=}")
 
     return block_len, crypto_signature, message_type, message_subtype, destination_addr

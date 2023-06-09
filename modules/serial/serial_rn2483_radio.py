@@ -63,8 +63,16 @@ class SerialRN2483Radio(Process):
         self.rn2483_radio_payloads = rn2483_radio_payloads
 
         self.serial_port = serial_port
-        self.ser = None
         self.settings = settings
+        self.serial = Serial(  # Settings matched to RN2483 Transceiver Data Sheet's default UART settings
+            port=self.serial_port,
+            timeout=1,
+            baudrate=57600,
+            bytesize=EIGHTBITS,
+            parity=PARITY_NONE,
+            stopbits=1,
+            rtscts=False,
+        )
 
         self.run()
 
@@ -73,18 +81,8 @@ class SerialRN2483Radio(Process):
             try:
                 # initiate the USB serial connection
                 logger.info(f"RN2483 Radio: Connecting to {self.serial_port}")
-                # Settings matched to RN2483 Transceiver Data Sheet's default UART settings
-                self.ser = Serial(
-                    port=self.serial_port,
-                    timeout=1,
-                    baudrate=57600,
-                    bytesize=EIGHTBITS,
-                    parity=PARITY_NONE,
-                    stopbits=1,
-                    rtscts=False,
-                )
                 logger.info(f"RN2483 Radio: Connected to {self.serial_port}")
-                self.serial_status.put(f"rn2483_connected True")
+                self.serial_status.put("rn2483_connected!")
                 self.serial_status.put(f"rn2483_port {self.serial_port}")
 
                 self.init_rn2483_radio()
@@ -100,14 +98,14 @@ class SerialRN2483Radio(Process):
                     self.check_for_transmissions()
 
             except SerialException:
-                self.serial_status.put(f"rn2483_connected False")
-                self.serial_status.put(f"rn2483_port null")
+                self.serial_status.put("rn2483_connected False")
+                self.serial_status.put("rn2483_port null")
                 logger.info("RN2483 Radio: Error communicating with serial device.")
                 time.sleep(3)
 
     def _read_ser(self) -> str:
         """Read from serial line."""
-        return str(self.ser.readline())
+        return str(self.serial.readline())
 
     def init_gpio(self) -> None:
         """Set all GPIO pins to input mode, thereby putting them in a state of high impedance."""
@@ -179,9 +177,9 @@ class SerialRN2483Radio(Process):
 
         data = str(command_string)
         data += "\r\n"  # Must include carriage return for valid commands (see DS40001784B pg XX)
-        self.ser.flush()  # Flush the serial port
+        self.serial.flush()  # Flush the serial port
 
-        self.ser.write(data.encode("utf-8"))  # Encode command_string as bytes and then transmit over serial port
+        self.serial.write(data.encode("utf-8"))  # Encode command_string as bytes and then transmit over serial port
         # Wait for response on the serial line. Return if 'ok' received
         # Sys reset gives us info about the board which we want to process differently from other commands
         if command_string not in ["sys reset", "radio get snr", "radio get rssi"]:
@@ -196,7 +194,7 @@ class SerialRN2483Radio(Process):
         function returns True. If anything else is read from the serial line then this function returns False.
         """
 
-        rv = str(self.ser.readline())  # Read from serial line
+        rv = str(self.serial.readline())  # Read from serial line
 
         if "ok" in rv:
             return True
@@ -219,7 +217,7 @@ class SerialRN2483Radio(Process):
     def check_for_transmissions(self) -> None:
         """Checks for new transmissions on the line."""
 
-        message = str(self.ser.readline())
+        message = str(self.serial.readline())
 
         if message == "b''":
             logger.info("Nothing received.")

@@ -3,11 +3,12 @@ __author__ = "Matteo Golin"
 
 # Imports
 import pytest
+from enum import Enum
 import modules.websocket.commands as cmd
 
 
 # Helper functions
-def command_parser(command: str) -> tuple[cmd.Enum, list[str]]:
+def command_parser(command: str) -> tuple[Enum, list[str]]:
     """Parses a command string and returns the parsed command and parameter list."""
 
     parameters = cmd.split_command_string(command)

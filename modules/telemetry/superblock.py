@@ -3,7 +3,7 @@ import os
 import struct
 import datetime
 import sys
-from datetime import datetime
+import datetime as dt
 
 
 class Flight:
@@ -25,8 +25,8 @@ class Flight:
         return struct.pack("<III", self.first_block, self.num_blocks, self.timestamp)
 
     @property
-    def time(self) -> datetime:
-        return datetime.datetime.fromtimestamp(self.timestamp, datetime.timezone.utc)
+    def time(self) -> dt.datetime:
+        return dt.datetime.fromtimestamp(self.timestamp, dt.timezone.utc)
 
     def is_valid(self):
         # Check for reasonable values
@@ -34,10 +34,11 @@ class Flight:
 
 
 class SuperBlock:
-    MAGIC = b'CUInSpac'
+    MAGIC = b"CUInSpac"
 
-    def __init__(self, version: int = 1, continued: bool = False,
-                 partition_length: int = 0, flights: list[Flight] = None):
+    def __init__(
+        self, version: int = 1, continued: bool = False, partition_length: int = 0, flights: list[Flight] | None = None
+    ):
         super().__init__()
         self.version: int = version
         self.continued: bool = continued
@@ -48,26 +49,25 @@ class SuperBlock:
         for flight in self.flights:
             self.flight_blocks += flight.num_blocks
 
-
     @classmethod
     def from_bytes(cls, block):
-        """ Generates the Superblock data object from bytes"""
+        """Generates the Superblock data object from bytes"""
         if len(block) != 512:
             raise ValueError("Invalid Superblock")
 
-        if block[0x0:0x8] != SuperBlock.MAGIC or block[0x1f8:0x200] != SuperBlock.MAGIC:
+        if block[0x0:0x8] != SuperBlock.MAGIC or block[0x1F8:0x200] != SuperBlock.MAGIC:
             raise ValueError("Invalid Superblock")
 
         version = int.from_bytes(block[0x08:0x09], "little")
         continued = not not int.from_bytes(block[0x09:0x0A], "little") & (1 << 7)
 
-        partition_length = struct.unpack("<I", block[0x0c:0x10])[0]
+        partition_length = struct.unpack("<I", block[0x0C:0x10])[0]
 
         flights = list()
         flight_blocks = 1
         for i in range(32):
             flight_start = 0x60 + (12 * i)
-            flight_entry = block[flight_start:flight_start + 12]
+            flight_entry = block[flight_start : flight_start + 12]
             flight_obj = Flight.from_bytes(flight_entry)
             if not flight_obj.is_valid():
                 continue
@@ -76,8 +76,8 @@ class SuperBlock:
         return SuperBlock(version, continued, partition_length, flights)
 
     def to_bytes(self) -> bytes:
-        """ Returns the Superblock data object in bytes """
-        block: bytearray = bytearray(b'\x00' * 512)
+        """Returns the Superblock data object in bytes"""
+        block: bytearray = bytearray(b"\x00" * 512)
         block[0x0:0x8] = SuperBlock.MAGIC
 
         block[0x08:0x09] = int(self.version).to_bytes(1, "little")
@@ -86,9 +86,9 @@ class SuperBlock:
 
         for i in range(len(self.flights)):
             flight_start = 0x60 + (12 * i)
-            block[flight_start:flight_start + 12] = self.flights[i].to_bytes()
+            block[flight_start : flight_start + 12] = self.flights[i].to_bytes()
 
-        block[0x1f8:0x200] = SuperBlock.MAGIC
+        block[0x1F8:0x200] = SuperBlock.MAGIC
         return bytes(block)
 
     def output(self, output_misc: bool = False, output_dd_cmd: bool = False):
@@ -109,7 +109,7 @@ class SuperBlock:
             print(f"To copy full SD card image, use:    dd if=[disk] of=full bs=512 count={flight_blocks + 2049}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) < 2:
         # No arguments
         exit(0)

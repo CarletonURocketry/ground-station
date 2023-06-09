@@ -45,7 +45,8 @@ class RadioParameters:
     modulation: The modulation type.
     frequency: The frequency in Hz.
     power: The 15th state has an output power of 14.1dBm for 868MHz and 13.6dBm for 433MHz.
-    spread_factor: Higher spreading factor means slower transmissions, but system will have better reception and less error.
+    spread_factor: Higher spreading factor means slower transmissions, but system will have better reception and less
+    error.
     coding_rate: The ratio of actual data to error-correcting data.
     bandwidth: The bandwidth allocated to the transmission.
     preamble_len: The length of the transmission used to synchronize the receiver.
