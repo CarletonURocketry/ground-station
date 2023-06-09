@@ -8,3 +8,5 @@ exclude =
 
 ignore =
     E203
+
+max-line-length = 120
