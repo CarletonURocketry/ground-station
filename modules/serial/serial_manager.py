@@ -46,7 +46,7 @@ class SerialManager(Process):
         self.update_serial_ports()
 
         # Handle program closing to ensure no orphan processes
-        signal(SIGTERM, shutdown_sequence)
+        signal(SIGTERM, shutdown_sequence)  # type:ignore
 
         self.run()
 
