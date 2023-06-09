@@ -8,7 +8,11 @@ import os
 
 # Constants
 ART_FILE: str = os.path.join(os.path.dirname(__file__), "launch.txt")
-FIELDS: dict[str, str] = {"rocket name": "ROCKET_NAME", "version": "VERSION", "date": "DATE"}
+FIELDS: dict[str, str] = {
+    "rocket name": "ROCKET_NAME",
+    "version": "VERSION",
+    "date": "DATE",
+}
 
 
 def load_art() -> str:

@@ -26,7 +26,7 @@ parser.add_argument(
     "-l",
     help="Selects the logging level for messages in the console.",
     choices=["debug", "info", "warning", "error", "critical"],
-    default="info"
+    default="info",
 )
 
 parser.add_argument(

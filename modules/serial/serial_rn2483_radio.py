@@ -150,7 +150,6 @@ class SerialRN2483Radio(Process):
 
         # Setting parameters
         for parameter, value in self.settings:
-
             # Special case where spread factor value must be preceded by sf
             if parameter == "spread_factor":
                 value = f"sf{value}"

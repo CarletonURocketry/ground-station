@@ -42,7 +42,6 @@ class WebSocketHandler(Process):
         self.start_websocket_server()
 
     def start_websocket_server(self) -> None:
-
         """Starts up the websocket server."""
 
         wss = tornado.web.Application(
@@ -62,7 +61,6 @@ class WebSocketHandler(Process):
         io_loop.start()
 
     def check_for_messages(self) -> Optional[str]:
-
         """Returns any JSON data that may be on the telemetry JSON output queue."""
 
         json_data = None
@@ -99,7 +97,6 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     @classmethod
     def send_message(cls, message: str | None) -> None:
-
         if message is None or message == "null":
             return
 

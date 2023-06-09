@@ -1,6 +1,10 @@
 from typing import Self, Generator
 from abc import ABC, abstractmethod
-from modules.telemetry.block import ControlBlockSubtype, BlockException, BlockUnknownException
+from modules.telemetry.block import (
+    ControlBlockSubtype,
+    BlockException,
+    BlockUnknownException,
+)
 
 
 class ControlDataBlockException(BlockException):

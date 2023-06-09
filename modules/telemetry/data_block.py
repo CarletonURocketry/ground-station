@@ -10,7 +10,11 @@ import struct
 from abc import ABC, abstractmethod
 from enum import Enum, IntEnum
 from typing import Generator, Self, Type
-from modules.telemetry.block import DataBlockSubtype, BlockException, BlockUnknownException
+from modules.telemetry.block import (
+    DataBlockSubtype,
+    BlockException,
+    BlockUnknownException,
+)
 from modules.misc import converter
 
 
@@ -236,7 +240,14 @@ class StatusDataBlock(DataBlock):
             raise DataBlockException(f"Invalid deployment state: {(parts[1] >> 28) & 0xf}") from error
 
         return StatusDataBlock(
-            parts[0], kx134_state, alt_state, imu_state, sd_state, deployment_state, parts[2], parts[3]
+            parts[0],
+            kx134_state,
+            alt_state,
+            imu_state,
+            sd_state,
+            deployment_state,
+            parts[2],
+            parts[3],
         )
 
     def to_payload(self) -> bytes:
@@ -249,7 +260,13 @@ class StatusDataBlock(DataBlock):
 
         states = kx134_state | alt_state | imu_state | sd_state | deployment_state
 
-        return struct.pack("<IIII", self.mission_time, states, self.sd_blocks_recorded, self.sd_checkouts_missed)
+        return struct.pack(
+            "<IIII",
+            self.mission_time,
+            states,
+            self.sd_blocks_recorded,
+            self.sd_checkouts_missed,
+        )
 
     def __str__(self):
         return (
@@ -291,7 +308,11 @@ class AltitudeDataBlock(DataBlock):
 
     def to_payload(self) -> bytes:
         return struct.pack(
-            "<Iiii", self.mission_time, int(self.pressure), int(self.temperature * 1000), int(self.altitude * 1000)
+            "<Iiii",
+            self.mission_time,
+            int(self.pressure),
+            int(self.temperature * 1000),
+            int(self.altitude * 1000),
         )
 
     def __str__(self):
@@ -302,8 +323,14 @@ class AltitudeDataBlock(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "pressure", {"pascals": self.pressure, "psi": converter.pascals_to_psi(self.pressure)}
-        yield "altitude", {"metres": self.altitude, "feet": converter.metres_to_feet(self.altitude)}
+        yield "pressure", {
+            "pascals": self.pressure,
+            "psi": converter.pascals_to_psi(self.pressure),
+        }
+        yield "altitude", {
+            "metres": self.altitude,
+            "feet": converter.metres_to_feet(self.altitude),
+        }
         yield "temperature", {
             "celsius": self.temperature,
             "fahrenheit": converter.celsius_to_fahrenheit(self.temperature),
@@ -503,7 +530,10 @@ class GNSSLocationBlock(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "position", {"latitude": (self.latitude / 600000), "longitude": (self.longitude / 600000)}
+        yield "position", {
+            "latitude": (self.latitude / 600000),
+            "longitude": (self.longitude / 600000),
+        }
         yield "utc_time", self.utc_time
         yield "altitude", self.altitude
         yield "speed", self.speed
@@ -528,7 +558,14 @@ class GNSSSatInfo:
     GPS_SV_OFFSET: int = 0
     GLONASS_SV_OFFSET: int = 65
 
-    def __init__(self, sat_type: GNSSSatType, elevation: int, snr: int, identifier: int, azimuth: int):
+    def __init__(
+        self,
+        sat_type: GNSSSatType,
+        elevation: int,
+        snr: int,
+        identifier: int,
+        azimuth: int,
+    ):
         self.sat_type: GNSSSatType = sat_type
         self.elevation: int = elevation
         self.snr: int = snr
@@ -631,7 +668,12 @@ class GNSSMetadataBlock(DataBlock):
         for n in self.glonass_sats_in_use:
             glonass_sats_in_use_bitfield |= 1 << (n - GNSSSatInfo.GLONASS_SV_OFFSET)
 
-        payload = struct.pack("<III", self.mission_time, gps_sats_in_use_bitfield, glonass_sats_in_use_bitfield)
+        payload = struct.pack(
+            "<III",
+            self.mission_time,
+            gps_sats_in_use_bitfield,
+            glonass_sats_in_use_bitfield,
+        )
 
         for sat in self.sats_in_view:
             payload = payload + sat.to_payload()
@@ -989,7 +1031,18 @@ class MPU9250Sample:
         mag_z = mag_parts[2] / mag_res.sensitivity
 
         return MPU9250Sample(
-            accel_x, accel_y, accel_z, temperature, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z, mag_ovf, mag_res
+            accel_x,
+            accel_y,
+            accel_z,
+            temperature,
+            gyro_x,
+            gyro_y,
+            gyro_z,
+            mag_x,
+            mag_y,
+            mag_z,
+            mag_ovf,
+            mag_res,
         )
 
     def to_payload(self, accel_sense: float, gyro_sense: float) -> bytes:
@@ -1101,12 +1154,21 @@ class MPU9250IMUDataBlock(DataBlock):
         for i in range(num_samples):
             sample_start = 8 + (i * 21)
             sample = MPU9250Sample.from_bytes(
-                payload[sample_start : sample_start + 21], accel_fsr.sensitivity, gyro_fsr.sensitivity
+                payload[sample_start : sample_start + 21],
+                accel_fsr.sensitivity,
+                gyro_fsr.sensitivity,
             )
             samples.append(sample)
 
         return MPU9250IMUDataBlock(
-            parts[0], ag_sample_rate, mag_sample_rate, accel_fsr, gyro_fsr, accel_bw, gyro_bw, samples
+            parts[0],
+            ag_sample_rate,
+            mag_sample_rate,
+            accel_fsr,
+            gyro_fsr,
+            accel_bw,
+            gyro_bw,
+            samples,
         )
 
     def to_payload(self) -> bytes:

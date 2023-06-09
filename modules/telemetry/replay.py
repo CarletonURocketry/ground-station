@@ -39,7 +39,13 @@ def parse_sd_block_header(header_bytes: bytes):
 
 
 class TelemetryReplay:
-    def __init__(self, replay_payloads: Queue, replay_input: Queue, replay_speed: int, replay_path: Path):
+    def __init__(
+        self,
+        replay_payloads: Queue,
+        replay_input: Queue,
+        replay_speed: int,
+        replay_path: Path,
+    ):
         # Replay buffers (Input and output)
         self.replay_payloads = replay_payloads
         self.replay_input = replay_input

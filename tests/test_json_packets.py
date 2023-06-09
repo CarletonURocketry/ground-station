@@ -3,7 +3,12 @@ __author__ = "Matteo Golin"
 
 # Imports
 import modules.telemetry.json_packets as jsp
-from modules.telemetry.data_block import DeploymentState, SDCardStatus, SensorStatus, StatusDataBlock
+from modules.telemetry.data_block import (
+    DeploymentState,
+    SDCardStatus,
+    SensorStatus,
+    StatusDataBlock,
+)
 
 
 # Default parameter tests
@@ -68,14 +73,22 @@ def test_rn2483_radio_data_serialization() -> None:
 
     rn2483_radio_data = jsp.RN2483RadioData(connected=True, connected_port="20")
 
-    assert dict(rn2483_radio_data) == {"connected_port": "20", "connected": True, "snr": 0}
+    assert dict(rn2483_radio_data) == {
+        "connected_port": "20",
+        "connected": True,
+        "snr": 0,
+    }
 
 
 def test_mission_data_serialization() -> None:
     """Test that the serialization of mission data is correct."""
 
     mission_data = jsp.MissionData(
-        name="rocket mission", epoch=12, state=jsp.MissionState.RECORDED, recording=True, last_mission_time=50
+        name="rocket mission",
+        epoch=12,
+        state=jsp.MissionState.RECORDED,
+        recording=True,
+        last_mission_time=50,
     )
 
     assert dict(mission_data) == {
@@ -117,7 +130,11 @@ def test_status_data_serialization() -> None:
     """Test that the serialization of status data is correct."""
 
     mission_data = jsp.MissionData(
-        name="rocket mission", epoch=12, state=jsp.MissionState.RECORDED, recording=True, last_mission_time=3921
+        name="rocket mission",
+        epoch=12,
+        state=jsp.MissionState.RECORDED,
+        recording=True,
+        last_mission_time=3921,
     )
 
     serial_data = jsp.SerialData(available_ports=["20", "16"])
@@ -149,7 +166,11 @@ def test_status_data_serialization() -> None:
     replay_data.mission_list = [jsp.MissionEntry(name="Devil The Rocket", length=3598549, epoch=1668434478)]
 
     status_data = jsp.StatusData(
-        mission=mission_data, serial=serial_data, rn2483_radio=rn2483_radio_data, rocket=rocket_data, replay=replay_data
+        mission=mission_data,
+        serial=serial_data,
+        rn2483_radio=rn2483_radio_data,
+        rocket=rocket_data,
+        replay=replay_data,
     )
 
     assert dict(status_data) == {

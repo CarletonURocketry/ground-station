@@ -181,7 +181,9 @@ class ReplayData:
 
                 # Output mission to mission list
                 mission_entry = MissionEntry(
-                    name=filename.stem, length=mission_time, epoch=mission_sb.flights[0].timestamp
+                    name=filename.stem,
+                    length=mission_time,
+                    epoch=mission_sb.flights[0].timestamp,
                 )
                 self.mission_list.append(mission_entry)
 
@@ -238,7 +240,8 @@ def get_last_mission_time(file, num_blocks) -> int:
             )
 
         # Do not unnecessarily parse blocks unless close to end of flight
-        if count > ((num_blocks - 1) * 512) and block_class == SDBlockSubtype.TELEMETRY_DATA:
+        is_telem = block_class == SDBlockSubtype.TELEMETRY_DATA
+        if count > ((num_blocks - 1) * 512) and is_telem:
             # First four bytes in block data is always mission time.
             block_time = struct.unpack("<I", block_data[:4])[0]
             last_mission_time = block_time if block_time > last_mission_time else last_mission_time

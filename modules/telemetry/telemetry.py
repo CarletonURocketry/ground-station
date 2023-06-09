@@ -21,7 +21,11 @@ from typing import Any
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
-from modules.telemetry.block import RadioBlockType, CommandBlockSubtype, ControlBlockSubtype
+from modules.telemetry.block import (
+    RadioBlockType,
+    CommandBlockSubtype,
+    ControlBlockSubtype,
+)
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.sd_block import TelemetryDataBlock, LoggingMetadataSpacerBlock
@@ -71,7 +75,7 @@ def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Pat
 
 
 # Errors
-class MissionNotFoundError(Exception):
+class MissionNotFoundError(FileNotFoundError):
     """Raised when the desired mission is not found."""
 
     def __init__(self, mission_name: str):
@@ -83,16 +87,16 @@ class MissionNotFoundError(Exception):
 class AlreadyRecordingError(Exception):
     """Raised if the telemetry process is already recording when instructed to record."""
 
-    def __init__(self):
-        self.message: str = "Recording is already in progress."
+    def __init__(self, message: str = "Recording is already in progress."):
+        self.message: str = message
         super().__init__(self.message)
 
 
 class ReplayPlaybackError(Exception):
     """Raised if the telemetry process replay system is active when instructed to record or recording."""
 
-    def __init__(self):
-        self.message: str = "Not recording when replay system is active."
+    def __init__(self, message: str = "Not recording when replay system is active."):
+        self.message: str = message
         super().__init__(self.message)
 
 
@@ -183,7 +187,12 @@ class Telemetry(Process):
 
     def generate_websocket_response(self) -> dict[str, Any]:
         """Returns the dictionary containing the JSON data for the websocket client."""
-        return {"version": VERSION, "org": ORG, "status": dict(self.status), "telemetry": self.telemetry}
+        return {
+            "version": VERSION,
+            "org": ORG,
+            "status": dict(self.status),
+            "telemetry": self.telemetry,
+        }
 
     def reset_data(self) -> None:
         """Resets all live data on the telemetry backend to a default state."""
@@ -281,20 +290,20 @@ class Telemetry(Process):
         self.replay = None
 
         self.reset_data()
-        # Empty replay output
-        self.replay_output = Queue()
+        self.replay_output = Queue()  # Empty replay output
 
     def play_mission(self, mission_name: str | None) -> None:
         """Plays the desired mission recording."""
 
         if self.status.mission.recording:
-            raise ReplayPlaybackError
+            raise AlreadyRecordingError
 
         if mission_name is None:
             raise ReplayPlaybackError
 
         mission_file = mission_path(mission_name, self.missions_dir)
-        if mission_name is not None and mission_file not in self.status.replay.mission_files_list:
+        not_in_list = mission_file not in self.status.replay.mission_files_list
+        if mission_name is not None and not_in_list:
             raise MissionNotFoundError(mission_name)
 
         if self.replay is None:
@@ -307,7 +316,12 @@ class Telemetry(Process):
 
             self.replay = Process(
                 target=TelemetryReplay,
-                args=(self.replay_output, self.replay_input, self.status.replay.speed, mission_file),
+                args=(
+                    self.replay_output,
+                    self.replay_input,
+                    self.status.replay.speed,
+                    mission_file,
+                ),
             )
             self.replay.start()
 
@@ -322,6 +336,7 @@ class Telemetry(Process):
         # Do not record if already recording or if replay is active
         if self.status.mission.recording:
             raise AlreadyRecordingError
+
         if self.status.replay.state != jsp.ReplayState.DNE:
             raise ReplayPlaybackError
 
@@ -364,7 +379,8 @@ class Telemetry(Process):
 
         # Reset mission data except state and last mission time
         self.status.mission = jsp.MissionData(
-            state=self.status.mission.state, last_mission_time=self.status.mission.last_mission_time
+            state=self.status.mission.state,
+            last_mission_time=self.status.mission.last_mission_time,
         )
 
     def recording_write_bytes(self, num_bytes: int, spacer: bool = False) -> None:

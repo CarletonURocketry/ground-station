@@ -26,8 +26,15 @@ def shutdown_sequence():
 
 
 class SerialManager(Process):
-    def __init__(self, serial_status: Queue, serial_ws_commands: Queue, radio_signal_report: Queue,
-                 rn2483_radio_input: Queue, rn2483_radio_payloads: Queue, config: Config):
+    def __init__(
+        self,
+        serial_status: Queue,
+        serial_ws_commands: Queue,
+        radio_signal_report: Queue,
+        rn2483_radio_input: Queue,
+        rn2483_radio_payloads: Queue,
+        config: Config,
+    ):
         super().__init__()
 
         self.serial_status = serial_status
@@ -57,7 +64,7 @@ class SerialManager(Process):
                 self.parse_ws_command(ws_cmd)
 
     def parse_ws_command(self, ws_cmd):
-        """ Parses the serial websocket commands """
+        """Parses the serial websocket commands"""
         try:
             match ws_cmd[0]:
                 case "rn2483_radio":
@@ -70,7 +77,7 @@ class SerialManager(Process):
             logger.error("Serial: Error parsing ws command")
 
     def parse_rn2483_radio_ws(self, ws_cmd):
-        """ Parses the websocket commands relating to the rn2483_radio """
+        """Parses the websocket commands relating to the rn2483_radio"""
         radio_ws_cmd = ws_cmd[0]
 
         if radio_ws_cmd == "connect" and self.rn2483_radio is None:
@@ -86,16 +93,18 @@ class SerialManager(Process):
                         proposed_serial_port,
                         self.config.radio_parameters,
                     ),
-                    daemon=True)
+                    daemon=True,
+                )
             else:
                 self.rn2483_radio = Process(
                     target=SerialRN2483Emulator,
                     args=(
                         self.serial_status,
                         self.radio_signal_report,
-                        self.rn2483_radio_payloads
+                        self.rn2483_radio_payloads,
                     ),
-                    daemon=True)
+                    daemon=True,
+                )
             self.rn2483_radio.start()
         elif radio_ws_cmd == "connect":
             logger.info("Already connected.")
@@ -109,22 +118,22 @@ class SerialManager(Process):
             logger.warning("Serial: RN2483 Radio already disconnected.")
 
     def update_serial_ports(self) -> list[str]:
-        """ Finds and updates serial ports on device
+        """Finds and updates serial ports on device
 
-            :raises EnvironmentError:
-                On unsupported or unknown platforms
-            :returns:
-                A list of the serial ports available on the system
+        :raises EnvironmentError:
+            On unsupported or unknown platforms
+        :returns:
+            A list of the serial ports available on the system
         """
         com_ports = [""]
 
-        if sys.platform.startswith('win'):
-            com_ports = ['COM%s' % (i + 1) for i in range(256)]
-        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        if sys.platform.startswith("win"):
+            com_ports = ["COM%s" % (i + 1) for i in range(256)]
+        elif sys.platform.startswith("linux") or sys.platform.startswith("cygwin"):
             # '/dev/tty[A-Za-z]*'
-            com_ports = glob.glob('/dev/ttyUSB*')
-        elif sys.platform.startswith('darwin'):
-            com_ports = glob.glob('/dev/tty.*')
+            com_ports = glob.glob("/dev/ttyUSB*")
+        elif sys.platform.startswith("darwin"):
+            com_ports = glob.glob("/dev/tty.*")
 
         tested_com_ports = []
 

@@ -12,7 +12,12 @@ from datetime import datetime
 
 
 class SerialRN2483Emulator(Process):
-    def __init__(self, serial_status: Queue, radio_signal_report: Queue, rn2483_radio_payloads: Queue):
+    def __init__(
+        self,
+        serial_status: Queue,
+        radio_signal_report: Queue,
+        rn2483_radio_payloads: Queue,
+    ):
         super().__init__()
 
         self.serial_status = serial_status
