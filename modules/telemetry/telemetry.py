@@ -296,7 +296,7 @@ class Telemetry(Process):
         if self.replay is None:
             self.status.mission.name = mission_name
             self.status.mission.epoch = [
-                mission["epoch"] for mission in self.status.replay.mission_list if mission["name"] == mission_name
+                mission.epoch for mission in self.status.replay.mission_list if mission.name == mission_name
             ][0]
             self.status.mission.state = jsp.MissionState.RECORDED
             self.status.mission.recording = False
@@ -421,22 +421,22 @@ class Telemetry(Process):
             case RadioBlockType.DATA:
                 # DATA BLOCK DETECTED
                 logger.debug(f"Content length: {len(block_contents)}")
-                block_data = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
+                block = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
                 # Increase the last mission time
-                if block_data.mission_time > self.status.mission.last_mission_time:
-                    self.status.mission.last_mission_time = block_data.mission_time
+                if block.mission_time > self.status.mission.last_mission_time:
+                    self.status.mission.last_mission_time = block.mission_time
 
                 # Write data to file when recording
                 if self.status.mission.recording:
-                    self.mission_recording_buffer += TelemetryDataBlock(data=block_data).to_bytes()
+                    self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
                     if len(self.mission_recording_buffer) >= 512:
                         buffer_length = len(self.mission_recording_buffer)
                         self.recording_write_bytes(buffer_length - (buffer_length % 512))
 
-                if block_subtype == DataBlockSubtype.STATUS:
-                    self.status.rocket = jsp.RocketData.from_data_block(block_data)
+                if block.subtype == DataBlockSubtype.STATUS:
+                    self.status.rocket = jsp.RocketData.from_data_block(block)  # type:ignore
                 else:
-                    self.telemetry[DataBlockSubtype(block_subtype).name.lower()] = dict(block_data)
+                    self.telemetry[block.subtype.name.lower()] = dict(block)  # type:ignore
             case _:
                 logger.warning("Unknown block type.")
 

@@ -39,11 +39,11 @@ class DataBlock(ABC):
 
     @classmethod
     @abstractmethod
-    def from_payload(cls, payload: bytes) -> Type[Self]:
+    def from_payload(cls, payload: bytes) -> DataBlock:
         """Returns a DataBlock initialized from a payload of bytes."""
 
     @staticmethod
-    def parse(block_subtype: DataBlockSubtype, payload: bytes) -> Type[DataBlock]:
+    def parse(block_subtype: DataBlockSubtype, payload: bytes) -> DataBlock:
         """Unmarshal a bytes object to appropriate block class."""
 
         SUBTYPE_CLASSES: dict[DataBlockSubtype, Type[DataBlock]] = {
