@@ -5,6 +5,8 @@
 # Authors:
 # Thomas Selwyn (Devil)
 # Matteo Golin (linguini1)
+
+# Imports
 from io import BufferedWriter
 import logging
 import math
@@ -12,7 +14,6 @@ from ast import literal_eval
 from multiprocessing import Queue, Process, active_children
 from pathlib import Path
 
-# Imports
 from signal import signal, SIGTERM
 from struct import unpack
 from time import time
@@ -62,6 +63,9 @@ def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Pat
     while missions_filepath.is_file() and file_suffix < FILE_CREATION_ATTEMPT_LIMIT:
         missions_filepath = mission_path(mission_name, missions_dir, file_suffix)
         file_suffix += 1
+
+    if file_suffix >= FILE_CREATION_ATTEMPT_LIMIT:
+        raise ValueError(f"Too many mission files already exist with name {mission_name}.")
 
     return missions_filepath
 
