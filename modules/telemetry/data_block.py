@@ -240,13 +240,14 @@ class StatusDataBlock(DataBlock):
         )
 
     def to_payload(self) -> bytes:
-        states = (
-            ((self.kx134_state.value & 0x7) << 16)
-            | ((self.alt_state.value & 0x7) << 19)
-            | ((self.imu_state.value & 0x7) << 22)
-            | ((self.sd_state.value & 0x7) << 25)
-            | ((self.deployment_state.value & 0x7) << 28)
-        )
+        """Transforms a StatusData block into a byte payload."""
+        kx134_state = (self.kx134_state.value & 0x7) << 16
+        alt_state = (self.alt_state.value & 0x7) << 19
+        imu_state = (self.imu_state.value & 0x7) << 22
+        sd_state = (self.sd_state.value & 0x7) << 25
+        deployment_state = (self.deployment_state.value & 0x7) << 28
+
+        states = kx134_state | alt_state | imu_state | sd_state | deployment_state
 
         return struct.pack("<IIII", self.mission_time, states, self.sd_blocks_recorded, self.sd_checkouts_missed)
 
@@ -785,16 +786,16 @@ class KX134AccelerometerDataBlock(DataBlock):
         return KX134AccelerometerDataBlock(parts[0], odr, accel_range, rolloff, resolution, samples)
 
     def to_payload(self) -> bytes:
+        """Transforms a KX134AccelerometerDataBlock into a bytes payload."""
         sample_bytes = len(self.samples) * int(self.resolution.bits // 8) * 3
         padding = len(self) - (sample_bytes + 6)
+        odr = self.odr & 0xF
+        accel_range = (self.accel_range & 0x3) << 4
+        rolloff = (self.rolloff & 0x1) << 6
+        resolution = (self.resolution & 0x1) << 7
+        pad = (padding & 0x3) << 14
 
-        settings = (
-            (self.odr & 0xF)
-            | ((self.accel_range & 0x3) << 4)
-            | ((self.rolloff & 0x1) << 6)
-            | ((self.resolution & 0x1) << 7)
-            | ((padding & 0x3) << 14)
-        )
+        settings = odr | accel_range | rolloff | resolution | pad
         head = struct.pack("<IH", self.mission_time, settings)
 
         sensitivity = (2 ** (self.resolution.bits - 1)) // self.accel_range.acceleration
@@ -1110,14 +1111,12 @@ class MPU9250IMUDataBlock(DataBlock):
 
     def to_payload(self) -> bytes:
         ag_sr_div = (1000 // self.ag_sample_rate) - 1
-        info = (
-            (int(ag_sr_div) & 0xFF)
-            | ((self.mag_sample_rate.samples_per_sec & 0x1) << 8)
-            | ((self.accel_fsr.acceleration & 0x3) << 9)
-            | ((self.gyro_fsr.angular_velocity & 0x3) << 11)
-            | ((int(self.accel_bw.bandwidth) & 0x7) << 13)
-            | ((self.gyro_bw.bandwidth & 0x7) << 16)
-        )
+        sample_rate = (self.mag_sample_rate.samples_per_sec & 0x1) << 8
+        acceleration = (self.accel_fsr.acceleration & 0x3) << 9
+        angular_vel = (self.gyro_fsr.angular_velocity & 0x3) << 11
+        accel_bw = (int(self.accel_bw.bandwidth) & 0x7) << 13
+        gyro_bw = (self.gyro_bw.bandwidth & 0x7) << 16
+        info = (int(ag_sr_div) & 0xFF) | sample_rate | acceleration | angular_vel | accel_bw | gyro_bw
 
         content_length = 8 + (21 * len(self.samples))
         total_length = (content_length + 3) & ~0x3
@@ -1139,7 +1138,9 @@ class MPU9250IMUDataBlock(DataBlock):
 
     def __str__(self):
         return (
-            f"{self.__class__.__name__} -> time: {self.mission_time} ms, accel: ({self.sensor.accel_x},{self.sensor.accel_y},{self.sensor.accel_z}), temp: {self.sensor.temperature}, "
+            f"{self.__class__.__name__} -> time: {self.mission_time}ms, "
+            f"accel: ({self.sensor.accel_x},{self.sensor.accel_y},{self.sensor.accel_z}), "
+            f"temp: {self.sensor.temperature}, "
             f"gyro: ({self.sensor.gyro_x},{self.sensor.gyro_y},{self.sensor.gyro_z}), "
             f"samples: {len(self.samples)}, "
             f"sample rate: {self.ag_sample_rate} Hz, accel FSR: {self.accel_fsr}, "

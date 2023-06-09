@@ -5,3 +5,6 @@ exclude =
     venv
     env
     __pycache__
+
+ignore =
+    E203

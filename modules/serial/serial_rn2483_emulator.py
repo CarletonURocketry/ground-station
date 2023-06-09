@@ -29,16 +29,16 @@ class SerialRN2483Emulator(Process):
         self.run()
 
     def run(self):
-        self.serial_status.put(f"rn2483_connected True")
-        self.serial_status.put(f"rn2483_port test")
+        self.serial_status.put("rn2483_connected True")
+        self.serial_status.put("rn2483_port test")
         self.radio_signal_report.put("snr 30")
-        #self.radio_signal_report.put("rssi -55")
+        # self.radio_signal_report.put("rssi -55")
         while True:
             self.tester()
             time.sleep(random.uniform(0, 2000) / 100000)
 
     def tester(self):
-        """ Generates test data to give to the telemetry process """
+        """Generates test data to give to the telemetry process"""
         random_alternation = int(random.uniform(0, 1000))
         if self.going_up:
             self.temp += random_alternation / 500
@@ -59,5 +59,10 @@ class SerialRN2483Emulator(Process):
 
         offset = datetime.now() - self.startup_time
 
-        #self.rn2483_radio_payloads.put(f"{packet_header}{block_header}{'E01F00008D540100BC57FF0010FEFFFF'}")
-        self.rn2483_radio_payloads.put(f"{packet_header}{block_header}{struct.pack('<Iiii', int(offset.total_seconds() * 1000), int(87181 + self.temp * 50), int(self.temp * 1000), int(self.altitude * 1000)).hex().upper()}")
+        # self.rn2483_radio_payloads.put(f"{packet_header}{block_header}{'E01F00008D540100BC57FF0010FEFFFF'}")
+        formatted_secs = int(offset.total_seconds() * 1000)
+        formatted_temp = int(87181 + self.temp * 50)
+        formatted_temp2 = int(self.temp * 1000)
+        formatted_alt = int(self.altitude * 1000)
+        byte_contents = struct.pack("<Iiii", formatted_secs, formatted_temp, formatted_temp2, formatted_alt)
+        self.rn2483_radio_payloads.put(f"{packet_header}{block_header}{byte_contents.hex().upper()}")

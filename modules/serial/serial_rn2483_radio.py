@@ -82,7 +82,7 @@ class SerialRN2483Radio(Process):
                 # initiate the USB serial connection
                 logger.info(f"RN2483 Radio: Connecting to {self.serial_port}")
                 logger.info(f"RN2483 Radio: Connected to {self.serial_port}")
-                self.serial_status.put(f"rn2483_connected True")
+                self.serial_status.put("rn2483_connected!")
                 self.serial_status.put(f"rn2483_port {self.serial_port}")
 
                 self.init_rn2483_radio()
@@ -98,8 +98,8 @@ class SerialRN2483Radio(Process):
                     self.check_for_transmissions()
 
             except SerialException:
-                self.serial_status.put(f"rn2483_connected False")
-                self.serial_status.put(f"rn2483_port null")
+                self.serial_status.put("rn2483_connected False")
+                self.serial_status.put("rn2483_port null")
                 logger.info("RN2483 Radio: Error communicating with serial device.")
                 time.sleep(3)
 

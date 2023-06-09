@@ -5,7 +5,6 @@ __author__ = "Matteo Golin"
 import pytest
 import json
 import os
-
 from modules.misc.config import CodingRates, Config, RadioParameters, load_config
 
 
@@ -268,6 +267,7 @@ def test_config_from_json(config):
     assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]
     assert cfg.approved_callsigns == config["approved_callsigns"]
 
+
 def test_load_config(config):
     """Test that loading a Config object from a valid JSON config file results in the correct values being set."""
 
@@ -287,6 +287,6 @@ def test_load_config(config):
     assert cfg.radio_parameters.iqi == rparams.get("iqi")
     assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]
     assert cfg.approved_callsigns == config["approved_callsigns"]
-    
+
     # Teardown
-    os.remove("./test_config.json") 
+    os.remove("./test_config.json")

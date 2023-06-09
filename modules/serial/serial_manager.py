@@ -98,11 +98,11 @@ class SerialManager(Process):
                     daemon=True)
             self.rn2483_radio.start()
         elif radio_ws_cmd == "connect":
-            logger.info(f"Serial: Already connected.")
+            logger.info("Already connected.")
         elif radio_ws_cmd == "disconnect" and self.rn2483_radio is not None:
-            logger.info(f"Serial: RN2483 Radio terminating")
-            self.serial_status.put(f"rn2483_connected False")
-            self.serial_status.put(f"rn2483_port null")
+            logger.info("Serial: RN2483 Radio terminating")
+            self.serial_status.put("rn2483_connected False")
+            self.serial_status.put("rn2483_port null")
             self.rn2483_radio.terminate()
             self.rn2483_radio = None
         elif radio_ws_cmd == "disconnect":

@@ -3,7 +3,7 @@ __author__ = "Matteo Golin"
 
 # Imports
 from enum import StrEnum, Enum
-from typing import Any, Type
+from typing import Type
 
 
 # Classes

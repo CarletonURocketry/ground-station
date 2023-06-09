@@ -19,7 +19,7 @@ import tornado.web
 import tornado.websocket
 
 # Constants
-ws_commands_queue: Queue
+WS_COMMANDS_QUEUE: Queue
 
 # Logger
 logger = logging.getLogger(__name__)
@@ -31,10 +31,10 @@ class WebSocketHandler(Process):
 
     def __init__(self, telemetry_json_output: Queue, ws_commands: Queue):
         super().__init__()
-        global ws_commands_queue
+        global WS_COMMANDS_QUEUE
 
         self.telemetry_json_output = telemetry_json_output
-        ws_commands_queue = ws_commands
+        WS_COMMANDS_QUEUE = ws_commands
 
         # Default to test mode
         # ws_commands_queue.put("serial rn2483_radio connect test")
@@ -77,20 +77,21 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     clients: set = set()
     last_msg_send: str = ""
-    global ws_commands_queue
+    global WS_COMMANDS_QUEUE
 
     def open(self) -> None:
         TornadoWSServer.clients.add(self)
         self.send_message(self.last_msg_send)
-        logger.info(f"WebSocket: Client connected")
+        logger.info("Client connected")
 
     def on_close(self) -> None:
         TornadoWSServer.clients.remove(self)
-        logger.info(f"WebSocket: Client disconnected")
+        logger.info("Client disconnected")
 
     @staticmethod
     def on_message(message: str) -> None:
-        ws_commands_queue.put(message)
+        global WS_COMMANDS_QUEUE
+        WS_COMMANDS_QUEUE.put(message)
 
     def check_origin(self, _) -> bool:
         """Authenticates clients from any host origin (_ parameter)."""
