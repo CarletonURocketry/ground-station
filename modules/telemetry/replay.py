@@ -29,18 +29,17 @@ def parse_sd_block_header(header_bytes: bytes):
     block_length: int
     """
 
-    header = struct.unpack('<HH', header_bytes)
+    header = struct.unpack("<HH", header_bytes)
 
-    block_class = header[0] & 0x3f  # SD Block Class
+    block_class = header[0] & 0x3F  # SD Block Class
     block_subtype = header[0] >> 6  # Block subtype (Altitude, IMU, GNSS, etc)
-    block_length = header[1]        # Length of entire block in bytes
+    block_length = header[1]  # Length of entire block in bytes
 
     return block_class, block_subtype, block_length
 
 
 class TelemetryReplay:
     def __init__(self, replay_payloads: Queue, replay_input: Queue, replay_speed: int, replay_path: Path):
-
         # Replay buffers (Input and output)
         self.replay_payloads = replay_payloads
         self.replay_input = replay_input
@@ -62,7 +61,7 @@ class TelemetryReplay:
                 self.run(file, flight.num_blocks)
 
     def run(self, file: BinaryIO, num_blocks: int):
-        """ Run loop """
+        """Run loop"""
         while True:
             if self.speed > 0:
                 self.read_next_sd_block(file, num_blocks)
@@ -79,16 +78,15 @@ class TelemetryReplay:
                 self.last_loop_time = int(time() * 1000)
 
     def read_next_sd_block(self, file: BinaryIO, num_blocks: int):
-        """ Reads the next stored block and outputs it """
+        """Reads the next stored block and outputs it"""
         if self.block_count <= ((num_blocks * 512) - 4):
             try:
                 block_header = file.read(4)
                 block_class, block_subtype, block_length = parse_sd_block_header(block_header)
                 block_data = file.read(block_length - 4)
                 self.block_count += block_length
-
-            except IOError as e:
-                print(e.message())
+            except IOError as error:
+                logger.error(f"{error}")
                 return
 
             # TODO Change block_type to use a matrix that compares SDBlockTypes and Radio blocks
