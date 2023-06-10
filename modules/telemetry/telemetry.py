@@ -21,11 +21,7 @@ from typing import Any
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
-from modules.telemetry.block import (
-    RadioBlockType,
-    CommandBlockSubtype,
-    ControlBlockSubtype,
-)
+from modules.telemetry.block import RadioBlockType, CommandBlockSubtype, ControlBlockSubtype
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.sd_block import TelemetryDataBlock, LoggingMetadataSpacerBlock
@@ -529,19 +525,19 @@ def _parse_block_header(header: str) -> BlockHeader:
     """
     Parses a block header string into its information components and returns them in a tuple.
 
-    block_len: int
+    block_len: the length of the data block as an integer
     crypto_signature: bool
-    message_type: int
+    message_type: the type of the message as an integer (0: Control, 1: Command, 2: Data)
     message_subtype: int
-    destination_addr: int
+    destination_addr: The destination address of the block (0: Ground Station, 1: Rocket)
     """
 
     unpacked_header: int = unpack("<I", bytes.fromhex(header))[0]
-    block_len = ((unpacked_header & 0x1F) + 1) * 4  # Length of the data block
+    block_len = ((unpacked_header & 0x1F) + 1) * 4
     crypto_signature = bool((unpacked_header >> 5) & 0x1)
-    message_type = (unpacked_header >> 6) & 0xF  # 0 - Control, 1 - Command, 2 - Data
+    message_type = (unpacked_header >> 6) & 0xF
     message_subtype = (unpacked_header >> 10) & 0x3F
-    destination_addr = (unpacked_header >> 16) & 0xF  # 0 - GStation, 1 - Rocket
+    destination_addr = (unpacked_header >> 16) & 0xF
 
     logger.debug(f"{block_len:=}, {crypto_signature:=}, {message_type:=}, {message_subtype:=}, {destination_addr:=}")
 
