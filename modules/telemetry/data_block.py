@@ -682,17 +682,27 @@ class KX134ODR(IntEnum):
 
 
 class KX134Range(IntEnum):
-    ACCEL_8G = 8
-    ACCEL_16G = 16
-    ACCEL_32G = 32
-    ACCEL_64G = 64
+    ACCEL_8G = 0
+    ACCEL_16G = 1
+    ACCEL_32G = 2
+    ACCEL_64G = 3
 
     @property
     def acceleration(self):
-        return self.value
+        match self:
+            case KX134Range.ACCEL_8G:
+                return 8
+            case KX134Range.ACCEL_16G:
+                return 16
+            case KX134Range.ACCEL_32G:
+                return 32
+            case KX134Range.ACCEL_64G:
+                return 64
+            case _:
+                return 0
 
     def __str__(self):
-        return f"+/-{self.value}g"
+        return f"+/-{self.acceleration}g"
 
 
 class KX134LPFRolloff(IntEnum):
@@ -704,15 +714,21 @@ class KX134LPFRolloff(IntEnum):
 
 
 class KX134Resolution(IntEnum):
-    RES_8_BIT = 8
-    RES_16_BIT = 16
+    """Resolution of the KX124."""
+
+    RES_8_BIT = 0
+    RES_16_BIT = 1
 
     @property
-    def bits(self) -> int:
-        return self.value
+    def bits(self):
+        if self == KX134Resolution.RES_8_BIT:
+            return 8
+        elif self == KX134Resolution.RES_16_BIT:
+            return 16
+        return 0
 
     def __str__(self):
-        return f"{self.value} bits per sample"
+        return f"{self.bits} bits per sample"
 
 
 class KX134AccelerometerDataBlock(DataBlock):
@@ -834,94 +850,168 @@ class KX134AccelerometerDataBlock(DataBlock):
 
 
 class MPU9250MagSR(IntEnum):
-    SR_8 = 8
-    SR_100 = 100
+    """Different magnitude sample rates for the MPU92250."""
+
+    SR_8 = 1
+    SR_100 = 2
 
     @property
     def samples_per_sec(self):
-        return self.value
+        match self:
+            case self.SR_8:
+                return 8
+            case self.SR_100:
+                return 100
+            case _:
+                return 0
 
     def __str__(self):
         return f"{self.samples_per_sec} Hz"
 
 
 class MPU9250AccelFSR(IntEnum):
-    ACCEL_2G = 2
-    ACCEL_4G = 4
-    ACCEL_8G = 8
-    ACCEL_16G = 16
+    """Acceleration FSR for MPU9250."""
+
+    ACCEL_2G = 0
+    ACCEL_4G = 1
+    ACCEL_8G = 2
+    ACCEL_16G = 3
 
     @property
     def acceleration(self):
-        return self.value
+        match self:
+            case self.ACCEL_2G:
+                return 2
+            case self.ACCEL_4G:
+                return 4
+            case self.ACCEL_8G:
+                return 8
+            case self.ACCEL_16G:
+                return 16
+            case _:
+                raise NotImplementedError()
 
     @property
     def sensitivity(self):
-        return 32768 / self.value
+        return 32768 / self.acceleration
 
     def __str__(self):
-        return f"+/-{self.value}g"
+        return f"+/-{self.sensitivity}g"
 
 
 class MPU9250GyroFSR(IntEnum):
-    AV_250DPS = 250
-    AV_500DPS = 500
-    AV_1000DPS = 1000
-    AV_2000DPS = 2000
+    """Gyro FSR for the MPU0250."""
+
+    AV_250DPS = 0
+    AV_500DPS = 1
+    AV_1000DPS = 2
+    AV_2000DPS = 3
 
     @property
     def angular_velocity(self):
-        return self.value
+        match self:
+            case self.AV_250DPS:
+                return 250
+            case self.AV_500DPS:
+                return 500
+            case self.AV_1000DPS:
+                return 1000
+            case self.AV_2000DPS:
+                return 2000
+            case _:
+                return 0
 
     @property
     def sensitivity(self):
-        return 32768 / self.value
+        return 32768 / self.angular_velocity
 
     def __str__(self):
-        return f"+/-{self.value} deg/s"
+        return f"+/-{self.angular_velocity}deg/s"
 
 
 class MPU9250AccelBW(Enum):
-    BW_5_HZ = 5.05
-    BW_10_HZ = 10.2
-    BW_21_HZ = 21.2
-    BW_45_HZ = 44.8
-    BW_99_HZ = 99.0
-    BW_218_HZ = 218.1
-    BW_420_HZ = 420.0
+    """Acceleration bandwidth for MPU9250."""
+
+    BW_5_HZ = 0
+    BW_10_HZ = 1
+    BW_21_HZ = 2
+    BW_45_HZ = 3
+    BW_99_HZ = 4
+    BW_218_HZ = 5
+    BW_420_HZ = 6
 
     @property
     def bandwidth(self) -> float:
-        return self.value
+        match self:
+            case self.BW_5_HZ:
+                return 5.05
+            case self.BW_10_HZ:
+                return 10.2
+            case self.BW_21_HZ:
+                return 21.2
+            case self.BW_45_HZ:
+                return 44.8
+            case self.BW_99_HZ:
+                return 99.0
+            case self.BW_218_HZ:
+                return 218.1
+            case self.BW_420_HZ:
+                return 420.0
+            case _:
+                return 0
 
     def __str__(self):
         return f"{self.bandwidth}Hz"
 
 
 class MPU9250GyroBW(IntEnum):
-    BW_5_HZ = 5
-    BW_10_HZ = 10
-    BW_20_HZ = 20
-    BW_41_HZ = 41
-    BW_92_HZ = 92
-    BW_184_HZ = 184
-    BW_250_HZ = 250
+    """Bandwidth FSR for the MPU0250."""
+
+    BW_5_HZ = 0
+    BW_10_HZ = 1
+    BW_20_HZ = 2
+    BW_41_HZ = 3
+    BW_92_HZ = 4
+    BW_184_HZ = 5
+    BW_250_HZ = 6
 
     @property
     def bandwidth(self):
-        return self.value
+        match self:
+            case self.BW_5_HZ:
+                return 5
+            case self.BW_10_HZ:
+                return 10
+            case self.BW_20_HZ:
+                return 20
+            case self.BW_41_HZ:
+                return 41
+            case self.BW_92_HZ:
+                return 92
+            case self.BW_184_HZ:
+                return 184
+            case self.BW_250_HZ:
+                return 250
+            case _:
+                return 0
 
     def __str__(self):
         return f"{self.bandwidth}Hz"
 
 
 class MPU9250MagResolution(IntEnum):
-    RES_14_BIT = 14
-    RES_16_BIT = 16
+    RES_14_BIT = 0
+    RES_16_BIT = 1
 
     @property
     def bits(self):
-        return self.value
+        match self:
+            case MPU9250MagResolution.RES_14_BIT:
+                return 14
+            case MPU9250MagResolution.RES_16_BIT:
+                return 16
+            case _:
+                return 0
 
     @property
     def sensitivity(self):
@@ -1057,9 +1147,10 @@ class MPU9250IMUDataBlock(DataBlock):
         return (sample_bytes + 8 + 3) & ~0x3
 
     @classmethod
-    def from_payload(cls, payload: bytes):
-        parts = struct.unpack("<II", payload[0:8])
+    def from_payload(cls, payload: bytes) -> Self:
+        """Creates an MPU9250IMUDataBlock from a bytes payload."""
 
+        parts = struct.unpack("<II", payload[0:8])
         ag_sample_rate = 1000 / ((parts[1] & 0xFF) + 1)
 
         try:
@@ -1105,8 +1196,15 @@ class MPU9250IMUDataBlock(DataBlock):
             )
             samples.append(sample)
 
-        return MPU9250IMUDataBlock(
-            parts[0], ag_sample_rate, mag_sample_rate, accel_fsr, gyro_fsr, accel_bw, gyro_bw, samples
+        return cls(
+            mission_time=parts[0],
+            ag_sample_rate=ag_sample_rate,
+            mag_sample_rate=mag_sample_rate,
+            accel_fsr=accel_fsr,
+            gyro_fsr=gyro_fsr,
+            accel_bw=accel_bw,
+            gyro_bw=gyro_bw,
+            samples=samples,
         )
 
     def to_payload(self) -> bytes:

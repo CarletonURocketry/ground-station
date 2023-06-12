@@ -422,11 +422,14 @@ class Telemetry(Process):
                 # DATA BLOCK DETECTED
                 logger.debug(f"Content length: {len(block_contents)}")
                 block = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
+                logger.debug(f"Data block parsed with mission time {block.mission_time}")
+
                 # Increase the last mission time
                 if block.mission_time > self.status.mission.last_mission_time:
                     self.status.mission.last_mission_time = block.mission_time
 
                 # Write data to file when recording
+                logger.debug(f"Recording: {self.status.mission.recording}")
                 if self.status.mission.recording:
                     self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
                     if len(self.mission_recording_buffer) >= 512:
