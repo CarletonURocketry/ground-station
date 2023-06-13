@@ -64,23 +64,24 @@ class SerialRN2483Radio(Process):
 
         self.serial_port = serial_port
         self.settings = settings
-        self.serial = Serial(  # Settings matched to RN2483 Transceiver Data Sheet's default UART settings
-            port=self.serial_port,
-            timeout=1,
-            baudrate=57600,
-            bytesize=EIGHTBITS,
-            parity=PARITY_NONE,
-            stopbits=1,
-            rtscts=False,
-        )
 
         self.run()
 
     def run(self):
         while True:
             try:
-                # initiate the USB serial connection
+                # Settings matched to RN2483 Transceiver Data Sheet's default UART settings
                 logger.info(f"RN2483 Radio: Connecting to {self.serial_port}")
+                self.serial = Serial(
+                    port=self.serial_port,
+                    timeout=1,
+                    baudrate=57600,
+                    bytesize=EIGHTBITS,
+                    parity=PARITY_NONE,
+                    stopbits=1,
+                    rtscts=False,
+                )
+                # initiate the USB serial connection
                 logger.info(f"RN2483 Radio: Connected to {self.serial_port}")
                 self.serial_status.put("rn2483_connected!")
                 self.serial_status.put(f"rn2483_port {self.serial_port}")
@@ -150,7 +151,6 @@ class SerialRN2483Radio(Process):
 
         # Setting parameters
         for parameter, value in self.settings:
-
             # Special case where spread factor value must be preceded by sf
             if parameter == "spread_factor":
                 value = f"sf{value}"
