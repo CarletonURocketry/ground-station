@@ -87,7 +87,9 @@ class SerialRN2483Radio(Process):
                 self.serial_status.put(f"rn2483_port {self.serial_port}")
 
                 self.init_rn2483_radio()
+                logger.debug("Radio initialization worked.")
                 self.set_rx_mode()
+                logger.debug("Rx mode set.")
 
                 while True:
                     while not self.rn2483_radio_input.empty():
@@ -218,6 +220,7 @@ class SerialRN2483Radio(Process):
         """Checks for new transmissions on the line."""
 
         message = str(self.serial.readline())
+        logger.debug(f"serial message: {message}")
 
         if message == "b''":
             logger.info("Nothing received.")
