@@ -41,9 +41,9 @@ def test_altitude_header(altitude_header: str):
 
 def test_signal_report_header(signal_report_header: str):
     """Ensure that parsing a signal report control block header works as expected."""
-    len, sig, msg_type, msg_subtype, destaddr = _parse_block_header(signal_report_header)
+    _, sig, msg_type, msg_subtype, destaddr = _parse_block_header(signal_report_header)
 
-    # assert len == 8  # Not sure about this length
+    # assert _ == 8  # Not sure about this length
     assert sig == 0
     assert RadioBlockType(msg_type) == RadioBlockType.CONTROL
     assert ControlBlockSubtype(msg_subtype) == ControlBlockSubtype.SIGNAL_REPORT
