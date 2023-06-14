@@ -83,7 +83,7 @@ class SerialRN2483Radio(Process):
                 )
                 # initiate the USB serial connection
                 logger.info(f"RN2483 Radio: Connected to {self.serial_port}")
-                self.serial_status.put("rn2483_connected")
+                self.serial_status.put("rn2483_connected True")
                 self.serial_status.put(f"rn2483_port {self.serial_port}")
 
                 self.init_rn2483_radio()

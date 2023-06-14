@@ -158,6 +158,7 @@ class Telemetry(Process):
 
             while not self.serial_status.empty():
                 x = self.serial_status.get().split(" ", maxsplit=1)
+                logger.debug("serial_status: {x}")
                 self.parse_serial_status(command=x[0], data=x[1])
                 self.update_websocket()
 
