@@ -83,7 +83,7 @@ class SerialRN2483Radio(Process):
                 )
                 # initiate the USB serial connection
                 logger.info(f"RN2483 Radio: Connected to {self.serial_port}")
-                self.serial_status.put("rn2483_connected!")
+                self.serial_status.put("rn2483_connected")
                 self.serial_status.put(f"rn2483_port {self.serial_port}")
 
                 self.init_rn2483_radio()
@@ -220,13 +220,13 @@ class SerialRN2483Radio(Process):
         """Checks for new transmissions on the line."""
 
         message = str(self.serial.readline())
-        logger.debug(f"serial message: {message}")
 
         if message == "b''":
             logger.info("Nothing received.")
             return
-
+        logger.debug(f"Received a serial message: {message}")
         message = message[10:-5]  # Trim unnecessary elements of the message
+        logger.debug(f"Cleaned serial message: {message}")
         self.rn2483_radio_payloads.put(message)  # Put serial message in data queue for telemetry
 
     def _tx(self, data) -> None:
