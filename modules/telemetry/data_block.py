@@ -1143,9 +1143,7 @@ class MPU9250IMUDataBlock(DataBlock):
         try:
             mag_sample_rate = MPU9250MagSR((parts[1] >> 8) & 0x1)
         except ValueError as error:
-            raise DataBlockException(
-                f"Invalid MPU9250 magnetometer sample rate: {(parts[1] >> 8) & 0x1}"
-            ) from error
+            raise DataBlockException(f"Invalid MPU9250 magnetometer sample rate: {(parts[1] >> 8) & 0x1}") from error
 
         try:
             accel_fsr = MPU9250AccelFSR((parts[1] >> 9) & 0x3)
@@ -1157,16 +1155,12 @@ class MPU9250IMUDataBlock(DataBlock):
         try:
             gyro_fsr = MPU9250GyroFSR((parts[1] >> 11) & 0x3)
         except ValueError as error:
-            raise DataBlockException(
-                f"Invalid MPU9250 gyroscope full scale range: {(parts[1] >> 11) & 0x3}"
-            ) from error
+            raise DataBlockException(f"Invalid MPU9250 gyroscope full scale range: {(parts[1] >> 11) & 0x3}") from error
 
         try:
             accel_bw = MPU9250AccelBW((parts[1] >> 13) & 0x7)
         except ValueError as error:
-            raise DataBlockException(
-                f"Invalid MPU9250 accelerometer bandwidth: {(parts[1] >> 13) & 0x7}"
-            ) from error
+            raise DataBlockException(f"Invalid MPU9250 accelerometer bandwidth: {(parts[1] >> 13) & 0x7}") from error
 
         try:
             gyro_bw = MPU9250GyroBW((parts[1] >> 16) & 0x7)
