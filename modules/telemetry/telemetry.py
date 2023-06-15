@@ -9,7 +9,9 @@ from io import BufferedWriter
 import logging
 import math
 from ast import literal_eval
-from multiprocessing import Queue, Process, active_children
+from queue import Queue
+import multiprocessing as mp
+from multiprocessing import Process, active_children
 from pathlib import Path
 
 # Imports
@@ -131,8 +133,8 @@ class Telemetry(Process):
 
         # Replay System
         self.replay = None
-        self.replay_input: Queue[str] = Queue()
-        self.replay_output: Queue[tuple[int, int, str]] = Queue()
+        self.replay_input: Queue[str] = mp.Queue()  # type:ignore
+        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type:ignore
 
         # Handle program closing to ensure no orphan processes
         signal(SIGTERM, shutdown_sequence)  # type:ignore
@@ -284,7 +286,7 @@ class Telemetry(Process):
 
         self.reset_data()
         # Empty replay output
-        self.replay_output = Queue()
+        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type: ignore
 
     def play_mission(self, mission_name: str | None) -> None:
         """Plays the desired mission recording."""

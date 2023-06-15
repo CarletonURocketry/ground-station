@@ -7,7 +7,7 @@
 import logging
 import struct
 from time import time, sleep
-from multiprocessing import Queue
+from queue import Queue
 
 from pathlib import Path
 from typing import BinaryIO

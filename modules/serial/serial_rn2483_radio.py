@@ -10,7 +10,8 @@
 # Imports
 import time
 import logging
-from multiprocessing import Queue, Process
+from queue import Queue
+from multiprocessing import Process
 from typing import Optional
 from serial import Serial, SerialException, EIGHTBITS, PARITY_NONE
 

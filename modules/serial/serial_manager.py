@@ -7,7 +7,8 @@
 import glob
 import sys
 import logging
-from multiprocessing import Process, Queue, active_children
+from queue import Queue
+from multiprocessing import Process, active_children
 from serial import Serial, SerialException
 from modules.misc.config import Config
 from modules.serial.serial_rn2483_radio import SerialRN2483Radio

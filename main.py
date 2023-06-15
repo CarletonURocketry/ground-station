@@ -5,7 +5,9 @@
 # Thomas Selwyn (Devil)
 # Matteo Golin (linguini1)
 
-from multiprocessing import Process, Queue
+import multiprocessing as mp
+from multiprocessing import Process
+from queue import Queue
 from re import sub
 import logging
 from typing import TypeAlias, Any
@@ -50,15 +52,15 @@ logger = logging.getLogger(__name__)
 
 def main():
     # Set up queues
-    serial_status: Queue[str] = Queue()
-    ws_commands: Queue[str] = Queue()
-    serial_ws_commands: Queue[list[str]] = Queue()
-    telemetry_ws_commands: Queue[list[str]] = Queue()
+    serial_status: Queue[str] = mp.Queue()  # type: ignore
+    ws_commands: Queue[str] = mp.Queue()  # type: ignore
+    serial_ws_commands: Queue[list[str]] = mp.Queue()  # type: ignore
+    telemetry_ws_commands: Queue[list[str]] = mp.Queue()  # type: ignore
 
-    radio_signal_report: Queue[str] = Queue()
-    rn2483_radio_input: Queue[str] = Queue()
-    rn2483_radio_payloads: Queue[str] = Queue()
-    telemetry_json_output: Queue[JSON] = Queue()
+    radio_signal_report: Queue[str] = mp.Queue()  # type: ignore
+    rn2483_radio_input: Queue[str] = mp.Queue()  # type: ignore
+    rn2483_radio_payloads: Queue[str] = mp.Queue()  # type: ignore
+    telemetry_json_output: Queue[JSON] = mp.Queue()  # type: ignore
 
     # Print display screen
     print_cu_rocket("No Name (Gas Propelled Launching Device)", VERSION)

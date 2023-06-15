@@ -7,7 +7,8 @@
 import random
 import struct
 import time
-from multiprocessing import Process, Queue
+from queue import Queue
+from multiprocessing import Process
 from datetime import datetime
 
 
