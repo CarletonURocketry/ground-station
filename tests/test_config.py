@@ -10,7 +10,7 @@ from modules.misc.config import CodingRates, Config, RadioParameters, load_confi
 
 # Fixtures
 @pytest.fixture()
-def def_radio_params():
+def def_radio_params() -> dict[str, str | int | bool]:
     return {
         "modulation": "lora",
         "frequency": 433_050_000,
@@ -26,17 +26,17 @@ def def_radio_params():
 
 
 @pytest.fixture()
-def callsigns():
+def callsigns() -> dict[str, str]:
     return {"VA3TEST": "Some Body", "VA3INI": "linguini1"}
 
 
 @pytest.fixture()
-def config(def_radio_params, callsigns):
+def config(def_radio_params: dict[str, str | int | bool], callsigns: dict[str, str]):
     return {"radio_parameters": def_radio_params, "approved_callsigns": callsigns}
 
 
 # Test radio parameters
-def test_radio_params_default(def_radio_params):
+def test_radio_params_default(def_radio_params: dict[str, str | int | bool]):
     """Tests that the RadioParameters object default constructor initializes all values to the correct defaults."""
     params = RadioParameters()
     assert params.modulation.value == def_radio_params.get("modulation")
@@ -47,7 +47,7 @@ def test_radio_params_default(def_radio_params):
     assert params.preamble_len == def_radio_params.get("preamble_len")
     assert params.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert params.iqi == def_radio_params.get("iqi")
-    assert params.sync_word == def_radio_params.get("sync_word")[2:]
+    assert params.sync_word == def_radio_params.get("sync_word")[2:]  # type: ignore
 
 
 def test_radio_params_partial_default():
@@ -61,7 +61,7 @@ def test_radio_params_partial_default():
     assert params.coding_rate == CodingRates.FOUR_FIFTHS
 
 
-def test_radio_params_default_json(def_radio_params):
+def test_radio_params_default_json(def_radio_params: dict[str, str | int | bool]):
     """
     Tests that the RadioParameters object's from_json method initializes all values to the correct defaults when given
     no radio_params JSON object.
@@ -75,7 +75,7 @@ def test_radio_params_default_json(def_radio_params):
     assert params.preamble_len == def_radio_params.get("preamble_len")
     assert params.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert params.iqi == def_radio_params.get("iqi")
-    assert params.sync_word == def_radio_params.get("sync_word")[2:]
+    assert params.sync_word == def_radio_params.get("sync_word")[2:]  # type: ignore
 
 
 def test_radio_params_partial_defaults_json():
@@ -101,19 +101,19 @@ def test_radio_params_invalid_arguments():
     """
 
     with pytest.raises(ValueError):
-        RadioParameters(frequency=42)
+        _ = RadioParameters(frequency=42)
 
     with pytest.raises(ValueError):
-        RadioParameters(power=18)
+        _ = RadioParameters(power=18)
 
     with pytest.raises(ValueError):
-        RadioParameters(spread_factor=6)
+        _ = RadioParameters(spread_factor=6)
 
     with pytest.raises(ValueError):
-        RadioParameters(preamble_len=65536)
+        _ = RadioParameters(preamble_len=65536)
 
     with pytest.raises(ValueError):
-        RadioParameters(sync_word="0x101")
+        _ = RadioParameters(sync_word="0x101")
 
 
 def test_radio_params_invalid_arguments_json():
@@ -123,19 +123,19 @@ def test_radio_params_invalid_arguments_json():
     """
 
     with pytest.raises(ValueError):
-        RadioParameters.from_json({"frequency": 42})
+        _ = RadioParameters.from_json({"frequency": 42})
 
     with pytest.raises(ValueError):
-        RadioParameters.from_json({"power": 18})
+        _ = RadioParameters.from_json({"power": 18})
 
     with pytest.raises(ValueError):
-        RadioParameters.from_json({"spread_factor": 6})
+        _ = RadioParameters.from_json({"spread_factor": 6})
 
     with pytest.raises(ValueError):
-        RadioParameters.from_json({"preamble_len": 65536})
+        _ = RadioParameters.from_json({"preamble_len": 65536})
 
     with pytest.raises(ValueError):
-        RadioParameters.from_json({"sync_word": "0x101"})
+        _ = RadioParameters.from_json({"sync_word": "0x101"})
 
 
 def test_radio_params_range_edges():
@@ -144,19 +144,19 @@ def test_radio_params_range_edges():
     does not raise any exceptions.
     """
 
-    RadioParameters(power=-3)
-    RadioParameters(power=16)
+    _ = RadioParameters(power=-3)
+    _ = RadioParameters(power=16)
 
-    RadioParameters(sync_word="0x0")
-    RadioParameters(sync_word="0x100")
+    _ = RadioParameters(sync_word="0x0")
+    _ = RadioParameters(sync_word="0x100")
 
-    RadioParameters(preamble_len=0)
-    RadioParameters(preamble_len=65_535)
+    _ = RadioParameters(preamble_len=0)
+    _ = RadioParameters(preamble_len=65_535)
 
-    RadioParameters(frequency=433_050_000)
-    RadioParameters(frequency=434_790_000)
-    RadioParameters(frequency=863_000_000)
-    RadioParameters(frequency=870_000_000)
+    _ = RadioParameters(frequency=433_050_000)
+    _ = RadioParameters(frequency=434_790_000)
+    _ = RadioParameters(frequency=863_000_000)
+    _ = RadioParameters(frequency=870_000_000)
 
 
 def test_radio_params_outside_range_edges():
@@ -166,43 +166,43 @@ def test_radio_params_outside_range_edges():
     """
 
     with pytest.raises(ValueError):
-        RadioParameters(power=-4)
+        _ = RadioParameters(power=-4)
     assert RadioParameters(power=-3).power == -3
 
     with pytest.raises(ValueError):
-        RadioParameters(power=17)
+        _ = RadioParameters(power=17)
     assert RadioParameters(power=16).power == 16
 
     with pytest.raises(ValueError):
-        RadioParameters(sync_word="0x101")
+        _ = RadioParameters(sync_word="0x101")
     assert RadioParameters(sync_word="0x100").sync_word == "100"
 
     with pytest.raises(ValueError):
-        RadioParameters(preamble_len=-1)
+        _ = RadioParameters(preamble_len=-1)
     assert RadioParameters(preamble_len=0).preamble_len == 0
 
     with pytest.raises(ValueError):
-        RadioParameters(preamble_len=65_536)
+        _ = RadioParameters(preamble_len=65_536)
     assert RadioParameters(preamble_len=65_535).preamble_len == 65_535
 
     with pytest.raises(ValueError):
-        RadioParameters(frequency=433_049_999)
+        _ = RadioParameters(frequency=433_049_999)
     assert RadioParameters(frequency=433_050_000).frequency == 433_050_000
 
     with pytest.raises(ValueError):
-        RadioParameters(frequency=434_790_001)
+        _ = RadioParameters(frequency=434_790_001)
     assert RadioParameters(frequency=434_790_000).frequency == 434_790_000
 
     with pytest.raises(ValueError):
-        RadioParameters(frequency=862_999_999)
+        _ = RadioParameters(frequency=862_999_999)
     assert RadioParameters(frequency=863_000_000).frequency == 863_000_000
 
     with pytest.raises(ValueError):
-        RadioParameters(frequency=870_000_001)
+        _ = RadioParameters(frequency=870_000_001)
     assert RadioParameters(frequency=870_000_000).frequency == 870_000_000
 
 
-def test_config_defaults(def_radio_params, callsigns):
+def test_config_defaults(def_radio_params: dict[str, str | int | bool], callsigns: dict[str, str]):
     """Tests that initializing an empty Config object results in the correct default values."""
 
     config = Config(approved_callsigns=callsigns)
@@ -215,11 +215,11 @@ def test_config_defaults(def_radio_params, callsigns):
     assert config.radio_parameters.preamble_len == def_radio_params.get("preamble_len")
     assert config.radio_parameters.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert config.radio_parameters.iqi == def_radio_params.get("iqi")
-    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")[2:]
+    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")[2:]  # type: ignore
     assert config.approved_callsigns == callsigns
 
 
-def test_config_defaults_json(def_radio_params, callsigns):
+def test_config_defaults_json(def_radio_params: dict[str, str | int | bool], callsigns: dict[str, str]):
     """Tests that initializing a Config object from an empty JSON object results in the correct default values."""
 
     config = Config.from_json({"approved_callsigns": callsigns})
@@ -232,7 +232,7 @@ def test_config_defaults_json(def_radio_params, callsigns):
     assert config.radio_parameters.preamble_len == def_radio_params.get("preamble_len")
     assert config.radio_parameters.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert config.radio_parameters.iqi == def_radio_params.get("iqi")
-    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")[2:]
+    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")[2:]  # type: ignore
     assert config.approved_callsigns == callsigns
 
 
@@ -240,17 +240,17 @@ def test_no_callsigns():
     """Tests that a Config object initialized with no callsigns raises a ValueError."""
 
     with pytest.raises(ValueError):
-        Config()
+        _ = Config()
 
 
 def test_no_callsigns_json():
     """Tests that Config object initialized with a JSON object containing no approved callsigns raises a ValueError."""
 
     with pytest.raises(ValueError):
-        Config.from_json(dict())
+        _ = Config.from_json(dict())
 
 
-def test_config_from_json(config):
+def test_config_from_json(config: dict[str, dict[str, str | int | bool]]):
     """Test that initializing a Config object from a valid JSON config results in the correct values being set."""
 
     cfg = Config.from_json(config)
@@ -264,11 +264,11 @@ def test_config_from_json(config):
     assert cfg.radio_parameters.preamble_len == rparams.get("preamble_len")
     assert cfg.radio_parameters.cyclic_redundancy == rparams.get("cyclic_redundancy")
     assert cfg.radio_parameters.iqi == rparams.get("iqi")
-    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]
+    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]  # type: ignore
     assert cfg.approved_callsigns == config["approved_callsigns"]
 
 
-def test_load_config(config):
+def test_load_config(config: dict[str, dict[str, str | int | bool]]):
     """Test that loading a Config object from a valid JSON config file results in the correct values being set."""
 
     # Setup
@@ -285,7 +285,7 @@ def test_load_config(config):
     assert cfg.radio_parameters.preamble_len == rparams.get("preamble_len")
     assert cfg.radio_parameters.cyclic_redundancy == rparams.get("cyclic_redundancy")
     assert cfg.radio_parameters.iqi == rparams.get("iqi")
-    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]
+    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]  # type: ignore
     assert cfg.approved_callsigns == config["approved_callsigns"]
 
     # Teardown
