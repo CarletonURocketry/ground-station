@@ -1,3 +1,22 @@
+[project]
+name = "Telemetry Server"
+description = "The CUInSpace ground station telemetry server for parsing and distributing rocket telemetry."
+license = {text = "MIT"}
+authors = [
+    {name = "Matteo Golin", email = "matteo.golin@gmail.com"},
+    {name = "Thomas Selwyn"},
+    {name = "Samuel Dewan"},
+    {name = "Arsalan Syed"}
+]
+requires-python = ">=3.11"
+dynamic = ["dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/CarletonURocketry/ground-station"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
 [tool.pyright]
 
 # Strict checking
