@@ -106,4 +106,4 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
         cls.last_msg_send = message
         for client in cls.clients:
-            client.write_message(message)
+            _ = client.write_message(message)
