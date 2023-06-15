@@ -65,16 +65,8 @@ class SerialRN2483Radio(Process):
 
         self.serial_port = serial_port
         self.settings = settings
+        self.serial: Serial
 
-        self.serial = Serial(
-            port=self.serial_port,
-            timeout=1,
-            baudrate=57600,
-            bytesize=EIGHTBITS,
-            parity=PARITY_NONE,
-            stopbits=1,
-            rtscts=False,
-        )
         self.run()
 
     def run(self):
