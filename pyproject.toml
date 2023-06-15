@@ -1,0 +1,64 @@
+[tool.pyright]
+
+# Strict checking
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+
+reportPropertyTypeMismatch = true  # Setter types must match getter types
+reportFunctionMemberAccess = true
+
+# Reporting missing type annotations
+reportMissingParameterType = "error"  # All parameters must be typed
+reportMissingTypeArgument = "error"
+
+reportUntypedFunctionDecorator = "error"
+reportUntypedClassDecorator = "error"
+reportUntypedBaseClass = "error"
+reportUntypedNamedTuple = "error"
+
+reportUnknownMemberType = "error"
+reportUnknownVariableType = "error"
+reportUnknownArgumentType = "error"
+reportUnknownParamaterType = "error"
+
+# Report bad ignores
+reportUnnecessaryTypeIgnoreComment = "error"
+
+# Best practices
+reportSelfClsParameterName = "error"
+reportConstantRedefinition = "error"
+reportUninitializedInstanceVariable = "error"
+reportImportCycles = "warning"
+reportDeprecated = "error"
+reportInvalidTypeVarUse = "warning"
+
+reportUnnecessaryIsInstance = "warning"
+reportUnnecessaryCast = "warning"
+reportUnnecessaryComparison = "warning"
+reportUnnecessaryContains = "warning"
+reportAssertAlwaysTrue = "warning"
+reportImplicitStringConcatenation = "warning"
+reportMatchNotExhaustive = "warning"
+
+reportUnusedImport = "warning"
+reportUnusedClass = "warning"
+reportUnusedFunction = "warning"
+reportUnusedVariable = "warning"
+reportUnusedCallResult = "warning"
+reportUnusedExpression = "warning"
+reportDuplicateImport = "warning"
+
+reportPrivateUsage = "warning"
+reportPrivateImportUsage = "warning"
+reportShadowedImports = "error"
+
+reportIncompatibleMethodOverride = "warning"
+reportIncompatibleVariableOverride = "warning"
+reportInconsistentConstructor = "warning"
+reportOverlappingOverload = "warning"
+reportMissingSuperCall = "warning"
+
+
+[tool.black]
+line-length = 120
