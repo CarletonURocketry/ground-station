@@ -48,23 +48,32 @@ logger = logging.getLogger(__name__)
 class SerialRN2483Radio(Process):
     def __init__(
         self,
-        serial_status: Queue,
-        radio_signal_report: Queue,
-        rn2483_radio_input: Queue,
-        rn2483_radio_payloads: Queue,
+        serial_status: Queue[str],
+        radio_signal_report: Queue[str],
+        rn2483_radio_input: Queue[str],
+        rn2483_radio_payloads: Queue[str],
         serial_port: str,
         settings: RadioParameters,
     ):
         Process.__init__(self)
 
-        self.serial_status = serial_status
-        self.radio_signal_report = radio_signal_report
-        self.rn2483_radio_input = rn2483_radio_input
-        self.rn2483_radio_payloads = rn2483_radio_payloads
+        self.serial_status: Queue[str] = serial_status
+        self.radio_signal_report: Queue[str] = radio_signal_report
+        self.rn2483_radio_input: Queue[str] = rn2483_radio_input
+        self.rn2483_radio_payloads: Queue[str] = rn2483_radio_payloads
 
         self.serial_port = serial_port
         self.settings = settings
 
+        self.serial = Serial(
+            port=self.serial_port,
+            timeout=1,
+            baudrate=57600,
+            bytesize=EIGHTBITS,
+            parity=PARITY_NONE,
+            stopbits=1,
+            rtscts=False,
+        )
         self.run()
 
     def run(self):
@@ -93,7 +102,7 @@ class SerialRN2483Radio(Process):
 
                 while True:
                     while not self.rn2483_radio_input.empty():
-                        self.write_to_rn2483_radio(self.rn2483_radio_input.get())
+                        _ = self.write_to_rn2483_radio(self.rn2483_radio_input.get())
                         self.set_rx_mode()
                         # FUTURE TO DO LIMIT TO ONLY AFTER THE ENTIRE BATCH IS DONE.
                         # AFTER SENDING A COMMAND TO RADIO RECALL SET_RX_MODE()
@@ -113,22 +122,22 @@ class SerialRN2483Radio(Process):
     def init_gpio(self) -> None:
         """Set all GPIO pins to input mode, thereby putting them in a state of high impedance."""
 
-        self.write_to_rn2483_radio("sys set pinmode GPIO0 digout")
-        self.write_to_rn2483_radio("sys set pinmode GPIO1 digout")
-        self.write_to_rn2483_radio("sys set pinmode GPIO2 digout")
-        self.write_to_rn2483_radio("sys set pindig GPIO0 1")
-        self.write_to_rn2483_radio("sys set pindig GPIO1 1")
-        self.write_to_rn2483_radio("sys set pindig GPIO2 0")
+        _ = self.write_to_rn2483_radio("sys set pinmode GPIO0 digout")
+        _ = self.write_to_rn2483_radio("sys set pinmode GPIO1 digout")
+        _ = self.write_to_rn2483_radio("sys set pinmode GPIO2 digout")
+        _ = self.write_to_rn2483_radio("sys set pindig GPIO0 1")
+        _ = self.write_to_rn2483_radio("sys set pindig GPIO1 1")
+        _ = self.write_to_rn2483_radio("sys set pindig GPIO2 0")
 
         for i in range(0, 14):
-            self.write_to_rn2483_radio(f"sys set pinmode GPIO{i} digin")
+            _ = self.write_to_rn2483_radio(f"sys set pinmode GPIO{i} digin")
 
         logger.info("Successfully set GPIO.")
 
     def reset(self) -> bool:
         """Performs a software reset on the RN2483 radio."""
 
-        self.write_to_rn2483_radio("sys reset")
+        _ = self.write_to_rn2483_radio("sys reset")
 
         ret = self._read_ser()  # Confirm from the rn2483 radio that the reset was a success
         if "RN2483" in ret:
@@ -144,7 +153,7 @@ class SerialRN2483Radio(Process):
         """
 
         # Restart the radio module
-        self.reset()
+        _ = self.reset()
         logger.info("Resetting radio...")
 
         # Initialize GPIO pins
@@ -181,7 +190,7 @@ class SerialRN2483Radio(Process):
         data += "\r\n"  # Must include carriage return for valid commands (see DS40001784B pg XX)
         self.serial.flush()  # Flush the serial port
 
-        self.serial.write(data.encode("utf-8"))  # Encode command_string as bytes and then transmit over serial port
+        _ = self.serial.write(data.encode("utf-8"))  # Encode command_string as bytes and then transmit over serial port
         # Wait for response on the serial line. Return if 'ok' received
         # Sys reset gives us info about the board which we want to process differently from other commands
         if command_string not in ["sys reset", "radio get snr", "radio get rssi"]:
@@ -210,8 +219,8 @@ class SerialRN2483Radio(Process):
     def set_rx_mode(self) -> None:
         """Set the RN2483 radio so that it constantly listens for transmissions."""
 
-        self.write_to_rn2483_radio("radio set wdt 0")  # Turn off watch dog timer
-        self.write_to_rn2483_radio("mac pause")  # This command must be passed before any reception can occur
+        _ = self.write_to_rn2483_radio("radio set wdt 0")  # Turn off watch dog timer
+        _ = self.write_to_rn2483_radio("mac pause")  # This command must be passed before any reception can occur
 
         if not self.write_to_rn2483_radio("radio rx 0"):  # Command radio to go into continuous reception mode
             logger.error("Failure putting radio into rx mode.")
@@ -229,13 +238,13 @@ class SerialRN2483Radio(Process):
         logger.debug(f"Cleaned serial message: {message}")
         self.rn2483_radio_payloads.put(message)  # Put serial message in data queue for telemetry
 
-    def _tx(self, data) -> None:
+    def _tx(self, data: str) -> None:
         """
         Transmit data, a method used for debugging.
         ROCKET DOES NOT RESPOND TO TRANSMISSIONS AT THIS TIME.
         """
 
-        self.write_to_rn2483_radio("mac pause")  # Command that must be called before each transmission and receive
+        _ = self.write_to_rn2483_radio("mac pause")  # Command that must be called before each transmission and receive
 
         if not self.write_to_rn2483_radio(f"radio tx {data}"):  # Is the data we wish to transmit valid?
             logger.error("Invalid transmission message.")
