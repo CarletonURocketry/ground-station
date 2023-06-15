@@ -338,7 +338,7 @@ class Telemetry(Process):
         # Create SuperBlock in file
         flight = Flight(first_block=1, num_blocks=0, timestamp=recording_epoch)
         self.mission_recording_sb.flights = [flight]
-        self.mission_recording_file.write(self.mission_recording_sb.to_bytes())
+        _ = self.mission_recording_file.write(self.mission_recording_sb.to_bytes())
         self.mission_recording_file.flush()
 
         # Status update
@@ -383,19 +383,19 @@ class Telemetry(Process):
 
         # Update Superblock with new block count
         self.mission_recording_sb.flights[0].num_blocks += int(math.ceil(num_bytes / 512))
-        self.mission_recording_file.seek(0)
-        self.mission_recording_file.write(self.mission_recording_sb.to_bytes())
+        _ = self.mission_recording_file.seek(0)
+        _ = self.mission_recording_file.write(self.mission_recording_sb.to_bytes())
 
         # Dump entire buffer to file
         blocks = self.mission_recording_buffer[:num_bytes]
         self.mission_recording_buffer = self.mission_recording_buffer[num_bytes:]
-        self.mission_recording_file.seek(0, 2)
-        self.mission_recording_file.write(blocks)
+        _ = self.mission_recording_file.seek(0, 2)
+        _ = self.mission_recording_file.write(blocks)
 
         # If less than 512 bytes, or a spacer is requested then write a spacer
         if num_bytes < 512 or spacer:
             spacer_block = LoggingMetadataSpacerBlock(512 - (num_bytes % 512))
-            self.mission_recording_file.write(spacer_block.to_bytes())
+            _ = self.mission_recording_file.write(spacer_block.to_bytes())
 
     def parse_rn2483_payload(self, block_type: int, block_subtype: int, contents: str) -> None:
         """
