@@ -4,6 +4,7 @@ import struct
 import datetime
 import sys
 import datetime as dt
+from typing import Self
 
 
 class Flight:
@@ -14,7 +15,7 @@ class Flight:
         self.timestamp: int = timestamp
 
     @classmethod
-    def from_bytes(cls, block):
+    def from_bytes(cls, block: bytes) -> Self:
         parts = struct.unpack("<III", block)
         first_block = parts[0]
         num_blocks = parts[1]
@@ -50,7 +51,7 @@ class SuperBlock:
             self.flight_blocks += flight.num_blocks
 
     @classmethod
-    def from_bytes(cls, block):
+    def from_bytes(cls, block: bytes) -> Self:
         """Generates the Superblock data object from bytes"""
         if len(block) != 512:
             raise ValueError("Invalid Superblock")

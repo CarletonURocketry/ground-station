@@ -20,7 +20,7 @@ from modules.telemetry.superblock import SuperBlock
 logger = logging.getLogger(__name__)
 
 
-def parse_sd_block_header(header_bytes: bytes):
+def parse_sd_block_header(header_bytes: bytes) -> tuple[int, int, int]:
     """
     Parses a sd block header string into its information components and returns them in a tuple.
 
