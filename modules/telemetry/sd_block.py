@@ -5,7 +5,7 @@
 from __future__ import annotations
 import struct
 from abc import ABC, abstractmethod
-from typing import Self
+from typing import Self, Any
 from modules.telemetry.data_block import DataBlock
 import modules.telemetry.block as blk
 
@@ -26,9 +26,10 @@ class SDBlockUnknownException(blk.BlockUnknownException):
 class SDBlock(ABC):
     """Defines the interface for all SDBlock subtypes."""
 
-    def __init__(self, sd_subtype: blk.SDBlockSubtype, subtype) -> None:
+    def __init__(self, sd_subtype: blk.SDBlockSubtype, subtype: Any) -> None:
+        super().__init__()
         self.sd_subtype: blk.SDBlockSubtype = sd_subtype
-        self.subtype = subtype
+        self.subtype: Any = subtype
 
     def __len__(self) -> int:
         """Length of the block in bytes."""
@@ -120,13 +121,13 @@ class LoggingMetadataSpacerBlock(LoggingMetadataBlock):
 class TelemetryDataBlock(SDBlock):
     """Responsible for initializing data blocks."""
 
-    def __init__(self, subtype: blk.DataBlockSubtype, data):
+    def __init__(self, subtype: blk.DataBlockSubtype, data: DataBlock):
         super().__init__(blk.SDBlockSubtype.TELEMETRY_DATA, subtype)
         self.data = data
 
     def __len__(self) -> int:
         """Length of the telemetry data in bytes. Four bytes for the block header, then the block contents itself."""
-        return 4 + self.data.length
+        return 4 + len(self.data)
 
     @classmethod
     def from_payload(cls, block_subtype: int, payload: bytes) -> Self:
@@ -142,7 +143,7 @@ class TelemetryDataBlock(SDBlock):
 
 #   Diagnostic Data
 class DiagnosticDataBlock(SDBlock):
-    def __init__(self, subtype) -> None:
+    def __init__(self, subtype: blk.DiagnosticDataBlockSubtype) -> None:
         super().__init__(blk.SDBlockSubtype.DIAGNOSTIC_DATA, subtype)
 
     @classmethod
@@ -157,12 +158,10 @@ class DiagnosticDataBlock(SDBlock):
                 return DiagnosticDataOutgoingRadioPacketBlock.from_payload(payload)
             case blk.DiagnosticDataBlockSubtype.INCOMING_RADIO_PACKET:
                 return DiagnosticDataIncomingRadioPacketBlock.from_payload(payload)
-            case _:
-                raise NotImplementedError(f"from_payload not implemented for {diagnostic_subtype}.")
 
 
 class DiagnosticDataRadioPacketBlock(DiagnosticDataBlock):
-    def __init__(self, subtype: blk.DiagnosticDataBlockSubtype, mission_time: int, packet):
+    def __init__(self, subtype: blk.DiagnosticDataBlockSubtype, mission_time: int, packet: bytes):
         super().__init__(subtype)
         self.mission_time: int = mission_time
         self.packet = packet
@@ -200,7 +199,7 @@ class DiagnosticDataLogMessageBlock(DiagnosticDataBlock):
 
 
 class DiagnosticDataOutgoingRadioPacketBlock(DiagnosticDataRadioPacketBlock):
-    def __init__(self, mission_time: int, packet):
+    def __init__(self, mission_time: int, packet: bytes):
         super().__init__(blk.DiagnosticDataBlockSubtype.OUTGOING_RADIO_PACKET, mission_time, packet)
 
     @classmethod
@@ -213,7 +212,7 @@ class DiagnosticDataOutgoingRadioPacketBlock(DiagnosticDataRadioPacketBlock):
 
 
 class DiagnosticDataIncomingRadioPacketBlock(DiagnosticDataRadioPacketBlock):
-    def __init__(self, mission_time: int, packet):
+    def __init__(self, mission_time: int, packet: bytes):
         super().__init__(blk.DiagnosticDataBlockSubtype.INCOMING_RADIO_PACKET, mission_time, packet)
 
     @classmethod
