@@ -26,6 +26,7 @@ class DataBlock(ABC):
     """Interface for all telemetry data blocks."""
 
     def __init__(self, subtype: DataBlockSubtype, mission_time: int):
+        super().__init__()
         self.mission_time: int = mission_time
         self.subtype: DataBlockSubtype = subtype
 
@@ -476,7 +477,7 @@ class GNSSLocationBlock(DataBlock):
         )
 
     @staticmethod
-    def coord_to_str(coord, ew=False):
+    def coord_to_str(coord: int, ew: bool = False):
         direction = coord >= 0
         coord = abs(coord)
         degrees = coord // 600000
@@ -529,6 +530,7 @@ class GNSSSatInfo:
     GLONASS_SV_OFFSET: int = 65
 
     def __init__(self, sat_type: GNSSSatType, elevation: int, snr: int, identifier: int, azimuth: int):
+        super().__init__()
         self.sat_type: GNSSSatType = sat_type
         self.elevation: int = elevation
         self.snr: int = snr
@@ -604,9 +606,9 @@ class GNSSMetadataBlock(DataBlock):
 
         parts = struct.unpack("<III", payload[0:offset])
         payload_time = parts[0]
-        gps_sats_in_use = list()
-        glonass_sats_in_use = list()
-        sats_in_view = list()
+        gps_sats_in_use: list[int] = list()
+        glonass_sats_in_use: list[int] = list()
+        sats_in_view: list[GNSSSatInfo] = list()
 
         # Check satellites in use bitfields
         for i in range(32):
@@ -698,8 +700,6 @@ class KX134Range(IntEnum):
                 return 32
             case KX134Range.ACCEL_64G:
                 return 64
-            case _:
-                return 0
 
     def __str__(self):
         return f"+/-{self.acceleration}g"
@@ -739,14 +739,14 @@ class KX134AccelerometerDataBlock(DataBlock):
         accel_range: KX134Range,
         rolloff: KX134LPFRolloff,
         resolution: KX134Resolution,
-        samples: list,
+        samples: list[tuple[float, float, float]],
     ):
         super().__init__(DataBlockSubtype.KX134_1211_ACCEL, mission_time)
         self.odr: KX134ODR = odr
         self.accel_range: KX134Range = accel_range
         self.rolloff: KX134LPFRolloff = rolloff
         self.resolution: KX134Resolution = resolution
-        self.samples: list = samples
+        self.samples: list[tuple[float, float, float]] = samples
 
         self.sample_period = 1 / self.odr.samples_per_sec
 
@@ -781,7 +781,7 @@ class KX134AccelerometerDataBlock(DataBlock):
         padding = (parts[1] >> 14) & 0x3
         num_samples = (len(payload) - (6 + padding)) // ((resolution.bits // 8) * 3)
 
-        samples = list()
+        samples: list[tuple[float, float, float]] = list()
         sensitivity = (2 ** (resolution.bits - 1)) // accel_range.acceleration
         for i in range(num_samples):
             if resolution == KX134Resolution.RES_8_BIT:
@@ -862,8 +862,6 @@ class MPU9250MagSR(IntEnum):
                 return 8
             case self.SR_100:
                 return 100
-            case _:
-                return 0
 
     def __str__(self):
         return f"{self.samples_per_sec} Hz"
@@ -888,8 +886,6 @@ class MPU9250AccelFSR(IntEnum):
                 return 8
             case self.ACCEL_16G:
                 return 16
-            case _:
-                raise NotImplementedError()
 
     @property
     def sensitivity(self):
@@ -918,8 +914,6 @@ class MPU9250GyroFSR(IntEnum):
                 return 1000
             case self.AV_2000DPS:
                 return 2000
-            case _:
-                return 0
 
     @property
     def sensitivity(self):
@@ -957,8 +951,6 @@ class MPU9250AccelBW(Enum):
                 return 218.1
             case self.BW_420_HZ:
                 return 420.0
-            case _:
-                return 0
 
     def __str__(self):
         return f"{self.bandwidth}Hz"
@@ -992,8 +984,6 @@ class MPU9250GyroBW(IntEnum):
                 return 184
             case self.BW_250_HZ:
                 return 250
-            case _:
-                return 0
 
     def __str__(self):
         return f"{self.bandwidth}Hz"
@@ -1010,8 +1000,6 @@ class MPU9250MagResolution(IntEnum):
                 return 14
             case MPU9250MagResolution.RES_16_BIT:
                 return 16
-            case _:
-                return 0
 
     @property
     def sensitivity(self):
@@ -1020,8 +1008,6 @@ class MPU9250MagResolution(IntEnum):
                 return 1 / 0.6
             case MPU9250MagResolution.RES_16_BIT:
                 return 1 / 0.15
-            case _:
-                raise NotImplementedError(f"Resolution of type {type(self)} invalid.")
 
     def __str__(self):
         return f"{self.bits} bits per sample"
@@ -1043,6 +1029,7 @@ class MPU9250Sample:
         mag_ovf: int,
         mag_res: MPU9250MagResolution,
     ):
+        super().__init__()
         self.accel_x: float = accel_x
         self.accel_y: float = accel_y
         self.accel_z: float = accel_z
@@ -1157,38 +1144,38 @@ class MPU9250IMUDataBlock(DataBlock):
             mag_sample_rate = MPU9250MagSR((parts[1] >> 8) & 0x1)
         except ValueError as error:
             raise DataBlockException(
-                f"Invalid MPU9250 magnetometer sample " f"rate: {(parts[1] >> 8) & 0x1}"
+                f"Invalid MPU9250 magnetometer sample rate: {(parts[1] >> 8) & 0x1}"
             ) from error
 
         try:
             accel_fsr = MPU9250AccelFSR((parts[1] >> 9) & 0x3)
         except ValueError as error:
             raise DataBlockException(
-                f"Invalid MPU9250 accelerometer full scale " f"range: {(parts[1] >> 9) & 0x3}"
+                f"Invalid MPU9250 accelerometer full scale range: {(parts[1] >> 9) & 0x3}"
             ) from error
 
         try:
             gyro_fsr = MPU9250GyroFSR((parts[1] >> 11) & 0x3)
         except ValueError as error:
             raise DataBlockException(
-                f"Invalid MPU9250 gyroscope full scale " f"range: {(parts[1] >> 11) & 0x3}"
+                f"Invalid MPU9250 gyroscope full scale range: {(parts[1] >> 11) & 0x3}"
             ) from error
 
         try:
             accel_bw = MPU9250AccelBW((parts[1] >> 13) & 0x7)
         except ValueError as error:
             raise DataBlockException(
-                f"Invalid MPU9250 accelerometer bandwidth: " f"{(parts[1] >> 13) & 0x7}"
+                f"Invalid MPU9250 accelerometer bandwidth: {(parts[1] >> 13) & 0x7}"
             ) from error
 
         try:
             gyro_bw = MPU9250GyroBW((parts[1] >> 16) & 0x7)
         except ValueError as error:
-            raise DataBlockException(f"Invalid MPU9250 gyroscope bandwidth: " f"{(parts[1] >> 16) & 0x7}") from error
+            raise DataBlockException(f"Invalid MPU9250 gyroscope bandwidth: {(parts[1] >> 16) & 0x7}") from error
 
         num_samples = (len(payload) - 8) // 21
 
-        samples = list()
+        samples: list[MPU9250Sample] = list()
         for i in range(num_samples):
             sample_start = 8 + (i * 21)
             sample = MPU9250Sample.from_bytes(
