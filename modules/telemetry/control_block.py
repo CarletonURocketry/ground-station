@@ -1,5 +1,11 @@
+# Defines the control block types
 from abc import ABC, abstractmethod
+from typing import Self
+import logging
 from modules.telemetry.block import ControlBlockSubtype, BlockException, BlockUnknownException
+
+# Define logger
+logger = logging.getLogger(__name__)
 
 
 class ControlDataBlockException(BlockException):
@@ -11,78 +17,56 @@ class ControlBlockUnknownException(BlockUnknownException):
 
 
 class ControlBlock(ABC):
-
-    @property
-    @abstractmethod
-    def length(self):
-        """ Length of block """
-
-    @property
-    @abstractmethod
-    def subtype(self):
-        """ Subtype of block """
+    """Represents the base interface for a Control Block."""
 
     @abstractmethod
     def to_payload(self):
-        """ Marshal block to a bytes object """
-
-    @staticmethod
-    @abstractmethod
-    def type_desc():
-        """ String description of block type """
+        """Marshal block to a bytes object"""
 
     @classmethod
-    def parse_block(cls, block_subtype, payload):
-        """ Unmarshal a bytes object to appropriate block class """
+    def parse_block(cls, block_subtype: ControlBlockSubtype, payload: bytes) -> Self:
+        """Unmarshal a bytes object to appropriate block class"""
         match block_subtype:
             case ControlBlockSubtype.SIGNAL_REPORT:
-                print("")
+                logger.debug("Control block of type {block_subtype} received.")
                 return SignalReportControlBlock.from_payload(payload)
             case ControlBlockSubtype.COMMAND_ACKNOWLEDGEMENT:
-                print("")
+                logger.debug("Control block of type {block_subtype} received.")
             case ControlBlockSubtype.COMMAND_NONCE_REQUEST:
-                print("")
+                logger.debug("Control block of type {block_subtype} received.")
             case ControlBlockSubtype.COMMAND_NONCE:
-                print("")
+                logger.debug("Control block of type {block_subtype} received.")
             case ControlBlockSubtype.BEACON:
-                print("")
+                logger.debug("Control block of type {block_subtype} received.")
             case ControlBlockSubtype.BEACON_RESPONSE:
-                print("")
+                logger.debug("Control block of type {block_subtype} received.")
+            case ControlBlockSubtype.RESERVED:
+                logger.debug("Control block of type {block_subtype} received.")
 
         raise ControlBlockUnknownException(f"Unknown control block subtype: {block_subtype}")
 
-    def __str__(self):
-        return ""
-
-    def __iter__(self):
-        yield ""
-
 
 class SignalReportControlBlock(ControlBlock):
-    def __init__(self):
-        self.mission_time = None
-        self.snr = 0
-        self.tx_power = 0
+    """Represents a control block requesting signal report."""
 
-    @staticmethod
-    def type_desc():
-        return "Signal Report"
+    def __init__(self):  # TODO accept parameters for creating one of these
+        super().__init__()
+        self.mission_time: int = 0
+        self.snr: int = 0
+        self.tx_power: int = 0
 
-    def length(self):
+    def __len__(self) -> int:
         return 16
 
-    def to_payload(self):
-        return ""
-
-    def subtype(self):
-        return ""
+    def to_payload(self) -> bytes:
+        return bytes()  # TODO implement this method
 
     @classmethod
-    def from_payload(cls, payload):
-        return ""
+    def from_payload(cls, _: bytes) -> Self:
+        return cls()
 
     def __str__(self):
-        return f"{self.type_desc()} -> time: {self.mission_time}, snr: {self.snr}, power: {self.tx_power}"
+        return f"{self.__class__.__name__} -> time: {self.mission_time}, snr: {self.snr}, power: {self.tx_power}"
 
     def __iter__(self):
         yield "mission_time", self.mission_time

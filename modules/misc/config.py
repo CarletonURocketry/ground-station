@@ -69,8 +69,7 @@ class RadioParameters:
     def __post_init__(self):
         if self.frequency not in range(*LF_RANGE) and self.frequency not in range(*HF_RANGE):
             raise ValueError(
-                f"Frequency '{self.frequency}' not in low frequency range {LF_RANGE} "
-                f"or high frequency range {HF_RANGE}"
+                f"Frequency '{self.frequency}' not in low frequency range {LF_RANGE} or high frequency range {HF_RANGE}"
             )
 
         if self.power not in range(*POWER_RANGE):
@@ -127,7 +126,7 @@ class Config:
     approved_callsigns: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
-        if self.approved_callsigns is None or len(self.approved_callsigns) == 0:
+        if len(self.approved_callsigns) == 0:
             raise ValueError("You must provide at least one approved callsign.")
 
     @classmethod

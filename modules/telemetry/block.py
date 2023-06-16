@@ -25,8 +25,6 @@ class DeviceAddress(IntEnum):
                 return "ROCKET"
             case DeviceAddress.MULTICAST:
                 return "MULTICAST"
-            case _:
-                return "UNKNOWN"
 
 
 class RadioBlockType(IntEnum):

@@ -31,7 +31,7 @@ def test_unknown_command_raises_error() -> None:
     parameters = cmd.split_command_string(command)
 
     with pytest.raises(cmd.WebsocketCommandNotFound):
-        cmd.parse(parameters, cmd.WebsocketCommand)
+        _ = cmd.parse(parameters, cmd.WebsocketCommand)
 
 
 def test_wrong_enum_raises_error() -> None:
@@ -41,7 +41,7 @@ def test_wrong_enum_raises_error() -> None:
     parameters = cmd.split_command_string(command)
 
     with pytest.raises(cmd.WebsocketCommandNotFound):
-        cmd.parse(parameters, cmd.WebsocketCommand.REPLAY.value)
+        _ = cmd.parse(parameters, cmd.WebsocketCommand.REPLAY.value)
 
 
 def test_command_not_found_error_message() -> None:
@@ -51,7 +51,7 @@ def test_command_not_found_error_message() -> None:
     parameters = cmd.split_command_string(command)
 
     try:
-        cmd.parse(parameters, cmd.WebsocketCommand)
+        _ = cmd.parse(parameters, cmd.WebsocketCommand)
     except cmd.WebsocketCommandNotFound as error:
         assert error.command == "halt"
         assert error.message == "The websocket command 'halt' does not exist."

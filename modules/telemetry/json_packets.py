@@ -2,6 +2,7 @@
 __author__ = "Matteo Golin"
 
 # Imports
+from io import BufferedReader
 import struct
 from dataclasses import dataclass, field
 from enum import IntEnum
@@ -144,7 +145,7 @@ class ReplayData:
     state: ReplayState = ReplayState.DNE
     speed: float = 1.0
     last_played_speed: float = 1.0
-    mission_files_list: list = field(default_factory=list)
+    mission_files_list: list[Path] = field(default_factory=list)
     mission_list: list[MissionEntry] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -176,7 +177,7 @@ class ReplayData:
                 mission_time = 0
                 # Reads last telemetry block of each flight to get final mission time
                 for flight in mission_sb.flights:
-                    file.seek(flight.first_block * 512)
+                    _ = file.seek(flight.first_block * 512)
                     mission_time += get_last_mission_time(file, flight.num_blocks)
 
                 # Output mission to mission list
@@ -213,7 +214,7 @@ class ParsingException(Exception):
     pass
 
 
-def get_last_mission_time(file, num_blocks) -> int:
+def get_last_mission_time(file: BufferedReader, num_blocks: int) -> int:
     """Obtains last recorded telemetry mission time from a flight"""
 
     # If flight is empty, return
@@ -225,7 +226,7 @@ def get_last_mission_time(file, num_blocks) -> int:
 
     while count <= ((num_blocks * 512) - 4):
         try:
-            block_header = file.read(4)
+            block_header: bytes = file.read(4)
             block_class, _, block_length = parse_sd_block_header(block_header)
             block_data = file.read(block_length - 4)
         except SDBlockException:
@@ -234,7 +235,7 @@ def get_last_mission_time(file, num_blocks) -> int:
         count += block_length
         if count > (num_blocks * 512):
             raise ParsingException(
-                f"Read block of length {block_length} would read {count} bytes " f"from {num_blocks * 512} byte flight"
+                f"Read block of length {block_length} would read {count} bytes from {num_blocks * 512} byte flight"
             )
 
         # Do not unnecessarily parse blocks unless close to end of flight

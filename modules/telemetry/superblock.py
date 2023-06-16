@@ -1,9 +1,9 @@
 #! /usr/bin/env python3
 import os
 import struct
-import datetime
 import sys
 import datetime as dt
+from typing import Self
 
 
 class Flight:
@@ -14,7 +14,7 @@ class Flight:
         self.timestamp: int = timestamp
 
     @classmethod
-    def from_bytes(cls, block):
+    def from_bytes(cls, block: bytes) -> Self:
         parts = struct.unpack("<III", block)
         first_block = parts[0]
         num_blocks = parts[1]
@@ -50,7 +50,7 @@ class SuperBlock:
             self.flight_blocks += flight.num_blocks
 
     @classmethod
-    def from_bytes(cls, block):
+    def from_bytes(cls, block: bytes) -> Self:
         """Generates the Superblock data object from bytes"""
         if len(block) != 512:
             raise ValueError("Invalid Superblock")
@@ -63,7 +63,7 @@ class SuperBlock:
 
         partition_length = struct.unpack("<I", block[0x0C:0x10])[0]
 
-        flights = list()
+        flights: list[Flight] = list()
         flight_blocks = 1
         for i in range(32):
             flight_start = 0x60 + (12 * i)
@@ -123,7 +123,7 @@ if __name__ == "__main__":
         # (512 bytes is just superblock, anything larger should be the full sd card image)
         # If it's a cuinspace telemetry file, first block is a superblock so don't skip.
         if ".mission" not in infile and file_size > 512:
-            f.seek(512 * 2048)
+            _ = f.seek(512 * 2048)
         sb = SuperBlock.from_bytes(f.read(512))
 
         sb.output(True)
