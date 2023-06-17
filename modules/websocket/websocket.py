@@ -6,10 +6,11 @@
 # Authors:
 # Thomas Selwyn (Devil)
 
+from __future__ import annotations
 import json
 from multiprocessing import Queue, Process
 from abc import ABC
-from typing import Optional
+from typing import Optional, Any
 import logging
 
 import tornado.gen
@@ -19,7 +20,7 @@ import tornado.web
 import tornado.websocket
 
 # Constants
-WS_COMMANDS_QUEUE: Queue
+ws_commands_queue: Queue[Any]
 
 # Logger
 logger = logging.getLogger(__name__)
@@ -29,12 +30,12 @@ class WebSocketHandler(Process):
 
     """Handles starting the websocket server process."""
 
-    def __init__(self, telemetry_json_output: Queue, ws_commands: Queue):
+    def __init__(self, telemetry_json_output: Queue[Any], ws_commands: Queue[Any]):
         super().__init__()
-        global WS_COMMANDS_QUEUE
+        global ws_commands_queue
 
-        self.telemetry_json_output = telemetry_json_output
-        WS_COMMANDS_QUEUE = ws_commands
+        self.telemetry_json_output: Queue[Any] = telemetry_json_output
+        ws_commands_queue = ws_commands
 
         # Default to test mode
         # ws_commands_queue.put("serial rn2483_radio connect test")
@@ -50,7 +51,7 @@ class WebSocketHandler(Process):
             websocket_ping_timeout=30,
         )
 
-        wss.listen(33845)
+        _ = wss.listen(33845)
 
         io_loop = tornado.ioloop.IOLoop.current()
         periodic_callback = tornado.ioloop.PeriodicCallback(
@@ -73,9 +74,9 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     """The server which handles websocket connections."""
 
-    clients: set = set()
+    clients: set[TornadoWSServer] = set()
     last_msg_send: str = ""
-    global WS_COMMANDS_QUEUE
+    global ws_commands_queue
 
     def open(self) -> None:
         TornadoWSServer.clients.add(self)
@@ -88,8 +89,8 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     @staticmethod
     def on_message(message: str) -> None:
-        global WS_COMMANDS_QUEUE
-        WS_COMMANDS_QUEUE.put(message)
+        global ws_commands_queue
+        ws_commands_queue.put(message)
 
     def check_origin(self, _) -> bool:
         """Authenticates clients from any host origin (_ parameter)."""
@@ -102,4 +103,4 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
         cls.last_msg_send = message
         for client in cls.clients:
-            client.write_message(message)
+            _ = client.write_message(message)

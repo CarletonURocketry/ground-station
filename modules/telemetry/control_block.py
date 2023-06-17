@@ -1,10 +1,11 @@
-from typing import Self, Generator
+# Defines the control block types
 from abc import ABC, abstractmethod
-from modules.telemetry.block import (
-    ControlBlockSubtype,
-    BlockException,
-    BlockUnknownException,
-)
+from typing import Self
+import logging
+from modules.telemetry.block import ControlBlockSubtype, BlockException, BlockUnknownException
+
+# Define logger
+logger = logging.getLogger(__name__)
 
 
 class ControlDataBlockException(BlockException):
@@ -26,13 +27,26 @@ class ControlBlock(ABC):
         """Marshal block to a bytes object."""
 
     @classmethod
-    def parse_block(cls, block_subtype: ControlBlockSubtype) -> Self:
+    def parse_block(cls, block_subtype: ControlBlockSubtype, payload: bytes) -> Self:
         """Unmarshal a bytes object to appropriate block class."""
         match block_subtype:
-            case _:
-                raise NotImplementedError(
-                    f"Block parsing is not yet implemented for ControlBlock of subtype {block_subtype}"
-                )
+            case ControlBlockSubtype.SIGNAL_REPORT:
+                logger.debug("Control block of type {block_subtype} received.")
+                return SignalReportControlBlock.from_payload(payload)
+            case ControlBlockSubtype.COMMAND_ACKNOWLEDGEMENT:
+                logger.debug("Control block of type {block_subtype} received.")
+            case ControlBlockSubtype.COMMAND_NONCE_REQUEST:
+                logger.debug("Control block of type {block_subtype} received.")
+            case ControlBlockSubtype.COMMAND_NONCE:
+                logger.debug("Control block of type {block_subtype} received.")
+            case ControlBlockSubtype.BEACON:
+                logger.debug("Control block of type {block_subtype} received.")
+            case ControlBlockSubtype.BEACON_RESPONSE:
+                logger.debug("Control block of type {block_subtype} received.")
+            case ControlBlockSubtype.RESERVED:
+                logger.debug("Control block of type {block_subtype} received.")
+
+        raise ControlBlockUnknownException(f"Unknown control block subtype: {block_subtype}")
 
 
 class SignalReportControlBlock(ControlBlock):
@@ -51,8 +65,8 @@ class SignalReportControlBlock(ControlBlock):
         raise NotImplementedError()
 
     @classmethod
-    def from_payload(cls) -> Self:
-        raise NotImplementedError()
+    def from_payload(cls, _: bytes) -> Self:
+        return cls()
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__} -> time: {self.mission_time}, snr: {self.snr}, power: {self.tx_power}"

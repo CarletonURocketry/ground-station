@@ -7,29 +7,25 @@
 import random
 import struct
 import time
-from multiprocessing import Process, Queue
+from queue import Queue
+from multiprocessing import Process
 from datetime import datetime
 
 
 class SerialRN2483Emulator(Process):
-    def __init__(
-        self,
-        serial_status: Queue,
-        radio_signal_report: Queue,
-        rn2483_radio_payloads: Queue,
-    ):
+    def __init__(self, serial_status: Queue[str], radio_signal_report: Queue[str], rn2483_radio_payloads: Queue[str]):
         super().__init__()
 
-        self.serial_status = serial_status
+        self.serial_status: Queue[str] = serial_status
 
-        self.rn2483_radio_payloads = rn2483_radio_payloads
-        self.radio_signal_report = radio_signal_report
+        self.rn2483_radio_payloads: Queue[str] = rn2483_radio_payloads
+        self.radio_signal_report: Queue[str] = radio_signal_report
 
         # Emulation Variables
-        self.altitude = 0
-        self.temp = 22
-        self.going_up = True
-        self.startup_time = datetime.now()
+        self.altitude: float = 0
+        self.temp: float = 22
+        self.going_up: bool = True
+        self.startup_time: datetime = datetime.now()
 
         self.run()
 

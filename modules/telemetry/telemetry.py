@@ -5,19 +5,19 @@
 # Authors:
 # Thomas Selwyn (Devil)
 # Matteo Golin (linguini1)
-
-# Imports
 from io import BufferedWriter
 import logging
 import math
 from ast import literal_eval
-from multiprocessing import Queue, Process, active_children
+from queue import Queue
+import multiprocessing as mp
+from multiprocessing import Process, active_children
 from pathlib import Path
 
 from signal import signal, SIGTERM
 from struct import unpack
 from time import time
-from typing import Any
+from typing import Any, TypeAlias
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
@@ -29,8 +29,9 @@ from modules.telemetry.superblock import SuperBlock, Flight
 from modules.misc.config import Config
 
 # Types
-BlockHeader = tuple[int, bool, int, int, int]
-PacketHeader = tuple[str, int, int, int, int]
+JSON: TypeAlias = dict[str, Any]
+BlockHeader: TypeAlias = tuple[int, bool, int, int, int]
+PacketHeader: TypeAlias = tuple[str, int, int, int, int]
 
 # Constants
 ORG: str = "CUInSpace"
@@ -100,27 +101,27 @@ class ReplayPlaybackError(Exception):
 class Telemetry(Process):
     def __init__(
         self,
-        serial_status: Queue,
-        radio_payloads: Queue,
-        rn2483_radio_input: Queue,
-        radio_signal_report: Queue,
-        telemetry_json_output: Queue,
-        telemetry_ws_commands: Queue,
+        serial_status: Queue[str],
+        radio_payloads: Queue[Any],
+        rn2483_radio_input: Queue[str],
+        radio_signal_report: Queue[str],
+        telemetry_json_output: Queue[JSON],
+        telemetry_ws_commands: Queue[list[str]],
         config: Config,
     ):
         super().__init__()
         self.config = config
 
-        self.radio_payloads = radio_payloads
-        self.telemetry_json_output = telemetry_json_output
-        self.telemetry_ws_commands = telemetry_ws_commands
-        self.rn2483_radio_input = rn2483_radio_input
-        self.radio_signal_report = radio_signal_report
-        self.serial_status = serial_status
+        self.radio_payloads: Queue[str] = radio_payloads
+        self.telemetry_json_output: Queue[JSON] = telemetry_json_output
+        self.telemetry_ws_commands: Queue[list[str]] = telemetry_ws_commands
+        self.rn2483_radio_input: Queue[str] = rn2483_radio_input
+        self.radio_signal_report: Queue[str] = radio_signal_report
+        self.serial_status: Queue[str] = serial_status
 
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
         self.status: jsp.StatusData = jsp.StatusData()
-        self.telemetry: dict = {}
+        self.telemetry: dict[str, str] = {}
 
         # Mission System
         self.missions_dir = Path.cwd().joinpath("missions")
@@ -134,8 +135,8 @@ class Telemetry(Process):
 
         # Replay System
         self.replay = None
-        self.replay_input = Queue()
-        self.replay_output = Queue()
+        self.replay_input: Queue[str] = mp.Queue()  # type:ignore
+        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type:ignore
 
         # Handle program closing to ensure no orphan processes
         signal(SIGTERM, shutdown_sequence)  # type:ignore
@@ -162,6 +163,7 @@ class Telemetry(Process):
 
             while not self.serial_status.empty():
                 x = self.serial_status.get().split(" ", maxsplit=1)
+                logger.debug(f"serial_status: {x}")
                 self.parse_serial_status(command=x[0], data=x[1])
                 self.update_websocket()
 
@@ -181,21 +183,16 @@ class Telemetry(Process):
         """Updates the websocket with the latest packet using the JSON output process."""
         self.telemetry_json_output.put(self.generate_websocket_response())
 
-    def generate_websocket_response(self) -> dict[str, Any]:
+    def generate_websocket_response(self) -> JSON:
         """Returns the dictionary containing the JSON data for the websocket client."""
-        return {
-            "version": VERSION,
-            "org": ORG,
-            "status": dict(self.status),
-            "telemetry": self.telemetry,
-        }
+        return {"version": VERSION, "org": ORG, "status": dict(self.status), "telemetry": self.telemetry}
 
     def reset_data(self) -> None:
         """Resets all live data on the telemetry backend to a default state."""
         self.status = jsp.StatusData()
         self.telemetry = {}
 
-    def parse_serial_status(self, command: str, data: str):
+    def parse_serial_status(self, command: str, data: str) -> None:
         """Parses the serial managers status output"""
         match command:
             case "serial_ports":
@@ -212,6 +209,8 @@ class Telemetry(Process):
                         self.status.mission.state = jsp.MissionState.DNE
                     case _:
                         self.status.mission.state = jsp.MissionState.LIVE
+            case _:
+                return None
 
     def execute_command(self, command: wsc.Enum, parameters: list[str]) -> None:
         """Executes the passed websocket command."""
@@ -250,6 +249,8 @@ class Telemetry(Process):
                     logger.error(e.message)
                 except ReplayPlaybackError as e:
                     logger.error(e.message)
+            case _:
+                raise NotImplementedError(f"Command {command} not implemented.")
 
         self.update_websocket()
 
@@ -286,7 +287,8 @@ class Telemetry(Process):
         self.replay = None
 
         self.reset_data()
-        self.replay_output = Queue()  # Empty replay output
+        # Empty replay output
+        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type: ignore
 
     def play_mission(self, mission_name: str | None) -> None:
         """Plays the desired mission recording."""
@@ -298,8 +300,7 @@ class Telemetry(Process):
             raise ReplayPlaybackError
 
         mission_file = mission_path(mission_name, self.missions_dir)
-        not_in_list = mission_file not in self.status.replay.mission_files_list
-        if mission_name is not None and not_in_list:
+        if mission_file not in self.status.replay.mission_files_list:
             raise MissionNotFoundError(mission_name)
 
         if self.replay is None:
@@ -312,12 +313,7 @@ class Telemetry(Process):
 
             self.replay = Process(
                 target=TelemetryReplay,
-                args=(
-                    self.replay_output,
-                    self.replay_input,
-                    self.status.replay.speed,
-                    mission_file,
-                ),
+                args=(self.replay_output, self.replay_input, self.status.replay.speed, mission_file),
             )
             self.replay.start()
 
@@ -347,7 +343,7 @@ class Telemetry(Process):
         # Create SuperBlock in file
         flight = Flight(first_block=1, num_blocks=0, timestamp=recording_epoch)
         self.mission_recording_sb.flights = [flight]
-        self.mission_recording_file.write(self.mission_recording_sb.to_bytes())
+        _ = self.mission_recording_file.write(self.mission_recording_sb.to_bytes())
         self.mission_recording_file.flush()
 
         # Status update
@@ -375,8 +371,7 @@ class Telemetry(Process):
 
         # Reset mission data except state and last mission time
         self.status.mission = jsp.MissionData(
-            state=self.status.mission.state,
-            last_mission_time=self.status.mission.last_mission_time,
+            state=self.status.mission.state, last_mission_time=self.status.mission.last_mission_time
         )
 
     def recording_write_bytes(self, num_bytes: int, spacer: bool = False) -> None:
@@ -393,19 +388,19 @@ class Telemetry(Process):
 
         # Update Superblock with new block count
         self.mission_recording_sb.flights[0].num_blocks += int(math.ceil(num_bytes / 512))
-        self.mission_recording_file.seek(0)
-        self.mission_recording_file.write(self.mission_recording_sb.to_bytes())
+        _ = self.mission_recording_file.seek(0)
+        _ = self.mission_recording_file.write(self.mission_recording_sb.to_bytes())
 
         # Dump entire buffer to file
         blocks = self.mission_recording_buffer[:num_bytes]
         self.mission_recording_buffer = self.mission_recording_buffer[num_bytes:]
-        self.mission_recording_file.seek(0, 2)
-        self.mission_recording_file.write(blocks)
+        _ = self.mission_recording_file.seek(0, 2)
+        _ = self.mission_recording_file.write(blocks)
 
         # If less than 512 bytes, or a spacer is requested then write a spacer
         if num_bytes < 512 or spacer:
             spacer_block = LoggingMetadataSpacerBlock(512 - (num_bytes % 512))
-            self.mission_recording_file.write(spacer_block.to_bytes())
+            _ = self.mission_recording_file.write(spacer_block.to_bytes())
 
     def parse_rn2483_payload(self, block_type: int, block_subtype: int, contents: str) -> None:
         """

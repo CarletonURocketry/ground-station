@@ -7,7 +7,7 @@
 import logging
 import struct
 from time import time, sleep
-from multiprocessing import Queue
+from queue import Queue
 
 from pathlib import Path
 from typing import BinaryIO
@@ -20,7 +20,7 @@ from modules.telemetry.superblock import SuperBlock
 logger = logging.getLogger(__name__)
 
 
-def parse_sd_block_header(header_bytes: bytes):
+def parse_sd_block_header(header_bytes: bytes) -> tuple[int, int, int]:
     """
     Parses a sd block header string into its information components and returns them in a tuple.
 
@@ -41,14 +41,16 @@ def parse_sd_block_header(header_bytes: bytes):
 class TelemetryReplay:
     def __init__(
         self,
-        replay_payloads: Queue,
-        replay_input: Queue,
+        replay_payloads: Queue[tuple[int, int, str]],
+        replay_input: Queue[str],
         replay_speed: int,
         replay_path: Path,
     ):
+        super().__init__()
+
         # Replay buffers (Input and output)
-        self.replay_payloads = replay_payloads
-        self.replay_input = replay_input
+        self.replay_payloads: Queue[tuple[int, int, str]] = replay_payloads
+        self.replay_input: Queue[str] = replay_input
 
         # Misc replay
         self.replay_path = replay_path
@@ -63,7 +65,7 @@ class TelemetryReplay:
             mission_sb = SuperBlock.from_bytes(file.read(512))
 
             for flight in mission_sb.flights:
-                file.seek(flight.first_block * 512)
+                _ = file.seek(flight.first_block * 512)
                 self.run(file, flight.num_blocks)
 
     def run(self, file: BinaryIO, num_blocks: int):
@@ -75,13 +77,15 @@ class TelemetryReplay:
             if not self.replay_input.empty():
                 self.parse_input_command(self.replay_input.get())
 
-    def parse_input_command(self, data: str):
-        split = data.split(" ")
-        match split[0]:
+    def parse_input_command(self, data: str) -> None:
+        cmd_list = data.split(" ")
+        match cmd_list[0]:
             case "speed":
-                self.speed = float(split[1])
+                self.speed = float(cmd_list[1])
                 # Reset loop time so resuming playback doesn't skip the time it was paused
                 self.last_loop_time = int(time() * 1000)
+            case _:
+                raise NotImplementedError(f"Replay command of {cmd_list} invalid.")
 
     def read_next_sd_block(self, file: BinaryIO, num_blocks: int):
         """Reads the next stored block and outputs it"""

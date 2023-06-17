@@ -18,11 +18,13 @@ class DeviceAddress(IntEnum):
     MULTICAST = 0xF
 
     def __str__(self):
-        return {
-            DeviceAddress.GROUND_STATION: "GROUND STATION",
-            DeviceAddress.ROCKET: "ROCKET",
-            DeviceAddress.MULTICAST: "MULTICAST",
-        }.get(self, "UNKNOWN")
+        match self:
+            case DeviceAddress.GROUND_STATION:
+                return "GROUND STATION"
+            case DeviceAddress.ROCKET:
+                return "ROCKET"
+            case DeviceAddress.MULTICAST:
+                return "MULTICAST"
 
 
 class RadioBlockType(IntEnum):

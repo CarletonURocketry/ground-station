@@ -5,9 +5,12 @@
 # Thomas Selwyn (Devil)
 # Matteo Golin (linguini1)
 
-from multiprocessing import Process, Queue
+import multiprocessing as mp
+from multiprocessing import Process
+from queue import Queue
 from re import sub
 import logging
+from typing import TypeAlias, Any
 from modules.misc.config import load_config
 
 from modules.misc.messages import print_cu_rocket
@@ -16,6 +19,7 @@ from modules.telemetry.telemetry import Telemetry
 from modules.websocket.websocket import WebSocketHandler
 from modules.misc.cli import parser
 
+JSON: TypeAlias = dict[str, Any]
 VERSION: str = "0.5.0-DEV"
 STR_TO_LOGGING_MODE: dict[str, int] = {
     "debug": logging.DEBUG,
@@ -35,7 +39,7 @@ args = vars(parser.parse_args())
 
 # Set up logging
 
-log_handlers: list = [logging.StreamHandler()]  # Always print to stdout
+log_handlers: list[logging.Handler] = [logging.StreamHandler()]  # Always print to stdout
 if args.get("o") is not None:
     log_handlers.append(logging.FileHandler(args.get("o", "logfile.log")))
 
@@ -48,15 +52,15 @@ logger = logging.getLogger(__name__)
 
 def main():
     # Set up queues
-    serial_status = Queue()
-    ws_commands = Queue()
-    serial_ws_commands = Queue()
-    telemetry_ws_commands = Queue()
+    serial_status: Queue[str] = mp.Queue()  # type: ignore
+    ws_commands: Queue[str] = mp.Queue()  # type: ignore
+    serial_ws_commands: Queue[list[str]] = mp.Queue()  # type: ignore
+    telemetry_ws_commands: Queue[list[str]] = mp.Queue()  # type: ignore
 
-    radio_signal_report = Queue()
-    rn2483_radio_input = Queue()
-    rn2483_radio_payloads = Queue()
-    telemetry_json_output = Queue()
+    radio_signal_report: Queue[str] = mp.Queue()  # type: ignore
+    rn2483_radio_input: Queue[str] = mp.Queue()  # type: ignore
+    rn2483_radio_payloads: Queue[str] = mp.Queue()  # type: ignore
+    telemetry_json_output: Queue[JSON] = mp.Queue()  # type: ignore
 
     # Print display screen
     print_cu_rocket("No Name (Gas Propelled Launching Device)", VERSION)
@@ -123,7 +127,7 @@ def main():
                 exit(0)
 
 
-def parse_ws_command(ws_cmd: str, serial_commands: Queue, telemetry_commands: Queue) -> None:
+def parse_ws_command(ws_cmd: str, serial_commands: Queue[list[str]], telemetry_commands: Queue[list[str]]) -> None:
     """Parses a websocket command and places it on the correct process queue (telemetry or serial)."""
 
     # Remove special characters
