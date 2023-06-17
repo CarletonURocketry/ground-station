@@ -3,7 +3,7 @@ __author__ = "Matteo Golin"
 
 # Imports
 import pytest
-from modules.telemetry.telemetry import _parse_block_header
+from modules.telemetry.telemetry import parse_block_header
 from modules.telemetry.block import RadioBlockType, DataBlockSubtype, ControlBlockSubtype
 from modules.telemetry.block import DeviceAddress
 
@@ -30,7 +30,7 @@ def status_header() -> str:
 # Tests
 def test_altitude_header(altitude_header: str):
     """Ensure that parsing an altitude data block header works as expected."""
-    len, sig, msg_type, msg_subtype, destaddr = _parse_block_header(altitude_header)
+    len, sig, msg_type, msg_subtype, destaddr = parse_block_header(altitude_header)
 
     assert len == 20
     assert sig == 0
@@ -41,7 +41,7 @@ def test_altitude_header(altitude_header: str):
 
 def test_signal_report_header(signal_report_header: str):
     """Ensure that parsing a signal report control block header works as expected."""
-    _, sig, msg_type, msg_subtype, destaddr = _parse_block_header(signal_report_header)
+    _, sig, msg_type, msg_subtype, destaddr = parse_block_header(signal_report_header)
 
     # assert _ == 8  # Not sure about this length
     assert sig == 0
@@ -52,7 +52,7 @@ def test_signal_report_header(signal_report_header: str):
 
 def test_test_header(status_header: str):
     """Ensure that parsing a status data block header works as expected."""
-    len, sig, msg_type, msg_subtype, destaddr = _parse_block_header(status_header)
+    len, sig, msg_type, msg_subtype, destaddr = parse_block_header(status_header)
 
     assert len == 20
     assert sig == 0

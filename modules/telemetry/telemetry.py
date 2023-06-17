@@ -460,7 +460,7 @@ class Telemetry(Process):
         # Extract the packet header
         data = data.strip()  # Sometimes some extra whitespace
         logger.debug(f"Full data string: {data}")
-        call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
+        call_sign, length, version, srs_addr, packet_num = parse_packet_header(data[:24])
         call_sign = call_sign.upper()  # Uppercase formatting because that's standard
 
         if length <= 24:  # If this packet nothing more than just the header
@@ -479,7 +479,7 @@ class Telemetry(Process):
             logger.debug(f"Blocks: {blocks}")
             logger.debug(f"Block header: {blocks[:8]}")
             block_header = blocks[:8]
-            block_len, _, block_type, block_subtype, _ = _parse_block_header(block_header)
+            block_len, _, block_type, block_subtype, _ = parse_block_header(block_header)
 
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
             logger.debug(f"Calculated block len in hex: {block_len}")
@@ -491,7 +491,7 @@ class Telemetry(Process):
             blocks = blocks[block_len:]
 
 
-def _parse_packet_header(header: str) -> PacketHeader:
+def parse_packet_header(header: str) -> PacketHeader:
     """
     Returns the packet header string's informational components in a tuple.
 
@@ -519,7 +519,7 @@ def _parse_packet_header(header: str) -> PacketHeader:
     return call_sign, length, version, src_addr, packet_num
 
 
-def _parse_block_header(header: str) -> BlockHeader:
+def parse_block_header(header: str) -> BlockHeader:
     """
     Parses a block header string into its information components and returns them in a tuple.
 

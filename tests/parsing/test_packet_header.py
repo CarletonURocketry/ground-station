@@ -2,7 +2,7 @@
 __author__ = "Matteo Golin"
 
 import pytest
-from modules.telemetry.telemetry import _parse_packet_header
+from modules.telemetry.telemetry import parse_packet_header
 
 
 # Fixtures
@@ -27,7 +27,7 @@ def zeta_header() -> str:
 # Tests
 def test_devils_header(devils_header: str) -> None:
     """Test that the devils packet header is parsed correctly."""
-    callsign, length, ver, src_addr, packet_num = _parse_packet_header(devils_header)
+    callsign, length, ver, src_addr, packet_num = parse_packet_header(devils_header)
 
     assert callsign == "Devils"
     assert length == 36
@@ -38,7 +38,7 @@ def test_devils_header(devils_header: str) -> None:
 
 def test_linguini_header(linguini_header: str) -> None:
     """Test that the linguini packet header is parsed correctly."""
-    callsign, length, ver, src_addr, packet_num = _parse_packet_header(linguini_header)
+    callsign, length, ver, src_addr, packet_num = parse_packet_header(linguini_header)
 
     assert callsign == "VA3INI"
     assert length == 24
@@ -49,7 +49,7 @@ def test_linguini_header(linguini_header: str) -> None:
 
 def test_zeta_header(zeta_header: str) -> None:
     """Test that the zeta packet header is parsed correctly."""
-    callsign, length, ver, src_addr, packet_num = _parse_packet_header(zeta_header)
+    callsign, length, ver, src_addr, packet_num = parse_packet_header(zeta_header)
 
     assert callsign == "VA3ZTA"
     assert length == 12

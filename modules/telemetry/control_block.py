@@ -1,6 +1,6 @@
 # Defines the control block types
 from abc import ABC, abstractmethod
-from typing import Self
+from typing import Self, Generator
 import logging
 from modules.telemetry.block import ControlBlockSubtype, BlockException, BlockUnknownException
 
@@ -20,6 +20,7 @@ class ControlBlock(ABC):
     """Defines the interface for control blocks."""
 
     def __init__(self, subtype: ControlBlockSubtype) -> None:
+        super().__init__()
         self.subtype: ControlBlockSubtype = subtype
 
     @abstractmethod
