@@ -37,7 +37,11 @@ class SuperBlock:
     MAGIC = b"CUInSpac"
 
     def __init__(
-        self, version: int = 1, continued: bool = False, partition_length: int = 0, flights: list[Flight] | None = None
+        self,
+        version: int = 1,
+        continued: bool = False,
+        partition_length: int = 0,
+        flights: list[Flight] | None = None,
     ):
         super().__init__()
         self.version: int = version

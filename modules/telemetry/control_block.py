@@ -1,6 +1,6 @@
 # Defines the control block types
 from abc import ABC, abstractmethod
-from typing import Self
+from typing import Self, Generator
 import logging
 from modules.telemetry.block import ControlBlockSubtype, BlockException, BlockUnknownException
 
@@ -17,15 +17,19 @@ class ControlBlockUnknownException(BlockUnknownException):
 
 
 class ControlBlock(ABC):
-    """Represents the base interface for a Control Block."""
+    """Defines the interface for control blocks."""
+
+    def __init__(self, subtype: ControlBlockSubtype) -> None:
+        super().__init__()
+        self.subtype: ControlBlockSubtype = subtype
 
     @abstractmethod
-    def to_payload(self):
-        """Marshal block to a bytes object"""
+    def to_payload(self) -> bytes:
+        """Marshal block to a bytes object."""
 
     @classmethod
     def parse_block(cls, block_subtype: ControlBlockSubtype, payload: bytes) -> Self:
-        """Unmarshal a bytes object to appropriate block class"""
+        """Unmarshal a bytes object to appropriate block class."""
         match block_subtype:
             case ControlBlockSubtype.SIGNAL_REPORT:
                 logger.debug("Control block of type {block_subtype} received.")
@@ -47,10 +51,10 @@ class ControlBlock(ABC):
 
 
 class SignalReportControlBlock(ControlBlock):
-    """Represents a control block requesting signal report."""
+    """Represents a control block requesting a signal report."""
 
-    def __init__(self):  # TODO accept parameters for creating one of these
-        super().__init__()
+    def __init__(self):
+        super().__init__(ControlBlockSubtype.SIGNAL_REPORT)
         self.mission_time: int = 0
         self.snr: int = 0
         self.tx_power: int = 0
@@ -59,16 +63,16 @@ class SignalReportControlBlock(ControlBlock):
         return 16
 
     def to_payload(self) -> bytes:
-        return bytes()  # TODO implement this method
+        raise NotImplementedError()
 
     @classmethod
     def from_payload(cls, _: bytes) -> Self:
         return cls()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.__class__.__name__} -> time: {self.mission_time}, snr: {self.snr}, power: {self.tx_power}"
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[tuple[str, int], None, None]:
         yield "mission_time", self.mission_time
         yield "snr", self.snr
         yield "power", self.tx_power

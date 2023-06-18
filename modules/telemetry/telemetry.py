@@ -14,7 +14,6 @@ import multiprocessing as mp
 from multiprocessing import Process, active_children
 from pathlib import Path
 
-# Imports
 from signal import signal, SIGTERM
 from struct import unpack
 from time import time
@@ -66,11 +65,14 @@ def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Pat
         missions_filepath = mission_path(mission_name, missions_dir, file_suffix)
         file_suffix += 1
 
+    if file_suffix >= FILE_CREATION_ATTEMPT_LIMIT:
+        raise ValueError(f"Too many mission files already exist with name {mission_name}.")
+
     return missions_filepath
 
 
 # Errors
-class MissionNotFoundError(Exception):
+class MissionNotFoundError(FileNotFoundError):
     """Raised when the desired mission is not found."""
 
     def __init__(self, mission_name: str):
@@ -82,16 +84,16 @@ class MissionNotFoundError(Exception):
 class AlreadyRecordingError(Exception):
     """Raised if the telemetry process is already recording when instructed to record."""
 
-    def __init__(self):
-        self.message: str = "Recording is already in progress."
+    def __init__(self, message: str = "Recording is already in progress."):
+        self.message: str = message
         super().__init__(self.message)
 
 
 class ReplayPlaybackError(Exception):
     """Raised if the telemetry process replay system is active when instructed to record or recording."""
 
-    def __init__(self):
-        self.message: str = "Not recording when replay system is active."
+    def __init__(self, message: str = "Not recording when replay system is active."):
+        self.message: str = message
         super().__init__(self.message)
 
 
@@ -161,7 +163,7 @@ class Telemetry(Process):
 
             while not self.serial_status.empty():
                 x = self.serial_status.get().split(" ", maxsplit=1)
-                logger.debug("serial_status: {x}")
+                logger.debug(f"serial_status: {x}")
                 self.parse_serial_status(command=x[0], data=x[1])
                 self.update_websocket()
 
@@ -292,7 +294,7 @@ class Telemetry(Process):
         """Plays the desired mission recording."""
 
         if self.status.mission.recording:
-            raise ReplayPlaybackError
+            raise AlreadyRecordingError
 
         if mission_name is None:
             raise ReplayPlaybackError
@@ -326,6 +328,7 @@ class Telemetry(Process):
         # Do not record if already recording or if replay is active
         if self.status.mission.recording:
             raise AlreadyRecordingError
+
         if self.status.replay.state != jsp.ReplayState.DNE:
             raise ReplayPlaybackError
 
@@ -457,7 +460,7 @@ class Telemetry(Process):
         # Extract the packet header
         data = data.strip()  # Sometimes some extra whitespace
         logger.debug(f"Full data string: {data}")
-        call_sign, length, version, srs_addr, packet_num = _parse_packet_header(data[:24])
+        call_sign, length, version, srs_addr, packet_num = parse_packet_header(data[:24])
         call_sign = call_sign.upper()  # Uppercase formatting because that's standard
 
         if length <= 24:  # If this packet nothing more than just the header
@@ -476,7 +479,7 @@ class Telemetry(Process):
             logger.debug(f"Blocks: {blocks}")
             logger.debug(f"Block header: {blocks[:8]}")
             block_header = blocks[:8]
-            block_len, _, block_type, block_subtype, _ = _parse_block_header(block_header)
+            block_len, _, block_type, block_subtype, _ = parse_block_header(block_header)
 
             block_len = block_len * 2  # Convert length in bytes to length in hex symbols
             logger.debug(f"Calculated block len in hex: {block_len}")
@@ -488,7 +491,7 @@ class Telemetry(Process):
             blocks = blocks[block_len:]
 
 
-def _parse_packet_header(header: str) -> PacketHeader:
+def parse_packet_header(header: str) -> PacketHeader:
     """
     Returns the packet header string's informational components in a tuple.
 
@@ -516,23 +519,23 @@ def _parse_packet_header(header: str) -> PacketHeader:
     return call_sign, length, version, src_addr, packet_num
 
 
-def _parse_block_header(header: str) -> BlockHeader:
+def parse_block_header(header: str) -> BlockHeader:
     """
     Parses a block header string into its information components and returns them in a tuple.
 
-    block_len: int
+    block_len: the length of the data block as an integer
     crypto_signature: bool
-    message_type: int
+    message_type: the type of the message as an integer (0: Control, 1: Command, 2: Data)
     message_subtype: int
-    destination_addr: int
+    destination_addr: The destination address of the block (0: Ground Station, 1: Rocket)
     """
 
     unpacked_header: int = unpack("<I", bytes.fromhex(header))[0]
-    block_len = ((unpacked_header & 0x1F) + 1) * 4  # Length of the data block
+    block_len = ((unpacked_header & 0x1F) + 1) * 4
     crypto_signature = bool((unpacked_header >> 5) & 0x1)
-    message_type = (unpacked_header >> 6) & 0xF  # 0 - Control, 1 - Command, 2 - Data
+    message_type = (unpacked_header >> 6) & 0xF
     message_subtype = (unpacked_header >> 10) & 0x3F
-    destination_addr = (unpacked_header >> 16) & 0xF  # 0 - GStation, 1 - Rocket
+    destination_addr = (unpacked_header >> 16) & 0xF
 
     logger.debug(f"{block_len:=}, {crypto_signature:=}, {message_type:=}, {message_subtype:=}, {destination_addr:=}")
 
