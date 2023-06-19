@@ -1,4 +1,5 @@
 # CUInSpace Telemetry Server
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 This software is a command line tool for retrieving UART data via serial from the CUInSpace
 [ground station board](ground-station-board) and parsing it into readable data which is served via websocket for the
