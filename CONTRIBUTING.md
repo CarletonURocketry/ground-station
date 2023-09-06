@@ -172,5 +172,8 @@ If your pull request is a work in progress, you can mark it as a draft until it'
 
 - Adhere to the existing code format when possible.
 - Avoid pushing any files that are not necessary (i.e. metafiles, config files).
-- If linting or formatting is enforced for the repository, run the checks locally and fix errors before opening a PR
-- If test suites are included for the repository, run them before opening a PR to ensure full passes
+
+You will need to run the repository linting, formatting and testing checks before pushing your PR in order to catch any
+mistakes early. For instructions on how to do so, see [workflows][workflows].
+
+[workflows]: https://github.com/CarletonURocketry/ground-station/wiki/Development-Quick-Start#workflows
