@@ -134,8 +134,8 @@ class Config:
         """Creates a new Config object from the JSON data contained in the user config file."""
 
         return cls(
-            radio_parameters=RadioParameters.from_json(data.get("radio_params", dict())),
-            approved_callsigns=data.get("approved_callsigns", dict()),
+            radio_parameters=RadioParameters.from_json(data.get("radio_params", dict())),  # type:ignore
+            approved_callsigns=data.get("approved_callsigns", dict()),  # type:ignore
         )
 
 
