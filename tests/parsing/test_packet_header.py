@@ -6,10 +6,6 @@ from modules.telemetry.telemetry import parse_packet_header
 
 
 # Fixtures
-@pytest.fixture
-def devils_header() -> str:
-    """Returns a packet header with call sign DEVILS."""
-    return "446576696c73202020202020"
 
 
 @pytest.fixture
