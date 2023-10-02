@@ -2,8 +2,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 This software is a command line tool for retrieving UART data via serial from the CUInSpace
-[ground station board](ground-station-board) and parsing it into readable data which is served via websocket for the
-[ground-station-ui](ground-station-ui) live telemetry dashboard.
+[ground station board][ground-station-board] and parsing it into readable data which is served via websocket for the
+[ground-station-ui][ground-station-ui] live telemetry dashboard.
 
 ## Quick Start
 Before starting, ensure you have Python 3.11+ installed and the CP210x driver for the homemade ground-station board UART
@@ -18,7 +18,7 @@ Note that the ground station device should be connected before starting the tele
 accurate list of available serial ports.
 
 ## Further Reading
-Please see the [GitHub Wiki](wiki) for further documentation on how to set up and run the telemetry server.
+Please see the [GitHub Wiki][wiki] for further documentation on how to set up and run the telemetry server.
 
 ## Contribution
 To contribute to this project, please view the contribution guidelines in the project's GitHub Wiki. Note that
