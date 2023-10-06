@@ -23,6 +23,7 @@ import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
 from modules.telemetry.block import RadioBlockType, CommandBlockSubtype, ControlBlockSubtype
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
+from modules.telemetry.faults import run_fault_check
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.sd_block import TelemetryDataBlock, LoggingMetadataSpacerBlock
 from modules.telemetry.superblock import SuperBlock, Flight
@@ -122,6 +123,7 @@ class Telemetry(Process):
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
         self.status: jsp.StatusData = jsp.StatusData()
         self.telemetry: dict[str, str] = {}
+        self.faults: dict = {}
 
         # Mission System
         self.missions_dir = Path.cwd().joinpath("missions")
@@ -185,12 +187,14 @@ class Telemetry(Process):
 
     def generate_websocket_response(self) -> JSON:
         """Returns the dictionary containing the JSON data for the websocket client."""
-        return {"version": VERSION, "org": ORG, "status": dict(self.status), "telemetry": self.telemetry}
+        return {"version": VERSION, "org": ORG, "status": dict(self.status),
+                "telemetry": self.telemetry, "faults": self.faults}
 
     def reset_data(self) -> None:
         """Resets all live data on the telemetry backend to a default state."""
         self.status = jsp.StatusData()
         self.telemetry = {}
+        self.faults = {}
 
     def parse_serial_status(self, command: str, data: str) -> None:
         """Parses the serial managers status output"""
@@ -451,8 +455,10 @@ class Telemetry(Process):
                     self.status.rocket = jsp.RocketData.from_data_block(block)  # type:ignore
                 else:
                     self.telemetry[block.subtype.name.lower()] = dict(block)  # type:ignore
+                    self.faults[block.subtype.name.lower()] = run_fault_check(block)
             case _:
                 logger.warning("Unknown block type.")
+
 
     def parse_rn2483_transmission(self, data: str):
         """Parses RN2483 Packets and extracts our telemetry payload blocks"""
