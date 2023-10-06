@@ -110,5 +110,22 @@
                 {"sat_type": "GLONASS", "elevation": 14, "snr": 20, "id": 71, "azimuth": 192}
             ]
         }
+    },
+    "faults": {
+        "altitude": {
+            "set": false,
+            "faults": []
+        },
+        "mpu9250_imu": {
+            "set": true,
+            "faults": ["mag_overflow"]
+        },
+        "gnss": {
+            "set": false,
+            "faults": []
+        },
+        "gnss_meta": {
+            "set": false,
+            "faults": []}
     }
 }
