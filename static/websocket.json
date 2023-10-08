@@ -126,6 +126,7 @@
         },
         "gnss_meta": {
             "set": false,
-            "faults": []}
+            "faults": []
+        }
     }
 }
