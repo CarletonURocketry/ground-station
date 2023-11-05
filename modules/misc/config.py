@@ -38,7 +38,6 @@ class CodingRates(StrEnum):
 
 @dataclass
 class RadioParameters:
-
     """
     Represents a collection of parameters for the RN2483 radio settings.
 
@@ -50,7 +49,7 @@ class RadioParameters:
     coding_rate: The ratio of actual data to error-correcting data.
     bandwidth: The bandwidth allocated to the transmission.
     preamble_len: The length of the transmission used to synchronize the receiver.
-    cyclic_redundancy: Enable or disable cyclic redudancy check used to detect errors in the received signal.
+    cyclic_redundancy: Enable or disable cyclic redundancy check used to detect errors in the received signal.
     iqi: Invert IQ function enabled/disabled.
     sync_word: The radio sync word.
     """
@@ -119,7 +118,6 @@ class RadioParameters:
 
 @dataclass
 class Config:
-
     """Contains settings for the ground station process."""
 
     general: dict[str, str] = field(default_factory=dict)

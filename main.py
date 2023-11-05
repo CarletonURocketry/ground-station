@@ -12,6 +12,7 @@ from re import sub
 import logging
 from typing import TypeAlias, Any
 from modules.misc.config import load_config
+from modules.misc.thresholds import load_thresholds
 
 from modules.misc.messages import print_cu_rocket
 from modules.serial.serial_manager import SerialManager
@@ -67,6 +68,9 @@ def main():
     # Load config file
     config = load_config("config.json")
 
+    # Load fault thresholds if enabled
+    thresholds = load_thresholds(config.general["faults_thresholds"]) if config.general["faults"] else None
+
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
     # Outputs information in hexadecimal payload format to rn2483_radio_payloads
@@ -97,6 +101,7 @@ def main():
             telemetry_json_output,
             telemetry_ws_commands,
             config,
+            thresholds,
         ),
     )
     telemetry.start()

@@ -1,0 +1,36 @@
+{
+    "general": {
+        "fault_trigger_count": 3,
+        "fault_clear_count": 3
+    },
+    "altitude": {
+        "pressure": {
+            "low": 0,
+            "high": 10000
+        },
+        "altitude": {
+            "low": 0,
+            "high": 35000
+        },
+        "temperature": {
+            "low": -1,
+            "high": 60
+        }
+    },
+
+    "gnss": {
+        "position": {
+            "latitude": 44.907956666666664,
+            "longitude": -76.26173
+        },
+        "utc_time": 1668434560,
+        "altitude": 150.701,
+        "speed": 27.49,
+        "course": 139.34,
+        "pdop": 1.15,
+        "hdop": 0.83,
+        "vdop": 0.8,
+        "sats_in_use": 13,
+        "fix_type": 3
+    }
+}

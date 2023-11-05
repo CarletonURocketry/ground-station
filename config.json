@@ -1,5 +1,7 @@
 {
   "general": {
+    "faults": true,
+    "faults_thresholds": "launch_canada.json",
     "telemetry_buffer_length": 20
   },
   "radio_params": {
