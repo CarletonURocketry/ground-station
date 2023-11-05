@@ -1,4 +1,8 @@
 {
+  "general" : {
+    "faults": true,
+    "faults_thresholds": "launch_canada.json"
+  },
   "radio_params": {
     "modulation": "lora",
     "frequency": 433050000,

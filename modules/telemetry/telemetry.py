@@ -28,6 +28,7 @@ from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.sd_block import TelemetryDataBlock, LoggingMetadataSpacerBlock
 from modules.telemetry.superblock import SuperBlock, Flight
 from modules.misc.config import Config
+from modules.misc.thresholds import FaultThresholds
 
 # Types
 JSON: TypeAlias = dict[str, Any]
@@ -109,9 +110,11 @@ class Telemetry(Process):
         telemetry_json_output: Queue[JSON],
         telemetry_ws_commands: Queue[list[str]],
         config: Config,
+        thresholds: FaultThresholds
     ):
         super().__init__()
         self.config = config
+        self.thresholds = thresholds
 
         self.radio_payloads: Queue[str] = radio_payloads
         self.telemetry_json_output: Queue[JSON] = telemetry_json_output
@@ -455,7 +458,8 @@ class Telemetry(Process):
                     self.status.rocket = jsp.RocketData.from_data_block(block)  # type:ignore
                 else:
                     self.telemetry[block.subtype.name.lower()] = dict(block)  # type:ignore
-                    self.faults[block.subtype.name.lower()] = run_fault_check(block)
+                    if self.thresholds is not None:
+                        self.faults[block.subtype.name.lower()] = run_fault_check(block, self.thresholds)
             case _:
                 logger.warning("Unknown block type.")
 
