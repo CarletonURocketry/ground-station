@@ -38,7 +38,6 @@ class ShutdownException(Exception):
 args = vars(parser.parse_args())
 
 # Set up logging
-
 log_handlers: list[logging.Handler] = [logging.StreamHandler()]  # Always print to stdout
 if args.get("o") is not None:
     log_handlers.append(logging.FileHandler(args.get("o", "logfile.log")))
@@ -107,9 +106,17 @@ def main():
     # This is PURELY a pass through of data for connectivity. No format conversion is done here.
     # Incoming information comes from telemetry_json_output from telemetry
     # Outputs information to connected websocket clients
-    websocket = Process(target=WebSocketHandler, args=(telemetry_json_output, ws_commands), daemon=True)
+    websocket = Process(
+        target=WebSocketHandler,
+        args=(
+            telemetry_json_output,
+            ws_commands),
+        daemon=True
+    )
     websocket.start()
     logger.info(f"{'WebSocket':.<16} started.")
+
+    logger.info("Websocket listening on port 33845")
 
     while True:
         # Messages sent to main process for handling
