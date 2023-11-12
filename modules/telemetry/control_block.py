@@ -1,4 +1,5 @@
 # Defines the control block types
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Self, Generator
 import logging
@@ -28,7 +29,7 @@ class ControlBlock(ABC):
         """Marshal block to a bytes object."""
 
     @classmethod
-    def parse_block(cls, block_subtype: ControlBlockSubtype, payload: bytes) -> Self:
+    def parse_block(cls, block_subtype: ControlBlockSubtype, payload: bytes) -> ControlBlock:
         """Unmarshal a bytes object to appropriate block class."""
         match block_subtype:
             case ControlBlockSubtype.SIGNAL_REPORT:

@@ -49,7 +49,7 @@ class SDBlock(ABC):
         """Marshal payload to bytes"""
 
     @classmethod
-    def from_bytes(cls, byte_data: bytes) -> Self:
+    def from_bytes(cls, byte_data: bytes) -> SDBlock:
         """Unmarshal a bytes object to appropriate block class."""
         if len(byte_data) < 4:
             raise SDBlockException(f"Block must be at least 4 bytes long ({len(byte_data)} bytes read)")
@@ -147,7 +147,7 @@ class DiagnosticDataBlock(SDBlock):
         super().__init__(blk.SDBlockSubtype.DIAGNOSTIC_DATA, subtype)
 
     @classmethod
-    def from_payload(cls, block_type: blk.DiagnosticDataBlockSubtype, payload: bytes) -> Self:
+    def from_payload(cls, block_type: blk.DiagnosticDataBlockSubtype, payload: bytes) -> DiagnosticDataBlock:
         """Returns a DiagnosticDataBlock subclass populated with the payload."""
         diagnostic_subtype = blk.DiagnosticDataBlockSubtype(block_type)
 
@@ -185,7 +185,7 @@ class DiagnosticDataLogMessageBlock(DiagnosticDataBlock):
         return 8 + ((len(self.msg.encode("utf-8")) + 3) & ~0x3)
 
     @classmethod
-    def from_payload(cls, payload: bytes) -> Self:
+    def from_payload(cls, payload: bytes) -> DiagnosticDataBlock:
         mission_time = struct.unpack("<I", payload[:4])[0]
         return cls(mission_time, payload[4:].decode("utf-8"))
 
