@@ -80,7 +80,7 @@ class DebugMessageDataBlock(DataBlock):
     @classmethod
     def from_payload(cls, payload: bytes) -> Self:
         mission_time = struct.unpack("<I", payload[0:4])[0]
-        return DebugMessageDataBlock(mission_time, payload[4:].decode("utf-8"))
+        return cls(mission_time, payload[4:].decode("utf-8"))
 
     def to_payload(self) -> bytes:
         b = self.debug_msg.encode("utf-8")
@@ -1065,7 +1065,7 @@ class MPU9250Sample:
         mag_y = mag_parts[1] / mag_res.sensitivity
         mag_z = mag_parts[2] / mag_res.sensitivity
 
-        return MPU9250Sample(
+        return cls(
             accel_x, accel_y, accel_z, temperature, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z, mag_ovf, mag_res
         )
 

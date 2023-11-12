@@ -19,7 +19,7 @@ class Flight:
         first_block = parts[0]
         num_blocks = parts[1]
         timestamp = parts[2]
-        return Flight(first_block, num_blocks, timestamp)
+        return cls(first_block, num_blocks, timestamp)
 
     def to_bytes(self):
         return struct.pack("<III", self.first_block, self.num_blocks, self.timestamp)
@@ -77,7 +77,7 @@ class SuperBlock:
                 continue
             flights.append(flight_obj)
             flight_blocks += flight_obj.num_blocks
-        return SuperBlock(version, continued, partition_length, flights)
+        return cls(version, continued, partition_length, flights)
 
     def to_bytes(self) -> bytes:
         """Returns the Superblock data object in bytes"""
