@@ -106,13 +106,7 @@ def main():
     # This is PURELY a pass through of data for connectivity. No format conversion is done here.
     # Incoming information comes from telemetry_json_output from telemetry
     # Outputs information to connected websocket clients
-    websocket = Process(
-        target=WebSocketHandler,
-        args=(
-            telemetry_json_output,
-            ws_commands),
-        daemon=True
-    )
+    websocket = Process(target=WebSocketHandler, args=(telemetry_json_output, ws_commands), daemon=True)
     websocket.start()
     logger.info(f"{'WebSocket':.<16} started.")
 
