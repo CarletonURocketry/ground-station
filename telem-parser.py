@@ -282,7 +282,6 @@ def parse_flight(file: StringIO, imagedir: Path, part_offset: int, flight_num: i
     num_blocks = 0
     # total_bytes = 0
     first_time = None
-    last_time = None
 
     file.seek((part_offset + flight.first_block) * 512)
 
