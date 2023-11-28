@@ -126,7 +126,7 @@ def find_superblock(file_path: Path) -> [int, SuperBlock]:
         superblock_addr = None
         try:
             mbr = MBR(file.read(512))
-        except ValueError as e:
+        except ValueError:
             logger.debug("No valid MBR found, assuming that first block is superblock.")
             superblock_addr = 0
         else:
@@ -169,4 +169,4 @@ if __name__ == "__main__":
             _ = f.seek(512 * 2048)
         sb = SuperBlock.from_bytes(f.read(512))
 
-        sb.output(True)
+        sb.output(True, True)

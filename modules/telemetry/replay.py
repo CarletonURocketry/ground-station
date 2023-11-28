@@ -12,7 +12,7 @@ from time import time, sleep
 from typing import BinaryIO
 
 from modules.telemetry.block import RadioBlockType, SDBlockSubtype
-from modules.telemetry.superblock import SuperBlock, find_superblock
+from modules.telemetry.superblock import find_superblock
 
 # Set up logging
 logger = logging.getLogger(__name__)

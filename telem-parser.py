@@ -1,5 +1,4 @@
 #! /usr/bin/env python3
-import datetime
 import os
 import sys
 from collections import Counter
@@ -8,8 +7,13 @@ from typing import BinaryIO
 
 from modules.telemetry.mbr import MBR
 from modules.telemetry.superblock import SuperBlock, Flight
-from modules.telemetry.sd_block import *
-from modules.telemetry.data_block import *
+from modules.telemetry.sd_block import (LoggingMetadataSpacerBlock, TelemetryDataBlock,
+                                        DiagnosticDataIncomingRadioPacketBlock, DiagnosticDataOutgoingRadioPacketBlock,
+                                        SDBlock, SDBlockException, DiagnosticDataLogMessageBlock)
+from modules.telemetry.data_block import (KX134LPFRolloff, KX134AccelerometerDataBlock, MPU9250IMUDataBlock,
+                                          DebugMessageDataBlock, AltitudeDataBlock, GNSSLocationBlock,
+                                          GNSSMetadataBlock, StatusDataBlock, AccelerationDataBlock,
+                                          AngularVelocityDataBlock)
 
 MISSION_EXTENSION = "mission"
 
@@ -172,7 +176,7 @@ def create_telemetry_mission(file: BinaryIO, mission_filename: str, superblock_a
 
     missions_dir = Path.cwd().joinpath("missions")
     missions_dir.mkdir(parents=True, exist_ok=True)
-    output_file_path = missions_dir.joinpath(f"{mission_filename}.{MISSION_EXTENSION}")
+    output_file_path = missions_dir.joinpath(f"{mission_filename.strip()}.{MISSION_EXTENSION}")
 
     # Generates the new telemetry mission file
     with open(output_file_path, "wb") as outfile:
@@ -241,7 +245,6 @@ def gen_blocks(file, first_block, num_blocks):
         #        print(SDBlock.from_bytes(block))
 
 
-
 def parse_flight(file, imagedir: Path, part_offset, flight_num, flight):
     print(f"############### Flight {flight_num} ###############")
     print(f"Starts at block: {flight.first_block}, {flight.num_blocks} "
@@ -263,7 +266,7 @@ def parse_flight(file, imagedir: Path, part_offset, flight_num, flight):
     block_type_counts = Counter()
     spacer_bytes = 0
     num_blocks = 0
-    total_bytes = 0
+    # total_bytes = 0
     first_time = None
     last_time = None
 
@@ -274,13 +277,13 @@ def parse_flight(file, imagedir: Path, part_offset, flight_num, flight):
 
         cls = type(block)
         if cls == TelemetryDataBlock:
-            #print(num_blocks, block)
+            # print(num_blocks, block)
             cls = type(block.data)
 
             if first_time is None:
                 first_time = mt_to_ms(block.data.mission_time)
 
-            last_time = mt_to_ms(block.data.mission_time)
+            # last_time = mt_to_ms(block.data.mission_time)
 
         # Increment count for block type
         block_type = (type(block), cls)
@@ -315,6 +318,8 @@ if len(sys.argv) < 2:
     exit(0)
 
 infile = sys.argv[1]
+file_size = os.stat(infile).st_size
+
 # Create output directory
 outdir = Path.cwd().joinpath("parsed")
 outdir.mkdir(parents=True, exist_ok=True)
@@ -324,11 +329,18 @@ image_directory.mkdir(parents=True, exist_ok=True)
 
 # Read input file
 with open(infile, "rb") as file:
+
+    # If file is just superblock, lets print out the dd cmd to grab the rest
+    if file_size <= 512:
+        sb = SuperBlock.from_bytes(file.read(512))
+        sb.output(True, True)
+        exit(0)
+
     # Read MBR
     superblock_addr = None
     try:
         mbr = MBR(file.read(512))
-    except ValueError as e:
+    except ValueError:
         print("No valid MBR found, assuming that first block is superblock.")
         superblock_addr = 0
     else:
@@ -360,7 +372,10 @@ with open(infile, "rb") as file:
               "2) Generate cuinspace mission file\n"
               "3) Parse telemetry into CSV files\n"
               "4) Exit")
-        cmd = int(input("What would you like to do? ").strip())
+        try:
+            cmd = int(input("What would you like to do? ").strip())
+        except ValueError:
+            print("Invalid entry. Try again")
 
         match cmd:
             case 1:
@@ -380,7 +395,8 @@ with open(infile, "rb") as file:
                     for num in flights_selected:
                         flight = sb.flights[num]
                         mission_flights.append(flight)
-                        print(f"Flight {num} -> start: {flight.first_block}, length: {flight.num_blocks}, time: {flight.timestamp}")
+                        print(f"Flight {num} -> start: {flight.first_block}, "
+                              f"length: {flight.num_blocks}, time: {flight.timestamp}")
                     print("###########################")
 
                     create_telemetry_mission(file, mission_name, superblock_addr, mission_flights)

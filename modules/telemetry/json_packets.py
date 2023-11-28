@@ -12,7 +12,6 @@ from typing import Self
 
 import modules.telemetry.data_block as db
 from modules.telemetry.block import SDBlockSubtype
-from modules.telemetry.mbr import MBR
 from modules.telemetry.sd_block import SDBlockException
 from modules.telemetry.replay import parse_sd_block_header
 from modules.telemetry.superblock import SuperBlock, find_superblock
