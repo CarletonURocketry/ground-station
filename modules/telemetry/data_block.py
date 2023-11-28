@@ -63,7 +63,7 @@ class DataBlock(ABC):
         subtype = SUBTYPE_CLASSES.get(block_subtype)
 
         if subtype is None:
-            raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype}")
+            raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype} {payload} {payload.hex()}")
 
         return subtype.from_payload(payload=payload)
 

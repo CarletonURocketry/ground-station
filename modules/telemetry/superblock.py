@@ -3,7 +3,13 @@ import os
 import struct
 import sys
 import datetime as dt
+import logging
+from pathlib import Path
 from typing import Self
+
+from modules.telemetry.mbr import MBR
+
+logger = logging.getLogger(__name__)
 
 
 class Flight:
@@ -37,11 +43,11 @@ class SuperBlock:
     MAGIC = b"CUInSpac"
 
     def __init__(
-        self,
-        version: int = 1,
-        continued: bool = False,
-        partition_length: int = 0,
-        flights: list[Flight] | None = None,
+            self,
+            version: int = 1,
+            continued: bool = False,
+            partition_length: int = 0,
+            flights: list[Flight] | None = None,
     ):
         super().__init__()
         self.version: int = version
@@ -71,7 +77,7 @@ class SuperBlock:
         flight_blocks = 1
         for i in range(32):
             flight_start = 0x60 + (12 * i)
-            flight_entry = block[flight_start : flight_start + 12]
+            flight_entry = block[flight_start: flight_start + 12]
             flight_obj = Flight.from_bytes(flight_entry)
             if not flight_obj.is_valid():
                 continue
@@ -90,7 +96,7 @@ class SuperBlock:
 
         for i in range(len(self.flights)):
             flight_start = 0x60 + (12 * i)
-            block[flight_start : flight_start + 12] = self.flights[i].to_bytes()
+            block[flight_start: flight_start + 12] = self.flights[i].to_bytes()
 
         block[0x1F8:0x200] = SuperBlock.MAGIC
         return bytes(block)
@@ -111,6 +117,39 @@ class SuperBlock:
         if output_dd_cmd:
             print(f"Last block: {flight_blocks}")
             print(f"To copy full SD card image, use:    dd if=[disk] of=full bs=512 count={flight_blocks + 2049}")
+
+
+def find_superblock(file_path: Path) -> [int, SuperBlock]:
+    """ Locates superblock address from mbr in image file or mission file """
+    with open(f"{file_path}", "rb") as file:
+        # Read MBR
+        superblock_addr = None
+        try:
+            mbr = MBR(file.read(512))
+        except ValueError as e:
+            logger.debug("No valid MBR found, assuming that first block is superblock.")
+            superblock_addr = 0
+        else:
+            # Look for a valid partition
+            for part in mbr.partitions:
+                if part.type == 0x89:
+                    superblock_addr = part.first_sector_lba
+                    break
+
+            if superblock_addr is None:
+                logger.warning("No CUInSpace partition found in MBR.")
+                return None
+
+        # Parse superblock
+        file.seek(superblock_addr * 512)
+        try:
+            superblock_bytes = file.read(512)
+            if len(superblock_bytes) == 512:
+                return superblock_addr, SuperBlock.from_bytes(superblock_bytes)
+            else:
+                logger.warning(f"Superblock for {file_path.name} contains {len(superblock_bytes)} byte(s)")
+        except ValueError:
+            logger.error(f"Could not parse superblock for {file_path.name}")
 
 
 if __name__ == "__main__":
