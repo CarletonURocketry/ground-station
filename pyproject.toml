@@ -72,9 +72,7 @@ reportPrivateImportUsage = "warning"
 reportShadowedImports = "error"
 
 reportIncompatibleVariableOverride = "warning"
-reportInconsistentConstructor = "warning"
 reportOverlappingOverload = "warning"
-reportMissingSuperCall = "warning"
 
 
 [tool.black]

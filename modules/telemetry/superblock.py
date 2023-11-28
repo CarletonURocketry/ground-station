@@ -5,7 +5,7 @@ import sys
 import datetime as dt
 import logging
 from pathlib import Path
-from typing import Self
+from typing import Self, Optional
 
 from modules.telemetry.mbr import MBR
 
@@ -119,11 +119,11 @@ class SuperBlock:
             print(f"To copy full SD card image, use:    dd if=[disk] of=full bs=512 count={flight_blocks + 2049}")
 
 
-def find_superblock(file_path: Path) -> [int, SuperBlock]:
+def find_superblock(file_path: Path) -> Optional[tuple[int, SuperBlock]]:
     """Locates superblock address from mbr in image file or mission file"""
     with open(f"{file_path}", "rb") as file:
         # Read MBR
-        superblock_addr = None
+        superblock_addr: int | None = None
         try:
             mbr = MBR(file.read(512))
         except ValueError:
