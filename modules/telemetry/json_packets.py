@@ -3,6 +3,7 @@ __author__ = "Matteo Golin"
 
 # Imports
 from io import BufferedReader
+import logging
 import struct
 from dataclasses import dataclass, field
 from enum import IntEnum
@@ -13,11 +14,13 @@ import modules.telemetry.data_block as db
 from modules.telemetry.block import SDBlockSubtype
 from modules.telemetry.sd_block import SDBlockException
 from modules.telemetry.replay import parse_sd_block_header
-from modules.telemetry.superblock import SuperBlock
+from modules.telemetry.superblock import SuperBlock, find_superblock
 
 # Constants
 MISSION_EXTENSION: str = "mission"
 MISSIONS_DIR: str = "missions"
+
+logger = logging.getLogger(__name__)
 
 
 # Helper classes
@@ -161,32 +164,39 @@ class ReplayData:
         # Check each file to output its misc details
         self.mission_list = []
         for filename in self.mission_files_list:
-            with open(f"{missions_dir.joinpath(filename.name)}", "rb") as file:
-                # Reads superblock for flight details
-                superblock_bytes = file.read(512)
-                if len(superblock_bytes) != 512:
-                    print(f"Superblock for {filename.name} contains {len(superblock_bytes)} byte(s)")
-                    continue
+            mission_path: Path = missions_dir.joinpath(filename.name)
 
-                mission_sb = SuperBlock.from_bytes(superblock_bytes)
+            # Find superblock from file and return it
+            sb_addr, mission_sb = find_superblock(mission_path)
 
-                if len(mission_sb.flights) == 0:
-                    print(f"Flight list for {filename.name} is empty")
-                    continue
+            # Read from superblock
+            if type(mission_sb) is not SuperBlock:
+                print(f"{filename.name} invalid. Not adding to mission list.")
+                continue
 
-                mission_time = 0
-                # Reads last telemetry block of each flight to get final mission time
-                for flight in mission_sb.flights:
-                    _ = file.seek(flight.first_block * 512)
-                    mission_time += get_last_mission_time(file, flight.num_blocks)
+            # Check if flight list is empty
+            if len(mission_sb.flights) == 0:
+                print(f"Flight list for {filename.name} is empty")
+                continue
 
-                # Output mission to mission list
-                mission_entry = MissionEntry(
-                    name=filename.stem,
-                    length=mission_time,
-                    epoch=mission_sb.flights[0].timestamp,
-                )
-                self.mission_list.append(mission_entry)
+            # Read last mission time from flights
+            mission_time = -1
+            try:
+                with open(f"{mission_path}", "rb") as file:
+                    # Reads last telemetry block of each flight to get final mission time
+                    for flight in mission_sb.flights:
+                        _ = file.seek((sb_addr + flight.first_block) * 512)
+                        mission_time += get_last_mission_time(file, flight.num_blocks)
+            except ParsingException:
+                logger.info(f"Unable to parse time from {filename.name}, defaulting to -1")
+
+            # Output mission to mission list
+            mission_entry = MissionEntry(
+                name=filename.stem,
+                length=mission_time,
+                epoch=mission_sb.flights[0].timestamp,
+            )
+            self.mission_list.append(mission_entry)
 
     def __iter__(self):
         yield "state", self.state
@@ -219,9 +229,9 @@ class ParsingException(Exception):
 def get_last_mission_time(file: BufferedReader, num_blocks: int) -> int:
     """Obtains last recorded telemetry mission time from a flight"""
 
-    # If flight is empty, return
-    if num_blocks == 0:
-        return 0
+    # If flight is empty, return no time found
+    if num_blocks <= 0:
+        return -1
 
     count = 0
     last_mission_time = 0
@@ -232,6 +242,8 @@ def get_last_mission_time(file: BufferedReader, num_blocks: int) -> int:
             block_class, _, block_length = parse_sd_block_header(block_header)
             block_data = file.read(block_length - 4)
         except SDBlockException:
+            return last_mission_time
+        except ValueError:
             return last_mission_time
 
         count += block_length

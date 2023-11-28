@@ -40,7 +40,7 @@ class SDBlock(ABC):
         payload = self._payload_bytes()
 
         block_class_type = (int(self.sd_subtype) & 0x3F) | ((int(self.subtype) & 0x3FF) << 6)
-        head = struct.pack("<HH", block_class_type, len(self))
+        head = struct.pack("<HH", block_class_type, len(self) + 4)
 
         return head + payload
 

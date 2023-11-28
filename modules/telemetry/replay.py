@@ -6,15 +6,13 @@
 # Matteo Golin (linguini)
 import logging
 import struct
-from time import time, sleep
-from queue import Queue
-
 from pathlib import Path
+from queue import Queue
+from time import time, sleep
 from typing import BinaryIO
 
 from modules.telemetry.block import RadioBlockType, SDBlockSubtype
-from modules.telemetry.superblock import SuperBlock
-
+from modules.telemetry.superblock import find_superblock
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -61,11 +59,12 @@ class TelemetryReplay:
         self.speed = replay_speed
         self.block_count = 0
 
-        with open(self.replay_path, "rb") as file:
-            mission_sb = SuperBlock.from_bytes(file.read(512))
+        # Replay superblock
+        sb_addr, mission_sb = find_superblock(self.replay_path)
 
+        with open(self.replay_path, "rb") as file:
             for flight in mission_sb.flights:
-                _ = file.seek(flight.first_block * 512)
+                _ = file.seek((sb_addr + flight.first_block) * 512)
                 self.run(file, flight.num_blocks)
 
     def run(self, file: BinaryIO, num_blocks: int):

@@ -3,7 +3,13 @@ import os
 import struct
 import sys
 import datetime as dt
-from typing import Self
+import logging
+from pathlib import Path
+from typing import Self, Optional
+
+from modules.telemetry.mbr import MBR
+
+logger = logging.getLogger(__name__)
 
 
 class Flight:
@@ -113,6 +119,39 @@ class SuperBlock:
             print(f"To copy full SD card image, use:    dd if=[disk] of=full bs=512 count={flight_blocks + 2049}")
 
 
+def find_superblock(file_path: Path) -> Optional[tuple[int, SuperBlock]]:
+    """Locates superblock address from mbr in image file or mission file"""
+    with open(f"{file_path}", "rb") as file:
+        # Read MBR
+        superblock_addr: int | None = None
+        try:
+            mbr = MBR(file.read(512))
+        except ValueError:
+            logger.debug("No valid MBR found, assuming that first block is superblock.")
+            superblock_addr = 0
+        else:
+            # Look for a valid partition
+            for part in mbr.partitions:
+                if part.type == 0x89:
+                    superblock_addr = part.first_sector_lba
+                    break
+
+            if superblock_addr is None:
+                logger.warning("No CUInSpace partition found in MBR.")
+                return None
+
+        # Parse superblock
+        file.seek(superblock_addr * 512)
+        try:
+            superblock_bytes = file.read(512)
+            if len(superblock_bytes) == 512:
+                return superblock_addr, SuperBlock.from_bytes(superblock_bytes)
+            else:
+                logger.warning(f"Superblock for {file_path.name} contains {len(superblock_bytes)} byte(s)")
+        except ValueError:
+            logger.error(f"Could not parse superblock for {file_path.name}")
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         # No arguments
@@ -130,4 +169,4 @@ if __name__ == "__main__":
             _ = f.seek(512 * 2048)
         sb = SuperBlock.from_bytes(f.read(512))
 
-        sb.output(True)
+        sb.output(True, True)
