@@ -64,7 +64,6 @@ reportUnusedImport = "warning"
 reportUnusedClass = "warning"
 reportUnusedFunction = "warning"
 reportUnusedVariable = "warning"
-reportUnusedCallResult = "warning"
 reportUnusedExpression = "warning"
 reportDuplicateImport = "warning"
 

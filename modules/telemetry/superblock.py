@@ -43,11 +43,11 @@ class SuperBlock:
     MAGIC = b"CUInSpac"
 
     def __init__(
-            self,
-            version: int = 1,
-            continued: bool = False,
-            partition_length: int = 0,
-            flights: list[Flight] | None = None,
+        self,
+        version: int = 1,
+        continued: bool = False,
+        partition_length: int = 0,
+        flights: list[Flight] | None = None,
     ):
         super().__init__()
         self.version: int = version
@@ -77,7 +77,7 @@ class SuperBlock:
         flight_blocks = 1
         for i in range(32):
             flight_start = 0x60 + (12 * i)
-            flight_entry = block[flight_start: flight_start + 12]
+            flight_entry = block[flight_start : flight_start + 12]
             flight_obj = Flight.from_bytes(flight_entry)
             if not flight_obj.is_valid():
                 continue
@@ -96,7 +96,7 @@ class SuperBlock:
 
         for i in range(len(self.flights)):
             flight_start = 0x60 + (12 * i)
-            block[flight_start: flight_start + 12] = self.flights[i].to_bytes()
+            block[flight_start : flight_start + 12] = self.flights[i].to_bytes()
 
         block[0x1F8:0x200] = SuperBlock.MAGIC
         return bytes(block)
@@ -120,7 +120,7 @@ class SuperBlock:
 
 
 def find_superblock(file_path: Path) -> [int, SuperBlock]:
-    """ Locates superblock address from mbr in image file or mission file """
+    """Locates superblock address from mbr in image file or mission file"""
     with open(f"{file_path}", "rb") as file:
         # Read MBR
         superblock_addr = None

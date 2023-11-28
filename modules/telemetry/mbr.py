@@ -3,9 +3,9 @@ import struct
 
 class CHSAddr:
     def __init__(self, addr):
-        self.cylinder = addr[2] | ((addr[1] & 0xc0) << 2)
+        self.cylinder = addr[2] | ((addr[1] & 0xC0) << 2)
         self.head = addr[0]
-        self.sector = addr[1] & 0x3f
+        self.sector = addr[1] & 0x3F
 
 
 class MBRPartition:
@@ -27,7 +27,7 @@ class MBR:
         self.partitions = list()
         for i in range(4):
             part_start = 446 + (16 * i)
-            part_entry = data[part_start:part_start + 16]
+            part_entry = data[part_start : part_start + 16]
             partition = MBRPartition(part_entry)
             if partition.valid:
                 self.partitions.append(partition)
