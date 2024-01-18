@@ -125,3 +125,28 @@ class TemperatureDB(DataBlock):
             The length of a temperature data block in bytes, not including the block header.
         """
         return 8
+
+
+class DebugMessageDB(DataBlock):
+    """Represents a debug message data block."""
+
+    def __init__(self, mission_time: int, message: str) -> None:
+        super().__init__(mission_time)
+        self.message: str = message
+
+    @classmethod
+    def from_bytes(cls, payload: bytes) -> Self:
+        """
+        Constructs a debug message data block from bytes.
+        Returns:
+            A debug message data block.
+        """
+        raise NotImplementedError
+
+    def __len__(self) -> int:
+        """
+        Get the length of a debug message data block in bytes.
+        Returns:
+            The length of a debug message data block in bytes, not including the block header.
+        """
+        return 4 + len(self.message)
