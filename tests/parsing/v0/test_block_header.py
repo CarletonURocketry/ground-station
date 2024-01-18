@@ -3,7 +3,7 @@ __author__ = "Matteo Golin"
 
 # Imports
 import pytest
-from modules.telemetry.telemetry import parse_block_header
+from modules.telemetry.telemetry_utils import parse_block_header
 from modules.telemetry.block import RadioBlockType, DataBlockSubtype, ControlBlockSubtype
 from modules.telemetry.block import DeviceAddress
 
