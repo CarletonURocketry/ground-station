@@ -150,3 +150,28 @@ class DebugMessageDB(DataBlock):
             The length of a debug message data block in bytes, not including the block header.
         """
         return 4 + len(self.message)
+
+
+def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
+    """
+    Parses a bytes payload into the correct data block type.
+    Args:
+        type: The type of data block to parse the bytes into.
+        payload: The bytes payload to parse into a data block.
+    Returns:
+        The parse data block.
+    Raises:
+        ValueError: Raised if the bytes cannot be parsed into the corresponding type.
+    """
+
+    match type:
+        case DataBlockSubtype.ALTITUDE:
+            return AltitudeDB.from_bytes(payload)
+        case DataBlockSubtype.PRESSURE:
+            return PressureDB.from_bytes(payload)
+        case DataBlockSubtype.TEMPERATURE:
+            return TemperatureDB.from_bytes(payload)
+        case DataBlockSubtype.DEBUG_MESSAGE:
+            return DebugMessageDB.from_bytes(payload)
+        case _:
+            raise NotImplementedError
