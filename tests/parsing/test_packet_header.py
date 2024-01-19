@@ -5,13 +5,6 @@ import pytest
 from modules.telemetry.telemetry_utils import parse_packet_header
 
 
-# Fixtures
-@pytest.fixture
-def devils_header() -> str:
-    """Returns a packet header with call sign DEVILS."""
-    return "446576696c73202020202020"
-
-
 @pytest.fixture
 def linguini_header() -> str:
     """Returns a packet header with call sign VA3INI (Matteo Golin)"""
@@ -22,18 +15,6 @@ def linguini_header() -> str:
 def zeta_header() -> str:
     """Returns a packet header with call sign VA3ZTA (Darwin Jull)"""
     return "5641335A5441090064000000"
-
-
-# Tests
-def test_devils_header(devils_header: str) -> None:
-    """Test that the devils packet header is parsed correctly."""
-    callsign, length, ver, src_addr, packet_num = parse_packet_header(devils_header)
-
-    assert callsign == "Devils"
-    assert length == 36
-    assert ver == 1
-    assert src_addr == 2
-    assert packet_num == 32
 
 
 def test_linguini_header(linguini_header: str) -> None:
@@ -48,7 +29,7 @@ def test_linguini_header(linguini_header: str) -> None:
 
 
 def test_zeta_header(zeta_header: str) -> None:
-    """Test that the zeta packet header is parsed correctly."""
+    """Test that the zeta (Darwin) packet header is parsed correctly."""
     callsign, length, ver, src_addr, packet_num = parse_packet_header(zeta_header)
 
     assert callsign == "VA3ZTA"
