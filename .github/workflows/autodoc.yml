@@ -25,10 +25,10 @@ jobs:
       # ADJUST THIS: install all dependencies (including pdoc)
       - run: |
           pip install -r requirements.txt
-          pip install pdoc
+          pip install pdoc3
       # ADJUST THIS: build your documentation into docs/.
       # We use a custom build script for pdoc itself, ideally you just run `pdoc -o docs/ ...` here.
-      - run: pydoc -o ./html ./modules
+      - run: pdoc -o ./html ./modules
 
       - uses: actions/upload-pages-artifact@v3
         with:
