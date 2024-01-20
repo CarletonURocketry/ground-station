@@ -2,7 +2,7 @@
 __author__ = "Matteo Golin"
 
 import pytest
-from modules.telemetry.telemetry_utils import parse_packet_header
+from modules.telemetry.block import PacketHeader
 
 
 @pytest.fixture
@@ -19,21 +19,21 @@ def zeta_header() -> str:
 
 def test_linguini_header(linguini_header: str) -> None:
     """Test that the linguini packet header is parsed correctly."""
-    callsign, length, ver, src_addr, packet_num = parse_packet_header(linguini_header)
+    hdr = PacketHeader.from_hex(linguini_header)
 
-    assert callsign == "VA3INI"
-    assert length == 24
-    assert ver == 0
-    assert src_addr == 9
-    assert packet_num == 7
+    assert hdr.callsign == "VA3INI"
+    assert len(hdr) == 24
+    assert hdr.version == 0
+    assert hdr.src_addr == 9
+    assert hdr.packet_num == 7
 
 
 def test_zeta_header(zeta_header: str) -> None:
     """Test that the zeta (Darwin) packet header is parsed correctly."""
-    callsign, length, ver, src_addr, packet_num = parse_packet_header(zeta_header)
+    hdr = PacketHeader.from_hex(zeta_header)
 
-    assert callsign == "VA3ZTA"
-    assert length == 12
-    assert ver == 8
-    assert src_addr == 6
-    assert packet_num == 1024
+    assert hdr.callsign == "VA3ZTA"
+    assert len(hdr) == 12
+    assert hdr.version == 8
+    assert hdr.src_addr == 6
+    assert hdr.packet_num == 1024
