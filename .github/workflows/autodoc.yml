@@ -10,7 +10,8 @@ on:
 
 # security: restrict permissions for CI jobs.
 permissions:
-  contents: write
+  contents: read
+  pages: write
 
 jobs:
   # Build the documentation and upload the static HTML files as an artifact.
