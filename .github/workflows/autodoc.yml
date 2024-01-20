@@ -2,9 +2,7 @@ name: Pydoc
 
 # build the documentation whenever there are new commits on main
 on:
-  pull_request:
-    types:
-      - closed
+  push:
     branches:
       - main
 
