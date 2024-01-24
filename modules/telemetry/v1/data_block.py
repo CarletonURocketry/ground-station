@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import Self
 from enum import IntEnum
+import struct
 
 
 class DataBlockSubtype(IntEnum):
@@ -91,7 +92,8 @@ class PressureDB(DataBlock):
         Returns:
             A pressure data block.
         """
-        raise NotImplementedError
+        parts = struct.unpack('<II', payload)
+        return PressureDB(parts[0], parts[1])
 
     def __len__(self) -> int:
         """
