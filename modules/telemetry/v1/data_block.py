@@ -24,8 +24,8 @@ class DataBlock(ABC):
         """Constructs a data block with the given mission time."""
         self.mission_time: int = mission_time
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def from_bytes(cls, payload: bytes) -> Self:
         """
         Constructs a data block from bytes.
