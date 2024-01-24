@@ -12,6 +12,7 @@ def pressure_data_content() -> bytes:
     pressure: 100810"""
     return b"\x00\x00\x00\x00\xca\x89\x01\x00"
 
+
 def test_pressure_data_block(pressure_data_content: bytes) -> None:
     """Test that the linguini packet header is parsed correctly."""
     pdb = PressureDB.from_bytes(pressure_data_content)
