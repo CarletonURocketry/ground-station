@@ -1,4 +1,7 @@
 {
+  "general": {
+    "telemetry_buffer_length": 20
+  },
   "radio_params": {
     "modulation": "lora",
     "frequency": 433050000,
