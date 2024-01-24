@@ -6,8 +6,10 @@ from modules.telemetry.v1.data_block import PressureDB
 
 
 @pytest.fixture
-def pressure_data_content() -> str:
-    """Returns a pressure sensor reading with a mission time of 0 and a pressure of """
+def pressure_data_content() -> bytes:
+    """Returns a pressure sensor reading with the following attributes
+    mission time: 0
+    pressure: 100810"""
     return b"\x00\x00\x00\x00\xca\x89\x01\x00"
 
 def test_pressure_data_block(pressure_data_content: bytes) -> None:

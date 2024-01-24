@@ -92,7 +92,7 @@ class PressureDB(DataBlock):
         Returns:
             A pressure data block.
         """
-        parts = struct.unpack('<II', payload)
+        parts = struct.unpack("<II", payload)
         return PressureDB(parts[0], parts[1])
 
     def __len__(self) -> int:
