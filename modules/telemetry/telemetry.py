@@ -121,7 +121,8 @@ class Telemetry(Process):
 
         # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
         self.status: jsp.StatusData = jsp.StatusData()
-        self.telemetry: dict[str, str] = {}
+        self.telemetry: dict[str, list[dict[str, str]]] = {}
+        self.telemetry_buffer_length: int = int(self.config.general['telemetry_buffer_length'])
 
         # Mission System
         self.missions_dir = Path.cwd().joinpath("missions")
@@ -450,7 +451,13 @@ class Telemetry(Process):
                 if block.subtype == DataBlockSubtype.STATUS:
                     self.status.rocket = jsp.RocketData.from_data_block(block)  # type:ignore
                 else:
-                    self.telemetry[block.subtype.name.lower()] = dict(block)  # type:ignore
+                    # Stores the last n packets into the telemetry data buffer
+                    if self.telemetry.get(block.subtype.name.lower()) is None:
+                        self.telemetry[block.subtype.name.lower()] = [dict(block)]  # type:ignore
+                    else:
+                        if len(self.telemetry[block.subtype.name.lower()]) >= self.telemetry_buffer_length:
+                            self.telemetry[block.subtype.name.lower()].pop(0)
+                        self.telemetry[block.subtype.name.lower()].append(dict(block))
             case _:
                 logger.warning("Unknown block type.")
 
@@ -468,10 +475,10 @@ class Telemetry(Process):
 
         blocks = data[24:]  # Remove the packet header
 
-        if call_sign in self.config.approved_callsigns:
-            logger.info(f"Incoming packet from {call_sign} ({self.config.approved_callsigns.get(call_sign)})")
-        else:
-            logger.warning(f"Incoming packet from unauthorized callsign {call_sign}")
+        #if call_sign in self.config.approved_callsigns:
+        #    logger.info(f"Incoming packet from {call_sign} ({self.config.approved_callsigns.get(call_sign)})")
+        #else:
+        #    logger.warning(f"Incoming packet from unauthorized callsign {call_sign}")
 
         # Parse through all blocks
         while blocks != "":
