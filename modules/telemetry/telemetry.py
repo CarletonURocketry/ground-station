@@ -455,9 +455,9 @@ class Telemetry(Process):
                     if self.telemetry.get(block.subtype.name.lower()) is None:
                         self.telemetry[block.subtype.name.lower()] = [dict(block)]  # type:ignore
                     else:
-                        if len(self.telemetry[block.subtype.name.lower()]) >= self.telemetry_buffer_length:
-                            self.telemetry[block.subtype.name.lower()].pop(0)
                         self.telemetry[block.subtype.name.lower()].append(dict(block))
+                        if len(self.telemetry[block.subtype.name.lower()]) > self.telemetry_buffer_length:
+                            self.telemetry[block.subtype.name.lower()].pop(0)
             case _:
                 logger.warning("Unknown block type.")
 
