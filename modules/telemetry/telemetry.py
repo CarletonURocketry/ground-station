@@ -475,10 +475,10 @@ class Telemetry(Process):
 
         blocks = data[24:]  # Remove the packet header
 
-        #if call_sign in self.config.approved_callsigns:
-        #    logger.info(f"Incoming packet from {call_sign} ({self.config.approved_callsigns.get(call_sign)})")
-        #else:
-        #    logger.warning(f"Incoming packet from unauthorized callsign {call_sign}")
+        if call_sign in self.config.approved_callsigns:
+            logger.info(f"Incoming packet from {call_sign} ({self.config.approved_callsigns.get(call_sign)})")
+        else:
+            logger.warning(f"Incoming packet from unauthorized callsign {call_sign}")
 
         # Parse through all blocks
         while blocks != "":
