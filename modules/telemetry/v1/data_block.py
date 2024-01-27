@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import Self
 from enum import IntEnum
+import struct
 
 
 class DataBlockSubtype(IntEnum):
@@ -9,7 +10,7 @@ class DataBlockSubtype(IntEnum):
 
     DEBUG_MESSAGE = 0x00
     ALTITUDE = 0x01
-    TEMPERATURE = 0x01
+    TEMPERATURE = 0x02
     PRESSURE = 0x03
     ACCELERATION = 0x04
     ANGULAR_VELOCITY = 0x05
@@ -116,7 +117,8 @@ class TemperatureDB(DataBlock):
         Returns:
             A temperature data block.
         """
-        raise NotImplementedError
+        parts = struct.unpack("<Ii", payload)
+        return TemperatureDB(parts[0], parts[1])
 
     def __len__(self) -> int:
         """
