@@ -3,6 +3,10 @@ from abc import ABC, abstractmethod
 from typing import Self
 from enum import IntEnum
 import struct
+<<<<<<< HEAD
+=======
+from modules.misc import converter
+>>>>>>> 865ad6f (Added altitude DB decoding)
 
 
 class DataBlockSubtype(IntEnum):
@@ -69,18 +73,30 @@ class AltitudeDB(DataBlock):
             An altitude data block.
         """
 
+<<<<<<< HEAD
         parts = struct.unpack("<Ii", payload)
         return AltitudeDB(parts[0])
     
     def to_bytes(self) -> bytes:
         return struct.pack("<Ii", int(self.altitude))
+=======
+        parts = struct.unpack("<Iiii", payload)
+        return AltitudeDB(parts[0])
+    
+    def to_bytes(self) -> bytes:
+        return struct.pack("<Iiii", int(self.altitude))
+>>>>>>> 865ad6f (Added altitude DB decoding)
 
     def __str__(self):
         return (f"{self.__class__.__name__} -> time: {self.mission_time} ms, altitude: {self.altitude} m")
 
     def __iter__(self):
         yield "mission time", self.mission_time
+<<<<<<< HEAD
         yield "altitude", {"meters": self.altitude}
+=======
+        yield "altitude", {"meters": self.altitude, "feet": converter.metres_to_feet(self.altitude)}
+>>>>>>> 865ad6f (Added altitude DB decoding)
 
 class PressureDB(DataBlock):
     """Represents a pressure data block."""
