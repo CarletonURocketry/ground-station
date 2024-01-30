@@ -2,6 +2,8 @@
 from abc import ABC, abstractmethod
 from typing import Self
 from enum import IntEnum
+import struct
+from modules.misc import converter
 
 
 class DataBlockSubtype(IntEnum):
@@ -51,14 +53,6 @@ class AltitudeDB(DataBlock):
         super().__init__(mission_time)
         self.altitude = altitude
 
-    @classmethod
-    def from_bytes(cls, payload: bytes) -> Self:
-        """
-        Constructs a data block from bytes.
-        Returns:
-            An altitude data block.
-        """
-        raise NotImplementedError
 
     def __len__(self) -> int:
         """
@@ -66,8 +60,28 @@ class AltitudeDB(DataBlock):
         Returns:
             The length of an altitude data block in bytes, not including the block header.
         """
-        return 8
+        return 16
 
+    @classmethod
+    def from_bytes(cls, payload: bytes) -> Self:
+        """
+        Constructs a data block from bytes.
+        Returns:
+            An altitude data block.
+        """
+
+        parts = struct.unpack("<Iiii", payload)
+        return AltitudeDB(parts[0])
+    
+    def to_bytes(self) -> bytes:
+        return struct.pack("<Iiii", int(self.altitude))
+
+    def __str__(self):
+        return (f"{self.__class__.__name__} -> time: {self.mission_time} ms, altitude: {self.altitude} m")
+
+    def __iter__(self):
+        yield "mission time", self.mission_time
+        yield "altitude", {"meters": self.altitude, "feet": converter.metres_to_feet(self.altitude)}
 
 class PressureDB(DataBlock):
     """Represents a pressure data block."""
