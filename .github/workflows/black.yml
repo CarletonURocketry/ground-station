@@ -20,4 +20,4 @@ jobs:
         pip install black
     - name: Check for formatting issues
       run: |
-        black --check .
+        black --check --diff .
