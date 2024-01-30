@@ -116,6 +116,8 @@ class TemperatureDB(DataBlock):
         Constructs a temperature data block from bytes.
         Returns:
             A temperature data block.
+        
+        hi mom
         """
         parts = struct.unpack("<Ii", payload)
         return TemperatureDB(parts[0], parts[1])
