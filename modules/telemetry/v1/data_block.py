@@ -25,8 +25,8 @@ class DataBlock(ABC):
         """Constructs a data block with the given mission time."""
         self.mission_time: int = mission_time
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def from_bytes(cls, payload: bytes) -> Self:
         """
         Constructs a data block from bytes.
@@ -92,7 +92,8 @@ class PressureDB(DataBlock):
         Returns:
             A pressure data block.
         """
-        raise NotImplementedError
+        parts = struct.unpack("<II", payload)
+        return PressureDB(parts[0], parts[1])
 
     def __len__(self) -> int:
         """
