@@ -3,10 +3,6 @@ from abc import ABC, abstractmethod
 from typing import Self
 from enum import IntEnum
 import struct
-<<<<<<< HEAD
-from modules.misc import converter
-=======
->>>>>>> c08443e96be80ca30767951dc100d8e616456632
 
 
 class DataBlockSubtype(IntEnum):
@@ -84,7 +80,7 @@ class AltitudeDB(DataBlock):
 
     def __iter__(self):
         yield "mission time", self.mission_time
-        yield "altitude", {"meters": self.altitude, "feet": converter.metres_to_feet(self.altitude)}
+        yield "altitude", {"meters": self.altitude}
 
 class PressureDB(DataBlock):
     """Represents a pressure data block."""
