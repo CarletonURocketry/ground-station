@@ -102,15 +102,15 @@ class ReplayPlaybackError(Exception):
 # Main class
 class Telemetry(Process):
     def __init__(
-        self,
-        serial_status: Queue[str],
-        radio_payloads: Queue[Any],
-        rn2483_radio_input: Queue[str],
-        radio_signal_report: Queue[str],
-        telemetry_json_output: Queue[JSON],
-        telemetry_ws_commands: Queue[list[str]],
-        config: Config,
-        thresholds: FaultThresholds
+            self,
+            serial_status: Queue[str],
+            radio_payloads: Queue[Any],
+            rn2483_radio_input: Queue[str],
+            radio_signal_report: Queue[str],
+            telemetry_json_output: Queue[JSON],
+            telemetry_ws_commands: Queue[list[str]],
+            config: Config,
+            thresholds: FaultThresholds
     ):
         super().__init__()
         self.config = config
@@ -465,11 +465,12 @@ class Telemetry(Process):
                         self.telemetry[block.subtype.name.lower()].append(dict(block))
                         if len(self.telemetry[block.subtype.name.lower()]) > self.telemetry_buffer_length:
                             self.telemetry[block.subtype.name.lower()].pop(0)
-                        if self.thresholds is not None:
-                            self.faults[block.subtype.name.lower()] = run_fault_check(block)
+
+                    # Fault Thresholds
+                    if self.thresholds is not None:
+                        self.faults[block.subtype.name.lower()] = run_fault_check(block, self.thresholds, self.telemetry)
             case _:
                 logger.warning("Unknown block type.")
-
 
     def parse_rn2483_transmission(self, data: str):
         """Parses RN2483 Packets and extracts our telemetry payload blocks"""

@@ -6,6 +6,7 @@
 # Matteo Golin (linguini1)
 
 import multiprocessing as mp
+from json import JSONDecodeError
 from multiprocessing import Process
 from queue import Queue
 from re import sub
@@ -68,8 +69,12 @@ def main():
     # Load config file
     config = load_config("config.json")
 
-    # Load fault thresholds if enabled
-    thresholds = load_thresholds(config.general["faults_thresholds"]) if config.general["faults"] else None
+    # Load fault thresholds
+    thresholds = None
+    try:
+        thresholds = load_thresholds(config.general["faults_thresholds"]) if config.general["faults"] else None
+    except JSONDecodeError:
+        logger.error(f"Unable to load fault thresholds due to corrupted config. Fault monitoring disabled.")
 
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART

@@ -11,17 +11,16 @@ from typing import Any, Self
 JSON = dict[str, Any]
 
 
-
-
 @dataclass
 class FaultThresholds:
     """Contains settings for fault thresholds."""
 
     general: dict[str, int] = field(default_factory=dict)
-    altitude: dict[str, dict[str, int]] = field(default_factory=dict)
-    mpu9250_imu: dict[str, dict[str, int]] = field(default_factory=dict)
-    gnss: dict[str, dict[str, int]] = field(default_factory=dict)
-    gnss_meta: dict[str, dict[str, int]] = field(default_factory=dict)
+    rocket: dict[str, dict[int, int, int]] = field(default_factory=dict)
+    altitude: dict[str, int] = field(default_factory=dict)
+    mpu9250_imu: dict[str, int] = field(default_factory=dict)
+    gnss: dict[str, int] = field(default_factory=dict)
+    gnss_meta: dict[str, int] = field(default_factory=dict)
 
     def __post_init__(self):
         if len(self.altitude) == 0:
@@ -29,12 +28,12 @@ class FaultThresholds:
 
     @classmethod
     def from_json(cls, data: JSON) -> Self:
-        """Creates a new FaultThresholds object from the JSON data contained in the user config file."""
+        """Creates a new FaultThresholds object from the JSON data contained in the fault thresholds file."""
 
         return cls(
             general=data.get("general", dict()),
+            rocket=data.get("rocket", dict()),
             altitude=data.get("altitude", dict()),
-            #altitude: AltitudeThresholds = field(default_factory=AltitudeThresholds)
             mpu9250_imu=data.get("mpu9250_imu", dict()),
             gnss=data.get("gnss", dict()),
             gnss_meta=data.get("gnss_meta", dict())

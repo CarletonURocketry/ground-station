@@ -3,34 +3,26 @@
         "fault_trigger_count": 3,
         "fault_clear_count": 3
     },
-    "altitude": {
-        "pressure": {
-            "low": 0,
-            "high": 10000
-        },
-        "altitude": {
-            "low": 0,
-            "high": 35000
-        },
-        "temperature": {
-            "low": -1,
-            "high": 60
-        }
+    "rocket": {
+        "altitude": [-100, 9000, 12000],
+        "pressure": [9000, 13000, 15000],
+        "speed": [-5, 50, 200],
+        "temperature": [0, 65, 75]
     },
-
+    "altitude": {
+        "packet_min": 0
+    },
+    "mpu9250_imu": {
+        "packet_min": 0,
+        "mag_ovf": true
+    },
     "gnss": {
-        "position": {
-            "latitude": 44.907956666666664,
-            "longitude": -76.26173
-        },
-        "utc_time": 1668434560,
-        "altitude": 150.701,
-        "speed": 27.49,
-        "course": 139.34,
-        "pdop": 1.15,
-        "hdop": 0.83,
-        "vdop": 0.8,
-        "sats_in_use": 13,
-        "fix_type": 3
+        "packet_min": 0,
+        "min_sats_in_use": 5,
+        "verify_fix_type": true
+    },
+    "gnss_meta": {
+        "packet_min": 0,
+        "min_sats_in_view": 5
     }
 }
