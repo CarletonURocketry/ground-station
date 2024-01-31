@@ -167,7 +167,10 @@ class ReplayData:
             mission_path: Path = missions_dir.joinpath(filename.name)
 
             # Find superblock from file and return it
-            sb_addr, mission_sb = find_superblock(mission_path)
+            superblock_result = find_superblock(mission_path)
+            if superblock_result is None:
+                raise ValueError(f"Could not find superblock in {mission_path}")
+            sb_addr, mission_sb = superblock_result
 
             # Read from superblock
             if type(mission_sb) is not SuperBlock:
