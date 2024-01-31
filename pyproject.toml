@@ -19,6 +19,8 @@ dependencies = {file = ["requirements.txt"]}
 
 [tool.pyright]
 
+ignore = ["./telem-parser/"]
+
 # Strict checking
 strictListInference = true
 strictDictionaryInference = true
