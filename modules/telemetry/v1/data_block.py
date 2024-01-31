@@ -3,7 +3,10 @@ from abc import ABC, abstractmethod
 from typing import Self
 from enum import IntEnum
 import struct
+<<<<<<< HEAD
 from modules.misc import converter
+=======
+>>>>>>> c08443e96be80ca30767951dc100d8e616456632
 
 
 class DataBlockSubtype(IntEnum):
@@ -26,8 +29,8 @@ class DataBlock(ABC):
         """Constructs a data block with the given mission time."""
         self.mission_time: int = mission_time
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def from_bytes(cls, payload: bytes) -> Self:
         """
         Constructs a data block from bytes.
@@ -105,7 +108,8 @@ class PressureDB(DataBlock):
         Returns:
             A pressure data block.
         """
-        raise NotImplementedError
+        parts = struct.unpack("<II", payload)
+        return PressureDB(parts[0], parts[1])
 
     def __len__(self) -> int:
         """
