@@ -18,8 +18,8 @@ Homepage = "https://github.com/CarletonURocketry/ground-station"
 dependencies = {file = ["requirements.txt"]}
 
 [tool.pyright]
-
 ignore = ["./telem-parser/"]
+exclude = ["./venv/"]
 
 # Strict checking
 strictListInference = true
