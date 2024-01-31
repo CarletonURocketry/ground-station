@@ -122,7 +122,7 @@ class Config:
 
     """Contains settings for the ground station process."""
 
-    general: dict[str, str] = field(default_factory=dict)
+    telemetry_buffer_size: int = 20
     radio_parameters: RadioParameters = field(default_factory=RadioParameters)
     approved_callsigns: dict[str, str] = field(default_factory=dict)
 
@@ -135,7 +135,7 @@ class Config:
         """Creates a new Config object from the JSON data contained in the user config file."""
 
         return cls(
-            general=data.get("general", dict()),  # type:ignore
+            telemetry_buffer_size=data.get("telemetry_buffer_size", int()),
             radio_parameters=RadioParameters.from_json(data.get("radio_params", dict())),  # type:ignore
             approved_callsigns=data.get("approved_callsigns", dict()),  # type:ignore
         )
