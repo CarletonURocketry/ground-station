@@ -1,8 +1,8 @@
 {
-  "general": {
-    "faults": true,
-    "faults_thresholds": "launch_canada.json",
-    "telemetry_buffer_length": 20
+  "telemetry_buffer_size": 20,
+  "faults": {
+    "enabled": true,
+    "faults_thresholds": "launch_canada.json"
   },
   "radio_params": {
     "modulation": "lora",
