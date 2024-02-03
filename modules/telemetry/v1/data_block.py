@@ -69,7 +69,7 @@ class AltitudeDB(DataBlock):
             An altitude data block.
         """
 
-        parts = struct.unpack("<Iiii", payload)
+        parts = struct.unpack("<Ii", payload)
         return AltitudeDB(parts[0])
     
     def to_bytes(self) -> bytes:
