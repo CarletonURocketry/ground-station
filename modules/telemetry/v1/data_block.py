@@ -73,7 +73,7 @@ class AltitudeDB(DataBlock):
         return AltitudeDB(parts[0])
     
     def to_bytes(self) -> bytes:
-        return struct.pack("<Iiii", int(self.altitude))
+        return struct.pack("<Ii", int(self.altitude))
 
     def __str__(self):
         return (f"{self.__class__.__name__} -> time: {self.mission_time} ms, altitude: {self.altitude} m")
