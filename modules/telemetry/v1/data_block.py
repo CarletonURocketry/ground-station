@@ -1,8 +1,10 @@
 # Contains data block utilities for version 1 of the radio packet format
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Self
 from enum import IntEnum
 import struct
+from modules.telemetry.block import DataBlockSubtype, BlockException, BlockUnknownException
 
 
 class DataBlockSubtype(IntEnum):
@@ -16,6 +18,12 @@ class DataBlockSubtype(IntEnum):
     ANGULAR_VELOCITY = 0x05
     GNSS_LOCATION = 0x06
     GNSS_METADATA = 0x07
+
+class DataBlockException(BlockException):
+    pass
+
+class DataBlockUnknownException(BlockUnknownException):
+    pass
 
 
 class DataBlock(ABC):
@@ -43,6 +51,24 @@ class DataBlock(ABC):
             The length of a data block in bytes, not include the block header.
         """
         pass
+
+    @staticmethod
+    def parse(block_subtype: DataBlockSubtype, payload: bytes) -> Self:
+        """Unmarshal a bytes object to appropriate block class."""
+
+        SUBTYPE_CLASSES: dict[DataBlockSubtype, DataBlock] = {
+            DataBlockSubtype.DEBUG_MESSAGE: DebugMessageDB,
+            DataBlockSubtype.ALTITUDE: AltitudeDB,
+            DataBlockSubtype.TEMPERATURE: TemperatureDB,
+            DataBlockSubtype.PRESSURE: PressureDB,
+        }
+
+        subtype = SUBTYPE_CLASSES.get(block_subtype)
+
+        if subtype is None:
+            raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype} {payload} {payload.hex()}")
+
+        return subtype.from_bytes(payload=payload)
 
 
 class AltitudeDB(DataBlock):
