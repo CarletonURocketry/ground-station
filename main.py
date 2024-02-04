@@ -6,15 +6,12 @@
 # Matteo Golin (linguini1)
 
 import multiprocessing as mp
-from json import JSONDecodeError
 from multiprocessing import Process
 from queue import Queue
 from re import sub
 import logging
 from typing import TypeAlias, Any
 from modules.misc.config import load_config
-from modules.misc.thresholds import load_thresholds
-
 from modules.misc.messages import print_cu_rocket
 from modules.serial.serial_manager import SerialManager
 from modules.telemetry.telemetry import Telemetry
@@ -69,13 +66,6 @@ def main():
     # Load config file
     config = load_config("config.json")
 
-    # Load fault thresholds
-    thresholds = None
-    try:
-        thresholds = load_thresholds(config.general["faults_thresholds"]) if config.general["faults"] else None
-    except JSONDecodeError:
-        logger.error(f"Unable to load fault thresholds due to corrupted config. Fault monitoring disabled.")
-
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
     # Outputs information in hexadecimal payload format to rn2483_radio_payloads
@@ -106,7 +96,6 @@ def main():
             telemetry_json_output,
             telemetry_ws_commands,
             config,
-            thresholds,
         ),
     )
     telemetry.start()

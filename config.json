@@ -2,7 +2,7 @@
   "telemetry_buffer_size": 20,
   "faults": {
     "enabled": true,
-    "faults_thresholds": "launch_canada.json"
+    "filename": "launch_canada.json"
   },
   "radio_params": {
     "modulation": "lora",

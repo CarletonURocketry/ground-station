@@ -6,20 +6,28 @@
 # Thomas Selwyn (Devil)
 import logging
 
-from modules.telemetry.data_block import DataBlock, AltitudeDataBlock, AccelerationDataBlock, AngularVelocityDataBlock, \
-    GNSSLocationBlock, \
-    GNSSMetadataBlock, MPU9250IMUDataBlock, KX134AccelerometerDataBlock
-from modules.telemetry.block import DataBlockSubtype, BlockException, BlockUnknownException
-from modules.misc.thresholds import FaultThresholds
+from modules.telemetry.data_block import (
+    DataBlock,
+    AltitudeDataBlock,
+    AccelerationDataBlock,
+    AngularVelocityDataBlock,
+    GNSSLocationBlock,
+    GNSSMetadataBlock,
+    MPU9250IMUDataBlock,
+    # KX134AccelerometerDataBlock,
+)
+from modules.telemetry.block import DataBlockSubtype
+from modules.misc.config import FaultsThresholds
 
 LOW: int = 0
 HYSTERESIS: int = 1
 HIGH: int = 2
 
 
-def run_fault_check(data_block: DataBlock, thresholds: FaultThresholds, telem_history: dict) -> dict:
+def run_fault_check(data_block: DataBlock, thresholds: FaultsThresholds, telemetry: dict) -> dict:
+    print(thresholds)
     try:
-        fault_list = run_general_check(data_block, thresholds)
+        fault_list: list = run_general_check(data_block)
 
         match data_block.subtype:
             case DataBlockSubtype.ALTITUDE:
@@ -41,8 +49,8 @@ def run_fault_check(data_block: DataBlock, thresholds: FaultThresholds, telem_hi
         logging.error(f"Fault Thresholds encountered config error, unable to read {str(e)}")
 
 
-def run_general_check(data_block: DataBlock, thresholds: FaultThresholds) -> [str]:
-    fault_list = []
+def run_general_check(data_block: DataBlock) -> [str]:
+    fault_list: list = []
 
     if data_block.mission_time < 0:
         fault_list += ["invalid_time"]
@@ -50,8 +58,8 @@ def run_general_check(data_block: DataBlock, thresholds: FaultThresholds) -> [st
     return fault_list
 
 
-def run_altitude_check(altitude_block: AltitudeDataBlock, thresholds: FaultThresholds) -> [str]:
-    fault_list = []
+def run_altitude_check(altitude_block: AltitudeDataBlock, thresholds: FaultsThresholds) -> [str]:
+    fault_list: list = []
 
     # Pressure
     if altitude_block.pressure < thresholds.rocket["pressure"][LOW]:
@@ -78,8 +86,8 @@ def run_altitude_check(altitude_block: AltitudeDataBlock, thresholds: FaultThres
     return fault_list
 
 
-def run_acceleration_check(acceleration_block: AccelerationDataBlock, thresholds: FaultThresholds) -> [str]:
-    fault_list = []
+def run_acceleration_check(acceleration_block: AccelerationDataBlock, thresholds: FaultsThresholds) -> [str]:
+    fault_list: list = []
 
     if acceleration_block.fsr < 0:
         fault_list += ["invalid_fsr"]
@@ -87,8 +95,8 @@ def run_acceleration_check(acceleration_block: AccelerationDataBlock, thresholds
     return fault_list
 
 
-def run_angular_check(angular_block: AngularVelocityDataBlock, thresholds: FaultThresholds) -> [str]:
-    fault_list = []
+def run_angular_check(angular_block: AngularVelocityDataBlock, thresholds: FaultsThresholds) -> [str]:
+    fault_list: list = []
 
     if angular_block.fsr < 0:
         fault_list += ["invalid_fsr"]
@@ -96,8 +104,8 @@ def run_angular_check(angular_block: AngularVelocityDataBlock, thresholds: Fault
     return fault_list
 
 
-def run_gnss_check(gnss_block: GNSSLocationBlock, thresholds: FaultThresholds) -> [str]:
-    fault_list = []
+def run_gnss_check(gnss_block: GNSSLocationBlock, thresholds: FaultsThresholds) -> [str]:
+    fault_list: list = []
 
     # Altitude
     if gnss_block.altitude < thresholds.rocket["altitude"][LOW]:
@@ -123,8 +131,8 @@ def run_gnss_check(gnss_block: GNSSLocationBlock, thresholds: FaultThresholds) -
     return fault_list
 
 
-def run_gnss_meta_check(gnss_meta_block: GNSSMetadataBlock, thresholds: FaultThresholds) -> [str]:
-    fault_list = []
+def run_gnss_meta_check(gnss_meta_block: GNSSMetadataBlock, thresholds: FaultsThresholds) -> [str]:
+    fault_list: list = []
 
     # Just in case we aren't using satellites for some reason...
     if len(gnss_meta_block.gps_sats_in_use + gnss_meta_block.glonass_sats_in_use) == 0:
@@ -139,11 +147,12 @@ def run_gnss_meta_check(gnss_meta_block: GNSSMetadataBlock, thresholds: FaultThr
     return fault_list
 
 
-def run_mpu9250_check(mpu_block: MPU9250IMUDataBlock, thresholds: FaultThresholds) -> [str]:
-    fault_list = []
+def run_mpu9250_check(mpu_block: MPU9250IMUDataBlock, thresholds: FaultsThresholds) -> [str]:
+    fault_list: list = []
 
     # Mag overflow
     if thresholds.mpu9250_imu["mag_ovf"] and mpu_block.samples[0].mag_ovf:
         fault_list += ["mag_overflow"]
+        # fault_list.append("mag_overflow")
 
     return fault_list
