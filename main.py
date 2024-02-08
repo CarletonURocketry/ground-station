@@ -82,7 +82,7 @@ def main():
         ),
     )
     serial.start()
-    logger.info(f"{'Serial':.<16} started.")
+    logger.info(f"{'Serial':.<13} started.")
 
     # Initialize Telemetry to parse radio packets, keep history and to log everything
     # Incoming information comes from rn2483_radio_payloads in payload format
@@ -100,7 +100,7 @@ def main():
         ),
     )
     telemetry.start()
-    logger.info(f"{'Telemetry':.<16} started.")
+    logger.info(f"{'Telemetry':.<13} started.")
 
     # Initialize Tornado websocket for UI communication
     # This is PURELY a pass through of data for connectivity. No format conversion is done here.
@@ -108,7 +108,7 @@ def main():
     # Outputs information to connected websocket clients
     websocket = Process(target=WebSocketHandler, args=(telemetry_json_output, ws_commands), daemon=True)
     websocket.start()
-    logger.info(f"{'WebSocket':.<16} started.")
+    logger.info(f"{'WebSocket':.<13} started.")
 
     while True:
         # Messages sent to main process for handling
