@@ -19,22 +19,22 @@
 
             ws = new WebSocket("ws://localhost:33845/websocket");
             ws.onopen = function(){
-                server_status.innerHTML = "<<< Server Connected";
+                server_status.innerHTML = ">>> Server Connected";
             };
             ws.onmessage = function(e){
                 // Log all websocket data streams
                 // msglog.innerHTML = msglog.innerHTML + "<br><<< Received data: " + e.data
 
                 updatedata = JSON.parse(e.data);
-                msglog.innerHTML = "<br>>>> Received data: " + e.data;
+                msglog.innerHTML = ">>> Received data: " + e.data;
 
                 rocket_status.innerHTML = "Rocket State " + updatedata.status.rocket.deployment_state
                 mission_time.innerHTML = "Time " + updatedata.status.mission.last_mission_time + " ms";
-                speed.innerHTML = "Speed " + updatedata.telemetry.gnss.speed + " knots";
-                lat.innerHTML = "Lat " + updatedata.telemetry.gnss.position.latitude;
-                long.innerHTML = "Long " + updatedata.telemetry.gnss.position.longitude;
-                temperature.innerHTML = "Temp " + updatedata.telemetry.altitude.temperature.celsius + " *C";
-                altitude.innerHTML = "Altitude " + updatedata.telemetry.altitude.altitude.feet + " ft";
+                speed.innerHTML = "Speed " + updatedata.telemetry.gnss[0].speed + " knots";
+                lat.innerHTML = "Lat " + updatedata.telemetry.gnss[0].position.latitude;
+                long.innerHTML = "Long " + updatedata.telemetry.gnss[0].position.longitude;
+                temperature.innerHTML = "Temp " + updatedata.telemetry.altitude[0].temperature.celsius + " *C";
+                altitude.innerHTML = "Altitude " + updatedata.telemetry.altitude[0].altitude.feet + " ft";
 
             };
             ws.onclose = function(){
@@ -66,8 +66,9 @@
     <div id="long">Long 0 </div>
     <div id="temperature">Temp 0 *C </div>
     <div id="altitude">Altitude 000 ft</div>
-    <div id="msglog"><br>>>> No data received</div>
+    <br>
     <div id="serverstatus"><<< Server Disconnected</div>
+    <div id="msglog"><<< No data received</div>
 </body>
 
 </html>

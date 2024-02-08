@@ -116,9 +116,9 @@ class Telemetry(Process):
         self.radio_signal_report: Queue[str] = radio_signal_report
         self.serial_status: Queue[str] = serial_status
 
-        # Telemetry Data holds a dict of the latest copy of received data blocks stored under the subtype name as a key.
+        # Telemetry Data holds the last few copies of received data blocks stored under the subtype name as a key.
         self.status: jsp.StatusData = jsp.StatusData()
-        self.telemetry: dict[str, str] = {}
+        self.telemetry: dict[str, list[dict[str, str]]] = {}
 
         # Mission System
         self.missions_dir = Path.cwd().joinpath("missions")
@@ -447,7 +447,13 @@ class Telemetry(Process):
                 if block.subtype == DataBlockSubtype.STATUS:
                     self.status.rocket = jsp.RocketData.from_data_block(block)  # type:ignore
                 else:
-                    self.telemetry[block.subtype.name.lower()] = dict(block)  # type:ignore
+                    # Stores the last n packets into the telemetry data buffer
+                    if self.telemetry.get(block.subtype.name.lower()) is None:
+                        self.telemetry[block.subtype.name.lower()] = [dict(block)]  # type:ignore
+                    else:
+                        self.telemetry[block.subtype.name.lower()].append(dict(block))  # type:ignore
+                        if len(self.telemetry[block.subtype.name.lower()]) > self.config.telemetry_buffer_size:
+                            self.telemetry[block.subtype.name.lower()].pop(0)
             case _:
                 logger.warning("Unknown block type.")
 

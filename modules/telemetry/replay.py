@@ -60,7 +60,10 @@ class TelemetryReplay:
         self.block_count = 0
 
         # Replay superblock
-        sb_addr, mission_sb = find_superblock(self.replay_path)
+        superblock_result = find_superblock(self.replay_path)
+        if superblock_result is None:
+            raise ValueError(f"Could not find superblock in {self.replay_path}")
+        sb_addr, mission_sb = superblock_result
 
         with open(self.replay_path, "rb") as file:
             for flight in mission_sb.flights:
