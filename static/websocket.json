@@ -37,7 +37,7 @@
         }
     },
     "telemetry": {
-        "altitude": {
+        "altitude": [{
             "mission_time": 8120,
             "pressure": {
                 "pascals": 87181,
@@ -51,8 +51,8 @@
                 "celsius": 12,
                 "fahrenheit": 54
             }
-        },
-        "mpu9250_imu": {
+        }],
+        "mpu9250_imu": [{
             "mission_time": 3598549,
             "accel_x": 0.0388946533203125,
             "accel_y": 0.0712890625,
@@ -70,8 +70,8 @@
             "sensor_sample_rate": 100.0,
             "accel_fsr": 3,
             "gyro_fsr": 3
-        },
-        "gnss": {
+        }],
+        "gnss": [{
             "mission_time": 84020,
             "position": {
                 "latitude": 44.907956666666664,
@@ -86,8 +86,8 @@
             "vdop": 0.8,
             "sats_in_use": 13,
             "fix_type": 3
-        },
-        "gnss_meta": {
+        }],
+        "gnss_meta": [{
             "mission_time": 81976,
             "gps_sats_in_use": [2, 5, 10, 13, 15, 18, 23, 24, 27],
             "glonass_sats_in_use": [69, 70, 79, 85],
@@ -109,7 +109,7 @@
                 {"sat_type": "GLONASS", "elevation": 16, "snr": 23, "id": 78, "azimuth": 416},
                 {"sat_type": "GLONASS", "elevation": 14, "snr": 20, "id": 71, "azimuth": 192}
             ]
-        }
+        }]
     },
     "faults": {
         "altitude": {
