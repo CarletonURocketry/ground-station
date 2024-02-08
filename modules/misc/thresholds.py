@@ -31,10 +31,10 @@ class ThresholdValues(NamedTuple):
 
 @dataclass
 class RocketThresholds:
-    altitude = ThresholdValues(LOW=-100, HYSTERESIS=9000, HIGH=12000)
-    pressure = ThresholdValues(LOW=9000, HYSTERESIS=13000, HIGH=15000)
-    speed = ThresholdValues(LOW=-5, HYSTERESIS=50, HIGH=200)
-    temperature = ThresholdValues(LOW=0, HYSTERESIS=65, HIGH=75)
+    altitude: ThresholdValues = ThresholdValues(LOW=-100, HYSTERESIS=9000, HIGH=12000)
+    pressure: ThresholdValues = ThresholdValues(LOW=9000, HYSTERESIS=13000, HIGH=15000)
+    speed: ThresholdValues = ThresholdValues(LOW=-5, HYSTERESIS=50, HIGH=200)
+    temperature: ThresholdValues = ThresholdValues(LOW=0, HYSTERESIS=65, HIGH=75)
 
     @classmethod
     def from_json(cls, data: JSON) -> Self:

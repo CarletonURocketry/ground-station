@@ -22,7 +22,7 @@ from modules.misc.thresholds import Thresholds
 def run_fault_check(
     data_block: DataBlock, thresholds: Thresholds, telemetry: dict[str, list[dict[str, str]]]
 ) -> dict[str, bool | list[str]]:
-    print(thresholds)
+    # print(thresholds)
 
     fault_list: list[str] = []
     try:
