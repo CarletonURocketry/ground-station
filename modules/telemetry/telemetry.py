@@ -27,7 +27,8 @@ from modules.telemetry.faults import run_fault_check
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.sd_block import TelemetryDataBlock, LoggingMetadataSpacerBlock
 from modules.telemetry.superblock import SuperBlock, Flight
-from modules.misc.config import Config
+from modules.misc.config import Config, ConfigError
+from modules.misc.thresholds import load_thresholds, Thresholds
 
 # Types
 JSON: TypeAlias = dict[str, Any]
@@ -112,6 +113,12 @@ class Telemetry(Process):
     ):
         super().__init__()
         self.config = config
+        self.thresholds: Thresholds | None = None
+        try:
+            if self.config.faults.enabled:
+                self.thresholds = load_thresholds(self.config.faults.filename)
+        except ConfigError as err:
+            logger.error(err.message)
 
         self.radio_payloads: Queue[str] = radio_payloads
         self.telemetry_json_output: Queue[JSON] = telemetry_json_output
@@ -122,7 +129,7 @@ class Telemetry(Process):
 
         # Telemetry Data holds the last few copies of received data blocks stored under the subtype name as a key.
         self.status: jsp.StatusData = jsp.StatusData()
-        self.faults: dict = {}
+        self.faults: dict[str, dict[str, bool | list[str]]] = {}
         self.telemetry: dict[str, list[dict[str, str]]] = {}
 
         # Mission System
@@ -468,9 +475,9 @@ class Telemetry(Process):
                             self.telemetry[block.subtype.name.lower()].pop(0)
 
                     # Fault Thresholds
-                    if self.config.faults.enabled and self.config.faults.thresholds is not None:
+                    if self.config.faults.enabled and self.thresholds is not None:
                         self.faults[block.subtype.name.lower()] = run_fault_check(
-                            block, self.config.faults.thresholds, self.telemetry
+                            block, self.thresholds, self.telemetry
                         )
             case _:
                 logger.warning("Unknown block type.")

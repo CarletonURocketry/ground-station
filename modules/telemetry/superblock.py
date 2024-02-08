@@ -112,7 +112,7 @@ class SuperBlock:
         for i, flight in enumerate(self.flights):
             print(f"Flight {i} -> start: {flight.first_block}, length: {flight.num_blocks}, time: {flight.timestamp}")
             flight_blocks = flight.first_block + flight.num_blocks
-        print()
+            print()
 
         if output_dd_cmd:
             print(f"Last block: {flight_blocks}")

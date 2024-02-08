@@ -5,7 +5,6 @@ __author__ = "Matteo Golin"
 import json
 from dataclasses import dataclass, field
 from enum import StrEnum
-from json import JSONDecodeError
 from typing import Any, Self
 import logging
 
@@ -23,6 +22,14 @@ JSON = dict[str, Any]
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
+
+class ConfigError(Exception):
+    """Raised if a configuration file has an issue."""
+
+    def __init__(self, message: str = "Configuration Error"):
+        self.message: str = message
+        super().__init__(self.message)
 
 
 class ModulationModes(StrEnum):
@@ -122,31 +129,6 @@ class RadioParameters:
 
 
 @dataclass
-class FaultsThresholds:
-    """Contains settings for fault thresholds."""
-
-    general: dict[str, int] = field(default_factory=dict)
-    rocket: dict[str, dict[int]] = field(default_factory=dict)
-    altitude: dict[str, int] = field(default_factory=dict)
-    mpu9250_imu: dict[str, int] = field(default_factory=dict)
-    gnss: dict[str, int] = field(default_factory=dict)
-    gnss_meta: dict[str, int] = field(default_factory=dict)
-
-    @classmethod
-    def from_json(cls, data: JSON) -> Self:
-        """Creates a new FaultThresholds object from the JSON data contained in the fault thresholds file."""
-
-        return cls(
-            general=data.get("general", dict()),  # type:ignore
-            rocket=data.get("rocket", dict()),  # type:ignore
-            altitude=data.get("altitude", dict()),  # type:ignore
-            mpu9250_imu=data.get("mpu9250_imu", dict()),  # type:ignore
-            gnss=data.get("gnss", dict()),  # type:ignore
-            gnss_meta=data.get("gnss_meta", dict()),  # type:ignore
-        )
-
-
-@dataclass
 class Faults:
     """
     Represents a collection of parameters for fault thresholds.
@@ -154,30 +136,19 @@ class Faults:
 
     enabled: bool = True
     filename: str = "launch_canada.json"
-    thresholds: FaultsThresholds = field(default_factory=FaultsThresholds)
 
     @classmethod
     def from_json(cls, data: JSON) -> Self:
         """Builds a new Faults object from JSON data found in a config file."""
-        cls.enabled = data.get("enabled", True)
-        cls.filename = data.get("filename", "launch_canada.json")
 
-        try:
-            with open(cls.filename, "r") as file:
-                data = json.load(file)
-                cls.thresholds = FaultsThresholds.from_json(data)
-        except JSONDecodeError:
-            logger.error("Unable to load fault thresholds due to corrupted config. Fault monitoring disabled.")
-            cls.enabled = False
-        except FileNotFoundError:
-            logger.error("Fault thresholds file not found. Fault monitoring disabled.")
-            cls.enabled = False
-        return cls
+        return cls(
+            enabled=data.get("enabled", True),
+            filename=data.get("filename", "launch_canada.json"),
+        )
 
     def __iter__(self):
         yield "enabled", self.enabled
         yield "filename", self.filename
-        yield "thresholds", self.thresholds
 
 
 @dataclass
