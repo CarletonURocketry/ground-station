@@ -619,7 +619,7 @@ class GNSSMetadataBlock(DataBlock):
 
         # Check satellites in view array
         while offset < len(payload):
-            sats_in_view.append(GNSSSatInfo.from_payload(payload[offset : offset + 4]))
+            sats_in_view.append(GNSSSatInfo.from_payload(payload[offset: offset + 4]))
             offset += 4
 
         return GNSSMetadataBlock(payload_time, gps_sats_in_use, glonass_sats_in_use, sats_in_view)
@@ -786,10 +786,10 @@ class KX134AccelerometerDataBlock(DataBlock):
         for i in range(num_samples):
             if resolution == KX134Resolution.RES_8_BIT:
                 samp_start = 6 + (i * 3)
-                samp_parts = struct.unpack("<bbb", payload[samp_start : samp_start + 3])
+                samp_parts = struct.unpack("<bbb", payload[samp_start: samp_start + 3])
             else:
                 samp_start = 6 + (i * 6)
-                samp_parts = struct.unpack("<hhh", payload[samp_start : samp_start + 6])
+                samp_parts = struct.unpack("<hhh", payload[samp_start: samp_start + 6])
 
             x = samp_parts[0] / sensitivity
             y = samp_parts[1] / sensitivity
@@ -1173,7 +1173,7 @@ class MPU9250IMUDataBlock(DataBlock):
         for i in range(num_samples):
             sample_start = 8 + (i * 21)
             sample = MPU9250Sample.from_bytes(
-                payload[sample_start : sample_start + 21], accel_fsr.sensitivity, gyro_fsr.sensitivity
+                payload[sample_start: sample_start + 21], accel_fsr.sensitivity, gyro_fsr.sensitivity
             )
             samples.append(sample)
 

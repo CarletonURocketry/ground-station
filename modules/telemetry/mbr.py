@@ -27,7 +27,7 @@ class MBR:
         self.partitions: list[MBRPartition] = list()
         for i in range(4):
             part_start = 446 + (16 * i)
-            part_entry = data[part_start : part_start + 16]
+            part_entry = data[part_start: part_start + 16]
             partition = MBRPartition(part_entry)
             if partition.valid:
                 self.partitions.append(partition)

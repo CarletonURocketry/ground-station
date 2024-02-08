@@ -166,7 +166,7 @@ def sanitize_superblock(superblock: bytearray, flights_to_keep: list[Flight]) ->
 
         # Zero out unused flight data holders
         if len(flights_to_keep) == 0:
-            superblock[flight_start : flight_start + 12] = b"\x00" * 12
+            superblock[flight_start: flight_start + 12] = b"\x00" * 12
             continue
 
         # Shift flight block numbering to properly match
@@ -175,7 +175,7 @@ def sanitize_superblock(superblock: bytearray, flights_to_keep: list[Flight]) ->
         flight_blocks_stored += flight.num_blocks
 
         # Output adjusted flight to superblock
-        superblock[flight_start : flight_start + 12] = flight.to_bytes()
+        superblock[flight_start: flight_start + 12] = flight.to_bytes()
 
         # Remove flight shifted
         flights_to_keep.pop(0)

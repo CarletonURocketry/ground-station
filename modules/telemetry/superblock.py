@@ -77,7 +77,7 @@ class SuperBlock:
         flight_blocks = 1
         for i in range(32):
             flight_start = 0x60 + (12 * i)
-            flight_entry = block[flight_start : flight_start + 12]
+            flight_entry = block[flight_start: flight_start + 12]
             flight_obj = Flight.from_bytes(flight_entry)
             if not flight_obj.is_valid():
                 continue
@@ -96,7 +96,7 @@ class SuperBlock:
 
         for i in range(len(self.flights)):
             flight_start = 0x60 + (12 * i)
-            block[flight_start : flight_start + 12] = self.flights[i].to_bytes()
+            block[flight_start: flight_start + 12] = self.flights[i].to_bytes()
 
         block[0x1F8:0x200] = SuperBlock.MAGIC
         return bytes(block)

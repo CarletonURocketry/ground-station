@@ -7,7 +7,4 @@ exclude =
     env
     __pycache__
 
-ignore =
-    E203
-
 max-line-length = 120
