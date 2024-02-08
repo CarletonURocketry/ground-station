@@ -110,8 +110,6 @@ def main():
     websocket.start()
     logger.info(f"{'WebSocket':.<16} started.")
 
-    logger.info("Websocket listening on port 33845")
-
     while True:
         # Messages sent to main process for handling
 
@@ -120,11 +118,11 @@ def main():
             try:
                 parse_ws_command(ws_commands.get(), serial_ws_commands, telemetry_ws_commands)
             except ShutdownException:
-                logger.warning("Backend shutting down........")
+                logger.info("Ground Station shutting down...")
                 serial.terminate()
                 telemetry.terminate()
                 websocket.terminate()
-                print("Good bye.")
+                logger.info("Ground Station shutdown.")
                 exit(0)
 
 
