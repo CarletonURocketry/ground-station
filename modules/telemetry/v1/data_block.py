@@ -1,10 +1,10 @@
 # Contains data block utilities for version 1 of the radio packet format
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Self
+from typing import Self, Type
 from enum import IntEnum
 import struct
-from modules.telemetry.block import DataBlockSubtype, BlockException, BlockUnknownException
+from modules.telemetry.block import BlockException, BlockUnknownException
 
 
 class DataBlockSubtype(IntEnum):
@@ -19,8 +19,10 @@ class DataBlockSubtype(IntEnum):
     GNSS_LOCATION = 0x06
     GNSS_METADATA = 0x07
 
+
 class DataBlockException(BlockException):
     pass
+
 
 class DataBlockUnknownException(BlockUnknownException):
     pass
@@ -53,10 +55,10 @@ class DataBlock(ABC):
         pass
 
     @staticmethod
-    def parse(block_subtype: DataBlockSubtype, payload: bytes) -> Self:
+    def parse(block_subtype: DataBlockSubtype, payload: bytes) -> DataBlock:
         """Unmarshal a bytes object to appropriate block class."""
 
-        SUBTYPE_CLASSES: dict[DataBlockSubtype, DataBlock] = {
+        SUBTYPE_CLASSES: dict[DataBlockSubtype, Type[DataBlock]] = {
             DataBlockSubtype.DEBUG_MESSAGE: DebugMessageDB,
             DataBlockSubtype.ALTITUDE: AltitudeDB,
             DataBlockSubtype.TEMPERATURE: TemperatureDB,
@@ -78,7 +80,6 @@ class AltitudeDB(DataBlock):
         super().__init__(mission_time)
         self.altitude = altitude
 
-
     def __len__(self) -> int:
         """
         Get the length of an altitude data block in bytes.
@@ -96,17 +97,18 @@ class AltitudeDB(DataBlock):
         """
 
         parts = struct.unpack("<Ii", payload)
-        return AltitudeDB(parts[0])
-    
+        return cls(parts[0], parts[1])
+
     def to_bytes(self) -> bytes:
         return struct.pack("<Ii", int(self.altitude))
 
     def __str__(self):
-        return (f"{self.__class__.__name__} -> time: {self.mission_time} ms, altitude: {self.altitude} m")
+        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, altitude: {self.altitude} m"
 
     def __iter__(self):
         yield "mission time", self.mission_time
         yield "altitude", {"meters": self.altitude}
+
 
 class PressureDB(DataBlock):
     """Represents a pressure data block."""
@@ -131,7 +133,7 @@ class PressureDB(DataBlock):
             A pressure data block.
         """
         parts = struct.unpack("<II", payload)
-        return PressureDB(parts[0], parts[1])
+        return cls(parts[0], parts[1])
 
     def __len__(self) -> int:
         """
@@ -157,7 +159,7 @@ class TemperatureDB(DataBlock):
             A temperature data block.
         """
         parts = struct.unpack("<Ii", payload)
-        return TemperatureDB(parts[0], parts[1])
+        return cls(parts[0], parts[1])
 
     def __len__(self) -> int:
         """

@@ -50,7 +50,7 @@ def test_parsing_header1(header1: str):
     hdr = BlockHeader.from_hex(header1)
 
     assert len(hdr) == 20
-    assert hdr.has_crypto == False
+    assert hdr.has_crypto is False
     assert hdr.message_type == 2
     assert hdr.message_subtype == 3
     assert hdr.destination == 0
