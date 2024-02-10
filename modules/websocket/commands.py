@@ -21,6 +21,7 @@ class ReplayCommands(StrEnum):
 
     PLAY = "play replay"
     PAUSE = "pause replay"
+    RESUME = "resume replay"
     SPEED = "speed replay"
     STOP = "stop replay"
 

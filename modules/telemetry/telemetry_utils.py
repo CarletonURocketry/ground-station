@@ -226,13 +226,14 @@ class Telemetry(Process):
                     logger.error(e.message)
                 except ReplayPlaybackError as e:
                     logger.error(e.message)
-
-            case WSCommand.REPLAY.value.STOP:
-                self.stop_replay()
             case WSCommand.REPLAY.value.PAUSE:
                 self.set_replay_speed(0.0)
+            case WSCommand.REPLAY.value.RESUME:
+                self.set_replay_speed(self.status.replay.last_played_speed)
             case WSCommand.REPLAY.value.SPEED:
                 self.set_replay_speed(float(parameters[0]))
+            case WSCommand.REPLAY.value.STOP:
+                self.stop_replay()
 
             # Record commands
             case WSCommand.RECORD.value.STOP:
