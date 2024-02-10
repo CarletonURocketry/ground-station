@@ -12,7 +12,7 @@ from multiprocessing import Queue, Process
 from abc import ABC
 from typing import Optional, Any
 import logging
-
+import os.path
 import tornado.gen
 import tornado.httpserver
 import tornado.ioloop
@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 class WebSocketHandler(Process):
-
     """Handles starting the websocket server process."""
 
     def __init__(self, telemetry_json_output: Queue[Any], ws_commands: Queue[Any]):
@@ -46,12 +45,24 @@ class WebSocketHandler(Process):
         """Starts up the websocket server."""
 
         wss = tornado.web.Application(
-            [(r"/websocket", TornadoWSServer)],
-            websocket_ping_interval=10,
-            websocket_ping_timeout=30,
+            [
+                (r"/websocket", TornadoWSServer),
+                (
+                    r"/(.*)",
+                    tornado.web.StaticFileHandler,
+                    {"path": os.path.join(os.getcwd(), "static"), "default_filename": "test.html"},
+                ),
+            ],
+            websocket_ping_interval=5,
+            websocket_ping_timeout=10,
         )
 
-        _ = wss.listen(33845)
+        try:
+            _ = wss.listen(33845)
+            logger.info("Websocket listening on port 33845, accessible at http://localhost:33845")
+        except OSError:
+            logger.info("Failed to bind to port 33845")
+            ws_commands_queue.put("shutdown")
 
         io_loop = tornado.ioloop.IOLoop.current()
         periodic_callback = tornado.ioloop.PeriodicCallback(
@@ -71,7 +82,6 @@ class WebSocketHandler(Process):
 
 
 class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
-
     """The server which handles websocket connections."""
 
     clients: set[TornadoWSServer] = set()
