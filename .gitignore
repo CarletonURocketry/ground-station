@@ -132,8 +132,5 @@ dmypy.json
 # Logging files
 /logs/
 
-# Missions
-/missions/
-
 # Misc
 .idea/
