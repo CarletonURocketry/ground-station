@@ -169,17 +169,19 @@ class ReplayData:
             # Find superblock from file and return it
             superblock_result = find_superblock(mission_path)
             if superblock_result is None:
-                raise ValueError(f"Could not find superblock in {mission_path}")
+                logger.info(f"{filename.name} invalid. Not adding to mission list.")
+                continue
             sb_addr, mission_sb = superblock_result
 
             # Read from superblock
             if type(mission_sb) is not SuperBlock:
-                print(f"{filename.name} invalid. Not adding to mission list.")
+                logger.info(f"{filename.name} invalid. Not adding to mission list.")
                 continue
 
             # Check if flight list is empty
             if len(mission_sb.flights) == 0:
                 print(f"Flight list for {filename.name} is empty")
+                logger.info(f"{filename.name} invalid. Not adding to mission list.")
                 continue
 
             # Read last mission time from flights
