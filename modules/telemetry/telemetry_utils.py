@@ -291,7 +291,8 @@ class Telemetry(Process):
     def play_mission(self, mission_name: str | None) -> None:
         """Plays the desired mission recording."""
 
-        if self.status.mission.recording:
+        # Ensure not doing anything silly
+        if self.status.mission.recording or self.replay is not None:
             raise AlreadyRecordingError
 
         if mission_name is None:
@@ -301,23 +302,31 @@ class Telemetry(Process):
         if mission_file not in self.status.replay.mission_files_list:
             raise MissionNotFoundError(mission_name)
 
-        if self.replay is None:
-            self.status.mission.name = mission_name
+        # Set output data to current mission
+        self.status.mission.name = mission_name
+
+        try:
             self.status.mission.epoch = [
                 mission.epoch for mission in self.status.replay.mission_list if mission.name == mission_name
             ][0]
-            self.status.mission.state = jsp.MissionState.RECORDED
-            self.status.mission.recording = False
+        except IndexError:
+            self.status.mission.epoch = -1
 
-            self.replay = Process(
-                target=TelemetryReplay,
-                args=(self.replay_output, self.replay_input, self.status.replay.speed, mission_file),
-            )
-            self.replay.start()
+        # We are not to record when replaying missions
+        self.status.mission.state = jsp.MissionState.RECORDED
+        self.status.mission.recording = False
+
+        # Replay system
+        self.replay = Process(
+            target=TelemetryReplay,
+            args=(self.replay_output, self.replay_input, self.status.replay.speed, mission_file),
+        )
+        self.replay.start()
 
         self.set_replay_speed(
             speed=self.status.replay.last_played_speed if self.status.replay.last_played_speed > 0 else 1
         )
+
         logger.info(f"REPLAY {mission_name} PLAYING")
 
     def start_recording(self, mission_name: str | None = None) -> None:
@@ -477,6 +486,7 @@ class Telemetry(Process):
             )
         else:
             logger.warning(f"Incoming packet from unauthorized callsign {pkt_hdr.callsign}")
+            return
 
         # Parse through all blocks
         while blocks != "":

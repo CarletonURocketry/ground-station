@@ -200,7 +200,7 @@ def test_status_data_serialization() -> None:
         "replay": {
             "state": jsp.ReplayState.PAUSED.value,
             "speed": 2.5,
-            "mission_list": [{"name": "Devil The Rocket", "length": 3598549, "epoch": 1668434478}],
+            "mission_list": [{"name": "Devil The Rocket", "length": 3598549, "epoch": 1668434478, "valid": True}],
         },
     }
 

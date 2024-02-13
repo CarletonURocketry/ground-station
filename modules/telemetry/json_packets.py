@@ -14,7 +14,7 @@ import modules.telemetry.data_block as db
 from modules.telemetry.block import SDBlockSubtype
 from modules.telemetry.sd_block import SDBlockException
 from modules.telemetry.replay import parse_sd_block_header
-from modules.telemetry.superblock import SuperBlock, find_superblock
+from modules.telemetry.superblock import find_superblock
 
 # Constants
 MISSION_EXTENSION: str = "mission"
@@ -48,14 +48,19 @@ class MissionEntry:
     name: str
     length: int = 0
     epoch: int = 0
+    valid: bool = True
 
     def __iter__(self):
         yield "name", self.name
         yield "length", self.length
         yield "epoch", self.epoch
+        yield "valid", self.valid
 
     def __len__(self) -> int:
         return self.length
+
+    def __bool__(self):
+        return bool(self.valid)
 
 
 # Status packet classes
@@ -165,43 +170,7 @@ class ReplayData:
         self.mission_list = []
         for filename in self.mission_files_list:
             mission_path: Path = missions_dir.joinpath(filename.name)
-
-            # Find superblock from file and return it
-            superblock_result = find_superblock(mission_path)
-            if superblock_result is None:
-                logger.info(f"{filename.name} invalid. Not adding to mission list.")
-                continue
-            sb_addr, mission_sb = superblock_result
-
-            # Read from superblock
-            if type(mission_sb) is not SuperBlock:
-                logger.info(f"{filename.name} invalid. Not adding to mission list.")
-                continue
-
-            # Check if flight list is empty
-            if len(mission_sb.flights) == 0:
-                print(f"Flight list for {filename.name} is empty")
-                logger.info(f"{filename.name} invalid. Not adding to mission list.")
-                continue
-
-            # Read last mission time from flights
-            mission_time = -1
-            try:
-                with open(f"{mission_path}", "rb") as file:
-                    # Reads last telemetry block of each flight to get final mission time
-                    for flight in mission_sb.flights:
-                        _ = file.seek((sb_addr + flight.first_block) * 512)
-                        mission_time += get_last_mission_time(file, flight.num_blocks)
-            except ParsingException:
-                logger.info(f"Unable to parse time from {filename.name}, defaulting to -1")
-
-            # Output mission to mission list
-            mission_entry = MissionEntry(
-                name=filename.stem,
-                length=mission_time,
-                epoch=mission_sb.flights[0].timestamp,
-            )
-            self.mission_list.append(mission_entry)
+            self.mission_list.append(parse_mission_file(mission_path))
 
     def __iter__(self):
         yield "state", self.state
@@ -265,3 +234,39 @@ def get_last_mission_time(file: BufferedReader, num_blocks: int) -> int:
             last_mission_time = block_time if block_time > last_mission_time else last_mission_time
 
     return last_mission_time
+
+
+def parse_mission_file(mission_file: Path) -> MissionEntry:
+    """Obtains mission metadata from file"""
+
+    # Find superblock from file and return it
+    superblock_result = find_superblock(mission_file)
+
+    # Parameters
+    mission_length = 0
+    mission_epoch = -1
+
+    if superblock_result is None:
+        return MissionEntry(mission_file.stem, mission_length, mission_epoch, False)
+
+    sb_addr, mission_sb = superblock_result
+
+    # Check if flight list is empty
+    if mission_sb.flights:
+        mission_epoch = mission_sb.flights[0].timestamp
+    else:
+        logger.warning(f"Flight list for {mission_file.stem} is empty")
+        return MissionEntry(mission_file.stem, mission_length, mission_epoch, False)
+
+    # Read mission length
+    try:
+        with open(f"{mission_file}", "rb") as file:
+            # Reads last telemetry block of each flight to get final mission time
+            for flight in mission_sb.flights:
+                _ = file.seek((sb_addr + flight.first_block) * 512)
+                mission_length += get_last_mission_time(file, flight.num_blocks)
+    except ParsingException:
+        logger.info(f"Unable to parse mission length from {mission_file.stem}, defaulting to -1")
+
+    # Return mission entry
+    return MissionEntry(name=mission_file.stem, length=mission_length, epoch=mission_epoch, valid=True)
