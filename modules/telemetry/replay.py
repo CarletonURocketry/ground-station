@@ -72,11 +72,12 @@ class TelemetryReplay:
                     _ = file.seek((sb_addr + flight.first_block) * 512)
                     self.run(file, flight.num_blocks)
         else:
-            print("V1")
             # Replay raw radio transmission file
-            with open(self.replay_path, "rb") as file:
+            with open(self.replay_path, "r") as file:
                 for line in file:
-                    self.output_replay_data(RadioBlockType.DATA, 0, line)
+                    replay_data = (RadioBlockType.DATA, 0, line)
+                    self.replay_payloads.put(replay_data)
+                    sleep(1)
 
     def run(self, file: BinaryIO, num_blocks: int):
         """Run loop"""
