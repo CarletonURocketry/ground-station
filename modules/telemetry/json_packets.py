@@ -45,22 +45,24 @@ class ReplayState(IntEnum):
 class MissionEntry:
     """Represents an available mission for replay."""
 
-    name: str
+    name: str = ""
     length: int = 0
     epoch: int = 0
-    valid: bool = True
+    filepath: Path = Path.cwd() / MISSIONS_DIR
+    version: int = 0
+    valid: bool = False
 
     def __iter__(self):
         yield "name", self.name
         yield "length", self.length
         yield "epoch", self.epoch
-        yield "valid", self.valid
+        yield "version", self.version
 
     def __len__(self) -> int:
         return self.length
 
     def __bool__(self):
-        return bool(self.valid)
+        return self.valid
 
 
 # Status packet classes
@@ -168,9 +170,8 @@ class ReplayData:
 
         # Check each file to output its misc details
         self.mission_list = []
-        for filename in self.mission_files_list:
-            mission_path: Path = missions_dir.joinpath(filename.name)
-            self.mission_list.append(parse_mission_file(mission_path))
+        for mission_file in self.mission_files_list:
+            self.mission_list.append(parse_mission_file(mission_file))
 
     def __iter__(self):
         yield "state", self.state
@@ -246,8 +247,11 @@ def parse_mission_file(mission_file: Path) -> MissionEntry:
     mission_length = 0
     mission_epoch = -1
 
+    # New format
     if superblock_result is None:
-        return MissionEntry(mission_file.stem, mission_length, mission_epoch, False)
+        return MissionEntry(
+            name=mission_file.stem, length=mission_length, epoch=mission_epoch, filepath=mission_file, version=1
+        )
 
     sb_addr, mission_sb = superblock_result
 
@@ -256,7 +260,6 @@ def parse_mission_file(mission_file: Path) -> MissionEntry:
         mission_epoch = mission_sb.flights[0].timestamp
     else:
         logger.warning(f"Flight list for {mission_file.stem} is empty")
-        return MissionEntry(mission_file.stem, mission_length, mission_epoch, False)
 
     # Read mission length
     try:
@@ -269,4 +272,4 @@ def parse_mission_file(mission_file: Path) -> MissionEntry:
         logger.info(f"Unable to parse mission length from {mission_file.stem}, defaulting to -1")
 
     # Return mission entry
-    return MissionEntry(name=mission_file.stem, length=mission_length, epoch=mission_epoch, valid=True)
+    return MissionEntry(name=mission_file.stem, length=mission_length, epoch=mission_epoch, filepath=mission_file)

@@ -59,9 +59,9 @@ class WebSocketHandler(Process):
 
         try:
             _ = wss.listen(33845)
-            logger.info("Websocket listening on port 33845, accessible at http://localhost:33845")
+            logger.info("HTTP listening on port 33845, accessible at http://localhost:33845")
         except OSError:
-            logger.info("Failed to bind to port 33845")
+            logger.error("Failed to bind to port 33845")
             ws_commands_queue.put("shutdown")
 
         io_loop = tornado.ioloop.IOLoop.current()

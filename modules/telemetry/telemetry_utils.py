@@ -284,15 +284,15 @@ class Telemetry(Process):
             self.replay.terminate()
         self.replay = None
 
-        self.reset_data()
         # Empty replay output
         self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type: ignore
+        self.reset_data()
 
     def play_mission(self, mission_name: str | None) -> None:
         """Plays the desired mission recording."""
 
         # Ensure not doing anything silly
-        if self.status.mission.recording or self.replay is not None:
+        if self.status.mission.recording:
             raise AlreadyRecordingError
 
         if mission_name is None:
@@ -317,11 +317,15 @@ class Telemetry(Process):
         self.status.mission.recording = False
 
         # Replay system
-        self.replay = Process(
-            target=TelemetryReplay,
-            args=(self.replay_output, self.replay_input, self.status.replay.speed, mission_file),
-        )
-        self.replay.start()
+        if self.replay is None:
+            # TEMPORARY VERSION CHECK
+            replay_ver = 1 if self.status.mission.epoch == -1 else 0
+
+            self.replay = Process(
+                target=TelemetryReplay,
+                args=(self.replay_output, self.replay_input, self.status.replay.speed, mission_file, replay_ver),
+            )
+            self.replay.start()
 
         self.set_replay_speed(
             speed=self.status.replay.last_played_speed if self.status.replay.last_played_speed > 0 else 1
