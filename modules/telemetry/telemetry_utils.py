@@ -481,12 +481,12 @@ class Telemetry(Process):
         # Extract the packet header
         data = data.strip()  # Sometimes some extra whitespace
         logger.debug(f"Full data string: {data}")
-        pkt_hdr = PacketHeader.from_hex(data[:24])
+        pkt_hdr = PacketHeader.from_hex(data[:32])
 
-        if len(pkt_hdr) <= 24:  # If this packet nothing more than just the header
+        if len(pkt_hdr) <= 32:  # If this packet nothing more than just the header
             logger.info(f"{pkt_hdr}")
 
-        blocks = data[24:]  # Remove the packet header
+        blocks = data[32:]  # Remove the packet header
 
         if pkt_hdr.callsign in self.config.approved_callsigns:
             logger.info(
@@ -502,9 +502,9 @@ class Telemetry(Process):
             logger.debug(f"Blocks: {blocks}")
             logger.debug(f"Block header: {blocks[:8]}")
             block_header = BlockHeader.from_hex(blocks[:8])
+            logger.debug(block_header)
 
             block_len = len(block_header) * 2  # Convert length in bytes to length in hex symbols
-            logger.debug(block_header)
             block_contents = blocks[8:block_len]
             self.parse_rn2483_payload(block_header.message_type, block_header.message_subtype, block_contents)
 

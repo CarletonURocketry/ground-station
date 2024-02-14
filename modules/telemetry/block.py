@@ -1,7 +1,7 @@
 # Generic block types and their subtypes
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Self
+from typing import Self, Optional
 import struct
 
 
@@ -109,6 +109,7 @@ class PacketHeader:
     """Represents a packet header."""
 
     callsign: str
+    callzone: Optional[str]
     length: int
     version: int
     src_addr: int
@@ -122,12 +123,22 @@ class PacketHeader:
             A newly constructed packet header object.
         """
         header = bin(int(payload, 16))[2:]
+        # Decodes the call sign/call zone from packet header
+        # Rearranges if call zone (W5/VE3LWN) is first
+        amateur_radio = bytes.fromhex(payload[:18]).decode("utf-8").strip('\x00').upper()
+        ham_callsign = amateur_radio[:6]
+        ham_callzone = amateur_radio[6:]
+        if ham_callsign.find("/") != -1:
+            ham_callsign = amateur_radio.split("/")[1]
+            ham_callzone = amateur_radio.split("/")[0]
+
         return cls(
-            callsign=bytes.fromhex(payload[:12]).decode("utf-8").upper(),
-            length=(int(header[47:53], 2) + 1) * 4,
-            version=int(header[53:58], 2),
-            src_addr=int(header[63:67], 2),
-            packet_num=int(header[67:79], 2),
+            callsign=ham_callsign.strip("/"),
+            callzone=ham_callzone.strip("/"),
+            length=(int(header[71:79], 2) + 1) * 4,
+            version=int(header[79:87], 2),
+            src_addr=int(header[87:95], 2),
+            packet_num=struct.unpack(">I", struct.pack("<I", int(header[95:127], 2)))[0],
         )
 
     def __len__(self) -> int:
