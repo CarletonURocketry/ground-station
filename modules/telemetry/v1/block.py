@@ -4,10 +4,8 @@ from enum import IntEnum
 
 class BlockType(IntEnum):
     """The different radio block types for version 1 of the radio packet format."""
-
-    CONTROL = 0x0
-    COMMAND = 0x1
-    DATA = 0x2
+    DATA = 0x0
+    RESERVED = 0xFF
 
 
 class DeviceAddress(IntEnum):
@@ -15,7 +13,8 @@ class DeviceAddress(IntEnum):
 
     GROUND_STATION = 0x0
     ROCKET = 0x1
-    MULTICAST = 0xF
+    RESERVED = 0xFE
+    MULTICAST = 0xFF
 
     def __str__(self):
         match self:
@@ -23,5 +22,7 @@ class DeviceAddress(IntEnum):
                 return "GROUND STATION"
             case DeviceAddress.ROCKET:
                 return "ROCKET"
+            case DeviceAddress.RESERVED:
+                return "RESERVED"
             case DeviceAddress.MULTICAST:
                 return "MULTICAST"
