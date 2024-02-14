@@ -77,7 +77,7 @@ class TelemetryReplay:
                 for line in file:
                     replay_data = (RadioBlockType.DATA, 0, line)
                     self.replay_payloads.put(replay_data)
-                    sleep(1)
+                    #sleep(1)
 
     def run(self, file: BinaryIO, num_blocks: int):
         """Run loop"""
