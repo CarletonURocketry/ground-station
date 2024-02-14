@@ -15,13 +15,12 @@ from multiprocessing import Process, active_children
 from pathlib import Path
 
 from signal import signal, SIGTERM
-from struct import unpack
-from time import time
+from time import time, sleep
 from typing import Any, TypeAlias
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
-from modules.telemetry.block import RadioBlockType, CommandBlockSubtype, ControlBlockSubtype
+from modules.telemetry.block import RadioBlockType, CommandBlockSubtype, ControlBlockSubtype, BlockHeader, PacketHeader
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 from modules.telemetry.faults import run_fault_check
 from modules.telemetry.replay import TelemetryReplay
@@ -32,8 +31,6 @@ from modules.misc.thresholds import load_thresholds, Thresholds
 
 # Types
 JSON: TypeAlias = dict[str, Any]
-BlockHeader: TypeAlias = tuple[int, bool, int, int, int]
-PacketHeader: TypeAlias = tuple[str, int, int, int, int]
 
 # Constants
 ORG: str = "CUInSpace"
@@ -156,6 +153,9 @@ class Telemetry(Process):
 
     def run(self):
         while True:
+            # Sleep for 1 ms
+            sleep(0.001)
+
             while not self.telemetry_ws_commands.empty():
                 # Parse websocket command into an enum
                 commands: list[str] = self.telemetry_ws_commands.get()
@@ -245,13 +245,14 @@ class Telemetry(Process):
                     logger.error(e.message)
                 except ReplayPlaybackError as e:
                     logger.error(e.message)
-
-            case WSCommand.REPLAY.value.STOP:
-                self.stop_replay()
             case WSCommand.REPLAY.value.PAUSE:
                 self.set_replay_speed(0.0)
+            case WSCommand.REPLAY.value.RESUME:
+                self.set_replay_speed(self.status.replay.last_played_speed)
             case WSCommand.REPLAY.value.SPEED:
                 self.set_replay_speed(float(parameters[0]))
+            case WSCommand.REPLAY.value.STOP:
+                self.stop_replay()
 
             # Record commands
             case WSCommand.RECORD.value.STOP:
@@ -488,83 +489,32 @@ class Telemetry(Process):
         # Extract the packet header
         data = data.strip()  # Sometimes some extra whitespace
         logger.debug(f"Full data string: {data}")
-        call_sign, length, version, srs_addr, packet_num = parse_packet_header(data[:24])
-        call_sign = call_sign.upper()  # Uppercase formatting because that's standard
+        pkt_hdr = PacketHeader.from_hex(data[:24])
 
-        if length <= 24:  # If this packet nothing more than just the header
-            logger.info(f"{call_sign, length, version, srs_addr, packet_num}")
+        if len(pkt_hdr) <= 24:  # If this packet nothing more than just the header
+            logger.info(f"{pkt_hdr}")
 
         blocks = data[24:]  # Remove the packet header
 
-        if call_sign in self.config.approved_callsigns:
-            logger.info(f"Incoming packet from {call_sign} ({self.config.approved_callsigns.get(call_sign)})")
+        if pkt_hdr.callsign in self.config.approved_callsigns:
+            logger.info(
+                f"Incoming packet from {pkt_hdr.callsign} ({self.config.approved_callsigns.get(pkt_hdr.callsign)})"
+            )
         else:
-            logger.warning(f"Incoming packet from unauthorized callsign {call_sign}")
+            logger.warning(f"Incoming packet from unauthorized callsign {pkt_hdr.callsign}")
 
         # Parse through all blocks
         while blocks != "":
             # Parse block header
             logger.debug(f"Blocks: {blocks}")
             logger.debug(f"Block header: {blocks[:8]}")
-            block_header = blocks[:8]
-            block_len, _, block_type, block_subtype, _ = parse_block_header(block_header)
+            block_header = BlockHeader.from_hex(blocks[:8])
 
-            block_len = block_len * 2  # Convert length in bytes to length in hex symbols
+            block_len = len(block_header) * 2  # Convert length in bytes to length in hex symbols
             logger.debug(f"Calculated block len in hex: {block_len}")
             block_contents = blocks[8:block_len]
 
-            self.parse_rn2483_payload(block_type, block_subtype, block_contents)
+            self.parse_rn2483_payload(block_header.message_type, block_header.message_subtype, block_contents)
 
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[block_len:]
-
-
-def parse_packet_header(header: str) -> PacketHeader:
-    """
-    Returns the packet header string's informational components in a tuple.
-
-    call_sign: str
-    length: int
-    version: int
-    src_addr: int
-    packet_num: int
-    """
-
-    # Extract call sign in utf-8
-    logger.debug(f"Packet header: {header}")
-    call_sign: str = bytes.fromhex(header[:12]).decode("utf-8")
-
-    # Convert header from hex to binary
-    header = bin(int(header, 16))[2:]
-
-    # Extract values and then convert them to ints
-    length: int = (int(header[47:53], 2) + 1) * 4
-    version: int = int(header[53:58], 2)
-    src_addr: int = int(header[63:67], 2)
-    packet_num: int = int(header[67:79], 2)
-    logger.debug(f"{length:=}, {version:=}, {src_addr:=}, {packet_num:=}")
-
-    return call_sign, length, version, src_addr, packet_num
-
-
-def parse_block_header(header: str) -> BlockHeader:
-    """
-    Parses a block header string into its information components and returns them in a tuple.
-
-    block_len: the length of the data block as an integer
-    crypto_signature: bool
-    message_type: the type of the message as an integer (0: Control, 1: Command, 2: Data)
-    message_subtype: int
-    destination_addr: The destination address of the block (0: Ground Station, 1: Rocket)
-    """
-
-    unpacked_header: int = unpack("<I", bytes.fromhex(header))[0]
-    block_len = ((unpacked_header & 0x1F) + 1) * 4
-    crypto_signature = bool((unpacked_header >> 5) & 0x1)
-    message_type = (unpacked_header >> 6) & 0xF
-    message_subtype = (unpacked_header >> 10) & 0x3F
-    destination_addr = (unpacked_header >> 16) & 0xF
-
-    logger.debug(f"{block_len:=}, {crypto_signature:=}, {message_type:=}, {message_subtype:=}, {destination_addr:=}")
-
-    return block_len, crypto_signature, message_type, message_subtype, destination_addr

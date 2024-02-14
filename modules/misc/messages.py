@@ -5,6 +5,7 @@
 # Imports
 import datetime as dt
 import os
+from time import sleep
 
 # Constants
 ART_FILE: str = os.path.join(os.path.dirname(__file__), "launch.txt")
@@ -37,3 +38,4 @@ def print_cu_rocket(rocket_name: str, version: str) -> None:
     art = load_art()
     art = populate_fields(art, rocket_name, version)
     print(art)
+    sleep(0.1)

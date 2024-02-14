@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+.DS_Store
 *.py[cod]
 *$py.class
 
@@ -130,9 +131,6 @@ dmypy.json
 
 # Logging files
 /logs/
-
-# Missions
-/missions/
 
 # Misc
 .idea/

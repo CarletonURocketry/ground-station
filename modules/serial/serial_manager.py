@@ -60,9 +60,8 @@ class SerialManager(Process):
 
     def run(self):
         while True:
-            while not self.serial_ws_commands.empty():
-                ws_cmd = self.serial_ws_commands.get()
-                self.parse_ws_command(ws_cmd)
+            ws_cmd = self.serial_ws_commands.get()
+            self.parse_ws_command(ws_cmd)
 
     def parse_ws_command(self, ws_cmd: list[str]):
         """Parses the serial websocket commands"""

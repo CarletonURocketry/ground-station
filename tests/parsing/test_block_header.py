@@ -1,61 +1,78 @@
 # Contains test cases for verifying the parsing of block headers.
-__author__ = "Matteo Golin"
 
 # Imports
 import pytest
-from modules.telemetry.telemetry import parse_block_header
-from modules.telemetry.block import RadioBlockType, DataBlockSubtype, ControlBlockSubtype
-from modules.telemetry.block import DeviceAddress
+from modules.telemetry.block import BlockHeader
 
 
 # Fixtures
 @pytest.fixture
-def altitude_header() -> str:
-    """Hex data for an altitude data block header."""
+def header1() -> str:
+    """
+    Data block header with the following attributes:
+    length: 20 bytes
+    cryptographic signature: false
+    message type: 2
+    message sub type: 3
+    destination address: 0
+    """
     return "840C0000"
 
 
 @pytest.fixture
-def signal_report_header() -> str:
-    """Hex data for a signal report control block header."""
+def header2() -> str:
+    """
+    Data block header with the following attributes:
+    length: 8 bytes
+    cryptographic signature: false
+    message type: 0
+    message sub type: 0
+    destination address: 0xF
+    """
     return "01000F20"
 
 
 @pytest.fixture
-def status_header() -> str:
-    """Hex data for a status data block header."""
+def header3() -> str:
+    """
+    Data block header with the following attributes:
+    length: 20 bytes
+    cryptographic signature: false
+    message type: 2
+    message sub type: 1
+    destination address: 0
+    """
     return "84040000"
 
 
-# Tests
-def test_altitude_header(altitude_header: str):
-    """Ensure that parsing an altitude data block header works as expected."""
-    len, sig, msg_type, msg_subtype, destaddr = parse_block_header(altitude_header)
+def test_parsing_header1(header1: str):
+    """Ensure that parsing a block header works as expected."""
+    hdr = BlockHeader.from_hex(header1)
 
-    assert len == 20
-    assert sig == 0
-    assert RadioBlockType(msg_type) == RadioBlockType.DATA
-    assert DataBlockSubtype(msg_subtype) == DataBlockSubtype.ALTITUDE
-    assert DeviceAddress(destaddr) == DeviceAddress.GROUND_STATION
-
-
-def test_signal_report_header(signal_report_header: str):
-    """Ensure that parsing a signal report control block header works as expected."""
-    _, sig, msg_type, msg_subtype, destaddr = parse_block_header(signal_report_header)
-
-    # assert _ == 8  # Not sure about this length
-    assert sig == 0
-    assert RadioBlockType(msg_type) == RadioBlockType.CONTROL
-    assert ControlBlockSubtype(msg_subtype) == ControlBlockSubtype.SIGNAL_REPORT
-    assert DeviceAddress(destaddr) == DeviceAddress.MULTICAST
+    assert len(hdr) == 20
+    assert hdr.has_crypto is False
+    assert hdr.message_type == 2
+    assert hdr.message_subtype == 3
+    assert hdr.destination == 0
 
 
-def test_test_header(status_header: str):
-    """Ensure that parsing a status data block header works as expected."""
-    len, sig, msg_type, msg_subtype, destaddr = parse_block_header(status_header)
+def test_parsing_header2(header2: str):
+    """Ensure that parsing a block header works as expected."""
+    hdr = BlockHeader.from_hex(header2)
 
-    assert len == 20
-    assert sig == 0
-    assert RadioBlockType(msg_type) == RadioBlockType.DATA
-    assert DataBlockSubtype(msg_subtype) == DataBlockSubtype.STATUS
-    assert DeviceAddress(destaddr) == DeviceAddress.GROUND_STATION
+    assert len(hdr) == 8
+    assert hdr.has_crypto == 0
+    assert hdr.message_type == 0
+    assert hdr.message_subtype == 0
+    assert hdr.destination == 0xF
+
+
+def test_parsing_header3(header3: str):
+    """Ensure that parsing a block header works as expected."""
+    hdr = BlockHeader.from_hex(header3)
+
+    assert len(hdr) == 20
+    assert hdr.has_crypto == 0
+    assert hdr.message_type == 2
+    assert hdr.message_subtype == 1
+    assert hdr.destination == 0
