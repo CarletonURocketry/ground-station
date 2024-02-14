@@ -8,6 +8,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Self
+import logging
 
 # Constants (note that trailing +1 is for inclusivity in range() object)
 POWER_RANGE: tuple[int, int] = (-3, 16 + 1)
@@ -20,6 +21,17 @@ HF_RANGE: tuple[int, int] = (863_000_000, 870_000_000 + 1)
 
 # Types
 JSON = dict[str, Any]
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+
+class ConfigError(Exception):
+    """Raised if a configuration file has an issue."""
+
+    def __init__(self, message: str = "Configuration Error"):
+        self.message: str = message
+        super().__init__(self.message)
 
 
 class ModulationModes(StrEnum):
@@ -40,7 +52,6 @@ class CodingRates(StrEnum):
 
 @dataclass
 class RadioParameters:
-
     """
     Represents a collection of parameters for the RN2483 radio settings.
 
@@ -52,7 +63,7 @@ class RadioParameters:
     coding_rate: The ratio of actual data to error-correcting data.
     bandwidth: The bandwidth allocated to the transmission.
     preamble_len: The length of the transmission used to synchronize the receiver.
-    cyclic_redundancy: Enable or disable cyclic redudancy check used to detect errors in the received signal.
+    cyclic_redundancy: Enable or disable cyclic redundancy check used to detect errors in the received signal.
     iqi: Invert IQ function enabled/disabled.
     sync_word: The radio sync word.
     """
@@ -120,11 +131,34 @@ class RadioParameters:
 
 
 @dataclass
-class Config:
+class Faults:
+    """
+    Represents a collection of parameters for fault thresholds.
+    """
 
+    enabled: bool = True
+    filename: str = "launch_canada.json"
+
+    @classmethod
+    def from_json(cls, data: JSON) -> Self:
+        """Builds a new Faults object from JSON data found in a config file."""
+
+        return cls(
+            enabled=data.get("enabled", True),
+            filename=data.get("filename", "launch_canada.json"),
+        )
+
+    def __iter__(self):
+        yield "enabled", self.enabled
+        yield "filename", self.filename
+
+
+@dataclass
+class Config:
     """Contains settings for the ground station process."""
 
     telemetry_buffer_size: int = 20
+    faults: Faults = field(default_factory=Faults)
     radio_parameters: RadioParameters = field(default_factory=RadioParameters)
     approved_callsigns: dict[str, str] = field(default_factory=dict)
 
@@ -138,6 +172,7 @@ class Config:
 
         return cls(
             telemetry_buffer_size=data.get("telemetry_buffer_size", int(20)),
+            faults=Faults.from_json(data.get("faults", dict())),  # type:ignore
             radio_parameters=RadioParameters.from_json(data.get("radio_params", dict())),  # type:ignore
             approved_callsigns=data.get("approved_callsigns", dict()),  # type:ignore
         )

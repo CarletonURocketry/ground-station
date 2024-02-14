@@ -22,17 +22,19 @@ import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
 from modules.telemetry.block import RadioBlockType, CommandBlockSubtype, ControlBlockSubtype, BlockHeader, PacketHeader
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
+from modules.telemetry.faults import run_fault_check
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.sd_block import TelemetryDataBlock, LoggingMetadataSpacerBlock
 from modules.telemetry.superblock import SuperBlock, Flight
-from modules.misc.config import Config
+from modules.misc.config import Config, ConfigError
+from modules.misc.thresholds import load_thresholds, Thresholds
 
 # Types
 JSON: TypeAlias = dict[str, Any]
 
 # Constants
 ORG: str = "CUInSpace"
-VERSION: str = "0.5.0-DEV"
+VERSION: str = "0.5.1-DEV"
 MISSION_EXTENSION: str = "mission"
 FILE_CREATION_ATTEMPT_LIMIT: int = 50
 
@@ -108,6 +110,12 @@ class Telemetry(Process):
     ):
         super().__init__()
         self.config = config
+        self.thresholds: Thresholds | None = None
+        try:
+            if self.config.faults.enabled:
+                self.thresholds = load_thresholds(self.config.faults.filename)
+        except ConfigError as err:
+            logger.error(err.message)
 
         self.radio_payloads: Queue[str] = radio_payloads
         self.telemetry_json_output: Queue[JSON] = telemetry_json_output
@@ -118,6 +126,7 @@ class Telemetry(Process):
 
         # Telemetry Data holds the last few copies of received data blocks stored under the subtype name as a key.
         self.status: jsp.StatusData = jsp.StatusData()
+        self.faults: dict[str, dict[str, bool | list[str]]] = {}
         self.telemetry: dict[str, list[dict[str, str]]] = {}
 
         # Mission System
@@ -185,12 +194,19 @@ class Telemetry(Process):
 
     def generate_websocket_response(self) -> JSON:
         """Returns the dictionary containing the JSON data for the websocket client."""
-        return {"version": VERSION, "org": ORG, "status": dict(self.status), "telemetry": self.telemetry}
+        return {
+            "version": VERSION,
+            "org": ORG,
+            "status": dict(self.status),
+            "telemetry": self.telemetry,
+            "faults": self.faults,
+        }
 
     def reset_data(self) -> None:
         """Resets all live data on the telemetry backend to a default state."""
         self.status = jsp.StatusData()
         self.telemetry = {}
+        self.faults = {}
 
     def parse_serial_status(self, command: str, data: str) -> None:
         """Parses the serial managers status output"""
@@ -458,6 +474,12 @@ class Telemetry(Process):
                         self.telemetry[block.subtype.name.lower()].append(dict(block))  # type:ignore
                         if len(self.telemetry[block.subtype.name.lower()]) > self.config.telemetry_buffer_size:
                             self.telemetry[block.subtype.name.lower()].pop(0)
+
+                    # Fault Thresholds
+                    if self.config.faults.enabled and self.thresholds is not None:
+                        self.faults[block.subtype.name.lower()] = run_fault_check(
+                            block, self.thresholds, self.telemetry
+                        )
             case _:
                 logger.warning("Unknown block type.")
 
