@@ -3,6 +3,8 @@ __author__ = "Matteo Golin"
 
 # Imports
 import json
+import os
+from pathlib import Path
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Self
@@ -143,7 +145,7 @@ class Config:
 
 def load_config(filepath: str) -> Config:
     """Returns a Config object created from a configuration JSON file."""
-
+    filepath = os.path.join(Path.cwd(), filepath) 
     with open(filepath, "r") as file:
         data = json.load(file)
 
