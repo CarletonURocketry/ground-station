@@ -172,7 +172,8 @@ class Telemetry(Process):
                 case jsp.MissionState.RECORDED:
                     while not self.replay_output.empty():
                         block_type, block_subtype, block_data = self.replay_output.get()
-                        #self.parse_rn2483_payload(block_type, block_subtype, block_data)
+                        logger.debug((block_type, block_subtype))
+                        # self.parse_rn2483_payload(block_type, block_subtype, block_data)
                         self.parse_rn2483_transmission(block_data)
                         self.update_websocket()
                 case _:

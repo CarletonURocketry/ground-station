@@ -4,6 +4,7 @@ from enum import IntEnum
 
 class BlockType(IntEnum):
     """The different radio block types for version 1 of the radio packet format."""
+
     DATA = 0x0
     RESERVED = 0xFF
 

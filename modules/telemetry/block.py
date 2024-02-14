@@ -123,9 +123,10 @@ class PacketHeader:
             A newly constructed packet header object.
         """
         header = bin(int(payload, 16))[2:]
+
         # Decodes the call sign/call zone from packet header
         # Rearranges if call zone (W5/VE3LWN) is first
-        amateur_radio = bytes.fromhex(payload[:18]).decode("utf-8").strip('\x00').upper()
+        amateur_radio = bytes.fromhex(payload[:18]).decode("utf-8").strip("\x00").upper()
         ham_callsign = amateur_radio[:6]
         ham_callzone = amateur_radio[6:]
         if ham_callsign.find("/") != -1:
