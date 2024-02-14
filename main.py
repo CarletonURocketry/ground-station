@@ -112,18 +112,17 @@ def main():
 
     while True:
         # Messages sent to main process for handling
-
-        # WS Commands
-        while not ws_commands.empty():
-            try:
-                parse_ws_command(ws_commands.get(), serial_ws_commands, telemetry_ws_commands)
-            except ShutdownException:
-                logger.info("Ground Station shutting down...")
-                serial.terminate()
-                telemetry.terminate()
-                websocket.terminate()
-                logger.info("Ground Station shutdown.")
-                exit(0)
+        try:
+            # WS Commands
+            command = ws_commands.get()
+            parse_ws_command(command, serial_ws_commands, telemetry_ws_commands)
+        except ShutdownException:
+            logger.info("Ground Station shutting down...")
+            serial.terminate()
+            telemetry.terminate()
+            websocket.terminate()
+            logger.info("Ground Station shutdown.")
+            exit(0)
 
 
 def parse_ws_command(ws_cmd: str, serial_commands: Queue[list[str]], telemetry_commands: Queue[list[str]]) -> None:
