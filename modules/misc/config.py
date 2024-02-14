@@ -145,7 +145,7 @@ class Config:
 
 def load_config(filepath: str) -> Config:
     """Returns a Config object created from a configuration JSON file."""
-    filepath = os.path.join(Path.cwd(), filepath) 
+    filepath = os.path.join(Path.cwd(), filepath)
     with open(filepath, "r") as file:
         data = json.load(file)
 
