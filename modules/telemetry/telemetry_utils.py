@@ -15,7 +15,7 @@ from multiprocessing import Process, active_children
 from pathlib import Path
 
 from signal import signal, SIGTERM
-from time import time
+from time import time, sleep
 from typing import Any, TypeAlias
 
 import modules.telemetry.json_packets as jsp
@@ -144,6 +144,9 @@ class Telemetry(Process):
 
     def run(self):
         while True:
+            # Sleep for 1 ms
+            sleep(0.001)
+
             while not self.telemetry_ws_commands.empty():
                 # Parse websocket command into an enum
                 commands: list[str] = self.telemetry_ws_commands.get()
