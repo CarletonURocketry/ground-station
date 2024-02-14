@@ -38,12 +38,12 @@ def parse_sd_block_header(header_bytes: bytes) -> tuple[int, int, int]:
 
 class TelemetryReplay:
     def __init__(
-            self,
-            replay_payloads: Queue[tuple[int, int, str]],
-            replay_input: Queue[str],
-            replay_speed: int,
-            replay_path: Path,
-            replay_version: int
+        self,
+        replay_payloads: Queue[tuple[int, int, str]],
+        replay_input: Queue[str],
+        replay_speed: int,
+        replay_path: Path,
+        replay_version: int,
     ):
         super().__init__()
 
@@ -77,7 +77,7 @@ class TelemetryReplay:
                 for line in file:
                     replay_data = (RadioBlockType.DATA, 0, line)
                     self.replay_payloads.put(replay_data)
-                    #sleep(1)
+                    # sleep(1)
 
     def run(self, file: BinaryIO, num_blocks: int):
         """Run loop"""
