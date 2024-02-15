@@ -1,7 +1,7 @@
 # Generic block types and their subtypes
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Self, Optional
+from typing import Self
 import struct
 
 
@@ -102,52 +102,6 @@ class DiagnosticDataBlockSubtype(IntEnum):
     LOG_MESSAGE = 0x0
     OUTGOING_RADIO_PACKET = 0x1
     INCOMING_RADIO_PACKET = 0x2
-
-
-@dataclass
-class PacketHeader:
-    """Represents a packet header."""
-
-    callsign: str
-    callzone: Optional[str]
-    length: int
-    version: int
-    src_addr: int
-    packet_num: int
-
-    @classmethod
-    def from_hex(cls, payload: str) -> Self:
-        """
-        Constructs a new packet header from a hex payload.
-        Returns:
-            A newly constructed packet header object.
-        """
-        header = bin(int(payload, 16))[2:]
-
-        # Decodes the call sign/call zone from packet header
-        # Rearranges if call zone (W5/VE3LWN) is first
-        amateur_radio = bytes.fromhex(payload[:18]).decode("utf-8").strip("\x00").upper()
-        ham_callsign = amateur_radio[:6]
-        ham_callzone = amateur_radio[6:]
-        if ham_callsign.find("/") != -1:
-            ham_callsign = amateur_radio.split("/")[1]
-            ham_callzone = amateur_radio.split("/")[0]
-
-        return cls(
-            callsign=ham_callsign.strip("/"),
-            callzone=ham_callzone.strip("/"),
-            length=(int(header[71:79], 2) + 1) * 4,
-            version=int(header[79:87], 2),
-            src_addr=int(header[87:95], 2),
-            packet_num=struct.unpack(">I", struct.pack("<I", int(header[95:127], 2)))[0],
-        )
-
-    def __len__(self) -> int:
-        """
-        Returns:
-            The length of the packet associated with this packet header in bytes.
-        """
-        return self.length
 
 
 @dataclass

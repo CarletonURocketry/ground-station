@@ -20,21 +20,24 @@ from typing import Any, TypeAlias
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
-from modules.telemetry.block import RadioBlockType, CommandBlockSubtype, ControlBlockSubtype, BlockHeader, PacketHeader
+from modules.telemetry.block import RadioBlockType, CommandBlockSubtype, ControlBlockSubtype
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.sd_block import TelemetryDataBlock, LoggingMetadataSpacerBlock
 from modules.telemetry.superblock import SuperBlock, Flight
 from modules.misc.config import Config
+import modules.telemetry.v1.data_block as v1db
+from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress
 
 # Types
 JSON: TypeAlias = dict[str, Any]
 
 # Constants
 ORG: str = "CUInSpace"
-VERSION: str = "0.5.0-DEV"
+VERSION: str = "0.5.1-DEV"
 MISSION_EXTENSION: str = "mission"
 FILE_CREATION_ATTEMPT_LIMIT: int = 50
+SUPPORTED_ENCODING_VERSION: int = 1
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -171,8 +174,8 @@ class Telemetry(Process):
             match self.status.mission.state:
                 case jsp.MissionState.RECORDED:
                     while not self.replay_output.empty():
-                        block_type, block_subtype, block_data = self.replay_output.get()
-                        logger.debug((block_type, block_subtype))
+                        block_type, block_subtype, block_data = self.replay_output.get()  # type: ignore
+                        # logger.debug(("IGNORE", block_type, block_subtype))
                         # self.parse_rn2483_payload(block_type, block_subtype, block_data)
                         self.parse_rn2483_transmission(block_data)
                         self.update_websocket()
@@ -476,6 +479,41 @@ class Telemetry(Process):
             case _:
                 logger.warning("Unknown block type.")
 
+    def parse_radio_block(self, version: int, block_type: int, block_subtype: int, contents: str) -> None:
+        """
+        Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
+        """
+
+        # Working with hex strings until this point.
+        # Hex/Bytes Demarcation point
+        logger.debug(f"Parsing v{version} type {block_type} subtype {block_subtype} contents: {contents}")
+        block_contents: bytes = bytes.fromhex(contents)
+
+        try:
+            block = v1db.DataBlock.parse(v1db.DataBlockSubtype(block_subtype), block_contents)
+            logger.info(str(block))
+
+            # Increase the last mission time
+            if block.mission_time > self.status.mission.last_mission_time:
+                self.status.mission.last_mission_time = block.mission_time
+
+            # logger.debug(f"Data block parsed with mission time {block.mission_time}")
+
+            self.telemetry[v1db.DataBlockSubtype(block_subtype).name.lower()] = [dict(block)]  # type: ignore
+        except NotImplementedError:
+            logger.warning(f"Block parsing for type {block_type}, with subtype {block_subtype} not implemented!")
+
+        # if block.subtype == DataBlockSubtype.STATUS:
+        #    self.status.rocket = jsp.RocketData.from_data_block(block)
+        # else:
+        #    # Stores the last n packets into the telemetry data buffer
+        #    if self.telemetry.get(block.subtype.name.lower()) is None:
+        #        self.telemetry[block.subtype.name.lower()] = [dict(block)]
+        #    else:
+        #        self.telemetry[block.subtype.name.lower()].append(dict(block))
+        #        if len(self.telemetry[block.subtype.name.lower()]) > self.config.telemetry_buffer_size:
+        #            self.telemetry[block.subtype.name.lower()].pop(0)
+
     def parse_rn2483_transmission(self, data: str):
         """Parses RN2483 Packets and extracts our telemetry payload blocks"""
 
@@ -489,12 +527,18 @@ class Telemetry(Process):
 
         blocks = data[32:]  # Remove the packet header
 
+        # Ensure packet is from an approved call sign
         if pkt_hdr.callsign in self.config.approved_callsigns:
             logger.info(
                 f"Incoming packet from {pkt_hdr.callsign} ({self.config.approved_callsigns.get(pkt_hdr.callsign)})"
             )
         else:
-            logger.warning(f"Incoming packet from unauthorized callsign {pkt_hdr.callsign}")
+            logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
+            return
+
+        # Ensure packet version compatibility
+        if pkt_hdr.version < SUPPORTED_ENCODING_VERSION:
+            logger.error(f"This version of ground station does not support encoding below {SUPPORTED_ENCODING_VERSION}")
             return
 
         # Parse through all blocks
@@ -503,11 +547,19 @@ class Telemetry(Process):
             logger.debug(f"Blocks: {blocks}")
             logger.debug(f"Block header: {blocks[:8]}")
             block_header = BlockHeader.from_hex(blocks[:8])
-            logger.debug(block_header)
 
+            # Select block contents
             block_len = len(block_header) * 2  # Convert length in bytes to length in hex symbols
             block_contents = blocks[8:block_len]
-            self.parse_rn2483_payload(block_header.message_type, block_header.message_subtype, block_contents)
+            logger.debug(f"Block info: {block_header}")
+
+            # Check if message is destined for ground station for processing
+            if block_header.destination in [DeviceAddress.GROUND_STATION, DeviceAddress.MULTICAST]:
+                self.parse_radio_block(
+                    pkt_hdr.version, block_header.message_type, block_header.message_subtype, block_contents
+                )
+            else:
+                logger.warning("Invalid destination address")
 
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[block_len:]

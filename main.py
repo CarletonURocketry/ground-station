@@ -20,7 +20,7 @@ from modules.websocket.websocket import WebSocketHandler
 from modules.misc.cli import parser
 
 JSON: TypeAlias = dict[str, Any]
-VERSION: str = "0.5.0-DEV"
+VERSION: str = "0.5.1-DEV"
 STR_TO_LOGGING_MODE: dict[str, int] = {
     "debug": logging.DEBUG,
     "info": logging.INFO,

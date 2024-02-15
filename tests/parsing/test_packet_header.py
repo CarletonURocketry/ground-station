@@ -2,7 +2,7 @@
 __author__ = "Matteo Golin"
 
 import pytest
-from modules.telemetry.block import PacketHeader
+from modules.telemetry.v1.block import PacketHeader
 
 
 @pytest.fixture
