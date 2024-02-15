@@ -20,7 +20,6 @@ from typing import Any, TypeAlias
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
-from modules.telemetry.block import RadioBlockType, CommandBlockSubtype, ControlBlockSubtype
 from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.sd_block import TelemetryDataBlock, LoggingMetadataSpacerBlock
@@ -430,54 +429,34 @@ class Telemetry(Process):
         # Hex/Bytes Demarcation point
         logger.debug(f"Block contents: {contents}")
         block_contents: bytes = bytes.fromhex(contents)
-        try:
-            radio_block = RadioBlockType(block_type)
-        except Exception:
-            logger.info(f"Received invalid radio block type of {block_type}.")
-            return
-        match radio_block:
-            case RadioBlockType.CONTROL:
-                # CONTROL BLOCK DETECTED
-                logger.info(f"Control block received of subtype {ControlBlockSubtype(block_subtype)}")
-                # GOT SIGNAL REPORT (ONLY CONTROL BLOCK BEING USED CURRENTLY)
-                self.rn2483_radio_input.put("radio get snr")
-                # self.rn2483_radio_input.put("radio get rssi")
-                return
-            case RadioBlockType.COMMAND:
-                # COMMAND BLOCK DETECTED
-                logger.info(f"Command block received of subtype {CommandBlockSubtype(block_subtype)}")
-                self.rn2483_radio_input.put("radio get snr")
-                return
-            case RadioBlockType.DATA:
-                # DATA BLOCK DETECTED
-                logger.debug(f"Content length: {len(block_contents)}")
-                block = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
-                logger.debug(f"Data block parsed with mission time {block.mission_time}")
 
-                # Increase the last mission time
-                if block.mission_time > self.status.mission.last_mission_time:
-                    self.status.mission.last_mission_time = block.mission_time
+        # DATA BLOCK DETECTED
+        logger.debug(f"Content length: {len(block_contents)}")
+        block = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
+        logger.debug(f"Data block parsed with mission time {block.mission_time}")
 
-                # Write data to file when recording
-                logger.debug(f"Recording: {self.status.mission.recording}")
-                if self.status.mission.recording:
-                    self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
-                    if len(self.mission_recording_buffer) >= 512:
-                        buffer_length = len(self.mission_recording_buffer)
-                        self.recording_write_bytes(buffer_length - (buffer_length % 512))
+        # Increase the last mission time
+        if block.mission_time > self.status.mission.last_mission_time:
+            self.status.mission.last_mission_time = block.mission_time
 
-                if block.subtype == DataBlockSubtype.STATUS:
-                    self.status.rocket = jsp.RocketData.from_data_block(block)  # type:ignore
-                else:
-                    # Stores the last n packets into the telemetry data buffer
-                    if self.telemetry.get(block.subtype.name.lower()) is None:
-                        self.telemetry[block.subtype.name.lower()] = [dict(block)]  # type:ignore
-                    else:
-                        self.telemetry[block.subtype.name.lower()].append(dict(block))  # type:ignore
-                        if len(self.telemetry[block.subtype.name.lower()]) > self.config.telemetry_buffer_size:
-                            self.telemetry[block.subtype.name.lower()].pop(0)
-            case _:
-                logger.warning("Unknown block type.")
+        # Write data to file when recording
+        logger.debug(f"Recording: {self.status.mission.recording}")
+        if self.status.mission.recording:
+            self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
+            if len(self.mission_recording_buffer) >= 512:
+                buffer_length = len(self.mission_recording_buffer)
+                self.recording_write_bytes(buffer_length - (buffer_length % 512))
+
+        if block.subtype == DataBlockSubtype.STATUS:
+            self.status.rocket = jsp.RocketData.from_data_block(block)  # type:ignore
+        else:
+            # Stores the last n packets into the telemetry data buffer
+            if self.telemetry.get(block.subtype.name.lower()) is None:
+                self.telemetry[block.subtype.name.lower()] = [dict(block)]  # type:ignore
+            else:
+                self.telemetry[block.subtype.name.lower()].append(dict(block))  # type:ignore
+                if len(self.telemetry[block.subtype.name.lower()]) > self.config.telemetry_buffer_size:
+                    self.telemetry[block.subtype.name.lower()].pop(0)
 
     def parse_radio_block(self, version: int, block_type: int, block_subtype: int, contents: str) -> None:
         """
@@ -511,7 +490,8 @@ class Telemetry(Process):
 
         except NotImplementedError:
             logger.warning(f"Block parsing for type {block_type}, with subtype {block_subtype} not implemented!")
-
+        except ValueError:
+            logger.error("Invalid data block subtype")
         # if block.subtype == DataBlockSubtype.STATUS:
         #    self.status.rocket = jsp.RocketData.from_data_block(block)
         # else:
@@ -561,6 +541,11 @@ class Telemetry(Process):
             block_len = len(block_header) * 2  # Convert length in bytes to length in hex symbols
             block_contents = blocks[8:block_len]
             logger.debug(f"Block info: {block_header}")
+
+            if not block_header.valid:
+                logger.error("Block header contains invalid block type values, skipping block")
+                blocks = blocks[block_len:]
+                continue
 
             # Check if message is destined for ground station for processing
             if block_header.destination in [DeviceAddress.GROUND_STATION, DeviceAddress.MULTICAST]:

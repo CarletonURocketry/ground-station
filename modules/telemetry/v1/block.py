@@ -5,6 +5,8 @@ from typing import Self, Optional
 import struct
 import logging
 
+from modules.telemetry.v1.data_block import DataBlockSubtype
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -90,6 +92,7 @@ class BlockHeader:
     message_type: int
     message_subtype: int
     destination: int
+    valid: bool = True
 
     @classmethod
     def from_hex(cls, payload: str) -> Self:
@@ -100,11 +103,26 @@ class BlockHeader:
         """
 
         unpacked_header = struct.unpack("<BBBB", bytes.fromhex(payload))
+
+        block_length = int(((unpacked_header[0]) + 1) * 4)
+        block_type = int(unpacked_header[1])
+        block_subtype = int(unpacked_header[2])
+        block_destination = int(unpacked_header[3])
+        block_valid = True
+
+        try:
+            _ = BlockType(block_type)
+            _ = DataBlockSubtype(block_subtype)
+            _ = DeviceAddress(block_destination)
+        except ValueError:
+            block_valid = False
+
         return cls(
-            length=int(((unpacked_header[0]) + 1) * 4),
-            message_type=int(unpacked_header[1]),
-            message_subtype=int(unpacked_header[2]),
-            destination=int(unpacked_header[3]),
+            length=block_length,
+            message_type=block_type,
+            message_subtype=block_subtype,
+            destination=block_destination,
+            valid=block_valid
         )
 
     def __len__(self) -> int:

@@ -203,7 +203,7 @@ class TemperatureDB(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "temperature", {"celsius": self.temperature}
+        yield "temperature", {"millidegrees": self.temperature, "celsius": round(self.temperature/1000, 2)}
 
 
 class DebugMessageDB(DataBlock):
