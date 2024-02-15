@@ -499,7 +499,16 @@ class Telemetry(Process):
 
             # logger.debug(f"Data block parsed with mission time {block.mission_time}")
 
-            self.telemetry[v1db.DataBlockSubtype(block_subtype).name.lower()] = [dict(block)]  # type: ignore
+            block_name = v1db.DataBlockSubtype(block_subtype).name.lower()
+
+            # Stores the last n packets into the telemetry data buffer
+            if self.telemetry.get(block_name) is None:
+                self.telemetry[block_name] = [dict(block)]  # type:ignore
+            else:
+                self.telemetry[block_name].append(dict(block))  # type:ignore
+                if len(self.telemetry[block_name]) > self.config.telemetry_buffer_size:
+                    self.telemetry[block_name].pop(0)
+
         except NotImplementedError:
             logger.warning(f"Block parsing for type {block_type}, with subtype {block_subtype} not implemented!")
 
