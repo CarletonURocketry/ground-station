@@ -20,15 +20,15 @@ from typing import Any, TypeAlias
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
-from modules.telemetry.data_block import DataBlock, DataBlockSubtype
 from modules.telemetry.replay import TelemetryReplay
-from modules.telemetry.sd_block import TelemetryDataBlock, LoggingMetadataSpacerBlock
+from modules.telemetry.sd_block import LoggingMetadataSpacerBlock
 from modules.telemetry.superblock import SuperBlock, Flight
 from modules.misc.config import Config
 import modules.telemetry.v1.data_block as v1db
 from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress
 
 # Types
+
 JSON: TypeAlias = dict[str, Any]
 
 # Constants
@@ -420,44 +420,6 @@ class Telemetry(Process):
             spacer_block = LoggingMetadataSpacerBlock(512 - (num_bytes % 512))
             _ = self.mission_recording_file.write(spacer_block.to_bytes())
 
-    def parse_rn2483_payload(self, block_type: int, block_subtype: int, contents: str) -> None:
-        """
-        Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
-        """
-
-        # Working with hex strings until this point.
-        # Hex/Bytes Demarcation point
-        logger.debug(f"Block contents: {contents}")
-        block_contents: bytes = bytes.fromhex(contents)
-
-        # DATA BLOCK DETECTED
-        logger.debug(f"Content length: {len(block_contents)}")
-        block = DataBlock.parse(DataBlockSubtype(block_subtype), block_contents)
-        logger.debug(f"Data block parsed with mission time {block.mission_time}")
-
-        # Increase the last mission time
-        if block.mission_time > self.status.mission.last_mission_time:
-            self.status.mission.last_mission_time = block.mission_time
-
-        # Write data to file when recording
-        logger.debug(f"Recording: {self.status.mission.recording}")
-        if self.status.mission.recording:
-            self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
-            if len(self.mission_recording_buffer) >= 512:
-                buffer_length = len(self.mission_recording_buffer)
-                self.recording_write_bytes(buffer_length - (buffer_length % 512))
-
-        if block.subtype == DataBlockSubtype.STATUS:
-            self.status.rocket = jsp.RocketData.from_data_block(block)  # type:ignore
-        else:
-            # Stores the last n packets into the telemetry data buffer
-            if self.telemetry.get(block.subtype.name.lower()) is None:
-                self.telemetry[block.subtype.name.lower()] = [dict(block)]  # type:ignore
-            else:
-                self.telemetry[block.subtype.name.lower()].append(dict(block))  # type:ignore
-                if len(self.telemetry[block.subtype.name.lower()]) > self.config.telemetry_buffer_size:
-                    self.telemetry[block.subtype.name.lower()].pop(0)
-
     def parse_radio_block(self, version: int, block_type: int, block_subtype: int, contents: str) -> None:
         """
         Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
@@ -470,16 +432,18 @@ class Telemetry(Process):
 
         try:
             block = v1db.DataBlock.parse(v1db.DataBlockSubtype(block_subtype), block_contents)
+            # logger.debug(f"Data block parsed with mission time {block.mission_time}")
             logger.info(str(block))
 
             # Increase the last mission time
             if block.mission_time > self.status.mission.last_mission_time:
                 self.status.mission.last_mission_time = block.mission_time
 
-            # logger.debug(f"Data block parsed with mission time {block.mission_time}")
+            # if block == DataBlockSubtype.STATUS:
+            #     self.status.rocket = jsp.RocketData.from_data_block(block)
+            #     return
 
             block_name = v1db.DataBlockSubtype(block_subtype).name.lower()
-
             # Stores the last n packets into the telemetry data buffer
             if self.telemetry.get(block_name) is None:
                 self.telemetry[block_name] = [dict(block)]  # type:ignore
@@ -488,20 +452,19 @@ class Telemetry(Process):
                 if len(self.telemetry[block_name]) > self.config.telemetry_buffer_size:
                     self.telemetry[block_name].pop(0)
 
+            # TODO UPDATE FOR V1
+            # Write data to file when recording
+            # logger.debug(f"Recording: {self.status.mission.recording}")
+            # if self.status.mission.recording:
+            #    self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
+            #    if len(self.mission_recording_buffer) >= 512:
+            #        buffer_length = len(self.mission_recording_buffer)
+            #        self.recording_write_bytes(buffer_length - (buffer_length % 512))
+
         except NotImplementedError:
             logger.warning(f"Block parsing for type {block_type}, with subtype {block_subtype} not implemented!")
         except ValueError:
             logger.error("Invalid data block subtype")
-        # if block.subtype == DataBlockSubtype.STATUS:
-        #    self.status.rocket = jsp.RocketData.from_data_block(block)
-        # else:
-        #    # Stores the last n packets into the telemetry data buffer
-        #    if self.telemetry.get(block.subtype.name.lower()) is None:
-        #        self.telemetry[block.subtype.name.lower()] = [dict(block)]
-        #    else:
-        #        self.telemetry[block.subtype.name.lower()].append(dict(block))
-        #        if len(self.telemetry[block.subtype.name.lower()]) > self.config.telemetry_buffer_size:
-        #            self.telemetry[block.subtype.name.lower()].pop(0)
 
     def parse_rn2483_transmission(self, data: str):
         """Parses RN2483 Packets and extracts our telemetry payload blocks"""
@@ -542,6 +505,7 @@ class Telemetry(Process):
             block_contents = blocks[8:block_len]
             logger.debug(f"Block info: {block_header}")
 
+            # Block Header Validity
             if not block_header.valid:
                 logger.error("Block header contains invalid block type values, skipping block")
                 blocks = blocks[block_len:]

@@ -122,7 +122,7 @@ class BlockHeader:
             message_type=block_type,
             message_subtype=block_subtype,
             destination=block_destination,
-            valid=block_valid
+            valid=block_valid,
         )
 
     def __len__(self) -> int:
