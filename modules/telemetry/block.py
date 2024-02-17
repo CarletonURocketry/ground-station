@@ -105,40 +105,6 @@ class DiagnosticDataBlockSubtype(IntEnum):
 
 
 @dataclass
-class PacketHeader:
-    """Represents a packet header."""
-
-    callsign: str
-    length: int
-    version: int
-    src_addr: int
-    packet_num: int
-
-    @classmethod
-    def from_hex(cls, payload: str) -> Self:
-        """
-        Constructs a new packet header from a hex payload.
-        Returns:
-            A newly constructed packet header object.
-        """
-        header = bin(int(payload, 16))[2:]
-        return cls(
-            callsign=bytes.fromhex(payload[:12]).decode("utf-8").upper(),
-            length=(int(header[47:53], 2) + 1) * 4,
-            version=int(header[53:58], 2),
-            src_addr=int(header[63:67], 2),
-            packet_num=int(header[67:79], 2),
-        )
-
-    def __len__(self) -> int:
-        """
-        Returns:
-            The length of the packet associated with this packet header in bytes.
-        """
-        return self.length
-
-
-@dataclass
 class BlockHeader:
     """Represents a header for a telemetry block."""
 

@@ -8,7 +8,7 @@ from modules.telemetry.block import BlockException, BlockUnknownException
 
 
 class DataBlockSubtype(IntEnum):
-    """Lists the sub types of data blocks that can be sent in Version 1 of the packet encoding format."""
+    """Lists the subtypes of data blocks that can be sent in Version 1 of the packet encoding format."""
 
     DEBUG_MESSAGE = 0x00
     ALTITUDE = 0x01
@@ -18,6 +18,28 @@ class DataBlockSubtype(IntEnum):
     ANGULAR_VELOCITY = 0x05
     GNSS_LOCATION = 0x06
     GNSS_METADATA = 0x07
+    RESERVED = 0x3F
+
+    def __str__(self):
+        match self:
+            case DataBlockSubtype.DEBUG_MESSAGE:
+                return "DEBUG MESSAGE"
+            case DataBlockSubtype.ALTITUDE:
+                return "ANGULAR VELOCITY"
+            case DataBlockSubtype.TEMPERATURE:
+                return "TEMPERATURE"
+            case DataBlockSubtype.PRESSURE:
+                return "PRESSURE"
+            case DataBlockSubtype.ACCELERATION:
+                return "ACCELERATION"
+            case DataBlockSubtype.ANGULAR_VELOCITY:
+                return "ANGULAR VELOCITY"
+            case DataBlockSubtype.GNSS_LOCATION:
+                return "GNSS LOCATION"
+            case DataBlockSubtype.GNSS_METADATA:
+                return "GNSS METADATA"
+            case _:
+                return "RESERVED"
 
 
 class DataBlockException(BlockException):
@@ -143,6 +165,13 @@ class PressureDB(DataBlock):
         """
         return 8
 
+    def __str__(self):
+        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, pressure: {self.pressure} Pa"
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "pressure", {"pascals": self.pressure}
+
 
 class TemperatureDB(DataBlock):
     """Represents a temperature data block."""
@@ -168,6 +197,13 @@ class TemperatureDB(DataBlock):
             The length of a temperature data block in bytes, not including the block header.
         """
         return 8
+
+    def __str__(self):
+        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, temperature: {self.temperature} mC"
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "temperature", {"millidegrees": self.temperature, "celsius": round(self.temperature / 1000, 2)}
 
 
 class DebugMessageDB(DataBlock):

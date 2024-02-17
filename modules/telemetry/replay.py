@@ -43,6 +43,7 @@ class TelemetryReplay:
         replay_input: Queue[str],
         replay_speed: int,
         replay_path: Path,
+        replay_version: int,
     ):
         super().__init__()
 
@@ -59,16 +60,24 @@ class TelemetryReplay:
         self.speed = replay_speed
         self.block_count = 0
 
-        # Replay superblock
-        superblock_result = find_superblock(self.replay_path)
-        if superblock_result is None:
-            raise ValueError(f"Could not find superblock in {self.replay_path}")
-        sb_addr, mission_sb = superblock_result
+        if replay_version == 0:
+            # Replay superblock
+            superblock_result = find_superblock(self.replay_path)
+            if superblock_result is None:
+                raise ValueError(f"Could not find superblock in {self.replay_path}")
+            sb_addr, mission_sb = superblock_result
 
-        with open(self.replay_path, "rb") as file:
-            for flight in mission_sb.flights:
-                _ = file.seek((sb_addr + flight.first_block) * 512)
-                self.run(file, flight.num_blocks)
+            with open(self.replay_path, "rb") as file:
+                for flight in mission_sb.flights:
+                    _ = file.seek((sb_addr + flight.first_block) * 512)
+                    self.run(file, flight.num_blocks)
+        else:
+            # Replay raw radio transmission file
+            with open(self.replay_path, "r") as file:
+                for line in file:
+                    replay_data = (RadioBlockType.DATA, 0, line)
+                    self.replay_payloads.put(replay_data)
+                    # sleep(1)
 
     def run(self, file: BinaryIO, num_blocks: int):
         """Run loop"""
