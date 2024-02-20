@@ -17,6 +17,7 @@ from pathlib import Path
 from signal import signal, SIGTERM
 from time import time, sleep
 from typing import Any, TypeAlias
+from types import FrameType
 
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
@@ -49,7 +50,7 @@ def mission_path(mission_name: str, missions_dir: Path, file_suffix: int = 0) ->
     return missions_dir.joinpath(f"{mission_name}{'' if file_suffix == 0 else f'_{file_suffix}'}.{MISSION_EXTENSION}")
 
 
-def shutdown_sequence() -> None:
+def shutdown_sequence(signum: int, stack_frame: FrameType) -> None:
     for child in active_children():
         child.terminate()
     exit(0)
