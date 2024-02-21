@@ -1,4 +1,9 @@
-"""Wrapper around RN2483 radio module."""
+"""
+Wrapper around RN2483 radio module.
+
+See the command data sheet for more information:
+https://ww1.microchip.com/downloads/en/DeviceDoc/RN2483-LoRa-Technology-Module-Command-Reference-User-Guide-DS40001784G.pdf
+"""
 
 from typing import Optional
 from serial import Serial, EIGHTBITS, PARITY_NONE, SerialException
@@ -55,7 +60,6 @@ def radio_write(conn: Serial, data: str) -> None:
         conn: A serial connection to the RN2483 radio.
         data: The full command or data to be sent to the RN2483 radio.
     """
-    # Must include carriage return for valid commands (see DS40001784B pg XX)
     data = str(data) + "\r\n"
     conn.flush()  # Flush the serial port
     conn.write(data.encode("utf-8"))  # Encode command_string as bytes and then transmit over serial port
