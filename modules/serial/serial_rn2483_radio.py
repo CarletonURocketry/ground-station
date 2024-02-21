@@ -88,8 +88,7 @@ def radio_write_ok(conn: Serial, data: str) -> bool:
     return wait_for_ok(conn)
 
 
-# Radio process
-class SerialRN2483Radio(Process):
+class RN2483Radio(Process):
     def __init__(
         self,
         serial_status: Queue[str],
