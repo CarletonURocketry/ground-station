@@ -11,7 +11,7 @@ from queue import Queue
 from multiprocessing import Process, active_children
 from serial import Serial, SerialException
 from modules.misc.config import Config
-from modules.serial.serial_rn2483_radio import RN2483Radio
+from modules.serial.serial_rn2483_radio import RN2483RadioProcess
 from modules.serial.serial_rn2483_emulator import SerialRN2483Emulator
 from signal import signal, SIGTERM
 
@@ -91,7 +91,7 @@ class SerialManager(Process):
                 )
             else:
                 self.rn2483_radio = Process(
-                    target=RN2483Radio,
+                    target=RN2483RadioProcess,
                     args=(
                         self.serial_status,
                         self.radio_signal_report,
