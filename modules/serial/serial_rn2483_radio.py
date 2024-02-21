@@ -126,25 +126,43 @@ class RN2483Radio(Process):
         """
         Runs the primary logic of the RN2483 radio.
         """
+
+        # Set up radio
         while True:
             try:
                 self.setup()
                 logger.debug("Radio initialization worked.")
                 self.set_rx_mode()
                 logger.debug("Rx mode set.")
-
-                while True:
-                    while not self.rn2483_radio_input.empty():
-                        self.write_to_rn2483_radio(self.rn2483_radio_input.get())
-                        self.set_rx_mode()
-                        # TODO: LIMIT TO ONLY AFTER THE ENTIRE BATCH IS DONE.
-                        # TODO: AFTER SENDING A COMMAND TO RADIO RECALL SET_RX_MODE()
-                    self.check_for_transmissions()
+                break
             except SerialException:
                 self.serial_status.put("rn2483_connected False")
                 self.serial_status.put("rn2483_port null")
                 logger.info("RN2483 Radio: Error communicating with serial device.")
                 time.sleep(3)
+
+        # Get transmissions
+        while True:
+            while not self.rn2483_radio_input.empty():
+
+                command_string = self.rn2483_radio_input.get()
+
+                # Commands that respond with success message
+                if command_string not in ["sys reset", "radio get snr", "radio get rssi"]:
+                    radio_write_ok(self.serial, command_string)
+
+                # Signal to noise ratio request
+                elif command_string == "radio get snr":
+                    radio_write(self.serial, command_string)
+                    self.radio_signal_report.put(f"snr {self.serial.readline()}")
+
+                # All other requests
+                radio_write(self.serial, command_string)
+
+            self.set_rx_mode()
+            # TODO: LIMIT TO ONLY AFTER THE ENTIRE BATCH IS DONE.
+            # TODO: AFTER SENDING A COMMAND TO RADIO RECALL SET_RX_MODE()
+            self.check_for_transmissions()
 
     def init_gpio(self) -> None:
         """Set all GPIO pins to input mode, thereby putting them in a state of high impedance."""
@@ -202,25 +220,6 @@ class RN2483Radio(Process):
                 logger.debug(f"{parameter} successfully set to {value}.")
             else:
                 logger.error(f"{parameter} could not be set to {value}.")
-
-    def write_to_rn2483_radio(self, command_string: str) -> Optional[bool]:
-        """
-        Writes data to the RN2483 radio via UART.
-        :param command_string: The full command to be sent to the RN2483 radio
-        """
-
-        data = str(command_string)
-        data += "\r\n"  # Must include carriage return for valid commands (see DS40001784B pg XX)
-        self.serial.flush()  # Flush the serial port
-
-        self.serial.write(data.encode("utf-8"))  # Encode command_string as bytes and then transmit over serial port
-        # Wait for response on the serial line. Return if 'ok' received
-        # Sys reset gives us info about the board which we want to process differently from other commands
-        if command_string not in ["sys reset", "radio get snr", "radio get rssi"]:
-            # TODO: clean this up with read functions
-            return wait_for_ok(self.serial)
-        elif command_string == "radio get snr":
-            self.radio_signal_report.put(f"snr {str(self.serial.readline())}")
 
     def set_rx_mode(self) -> bool:
         """
