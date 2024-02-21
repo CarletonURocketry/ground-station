@@ -14,13 +14,14 @@ from modules.misc.config import Config
 from modules.serial.serial_rn2483_radio import SerialRN2483Radio
 from modules.serial.serial_rn2483_emulator import SerialRN2483Emulator
 from signal import signal, SIGTERM
+from types import FrameType
 
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
-def shutdown_sequence():
+def shutdown_sequence(signum: int, stack_frame: FrameType):
     for child in active_children():
         child.terminate()
     exit(0)
