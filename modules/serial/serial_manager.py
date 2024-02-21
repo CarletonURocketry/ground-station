@@ -82,7 +82,14 @@ class SerialManager(Process):
 
         if radio_ws_cmd == "connect" and self.rn2483_radio is None:
             proposed_serial_port = ws_cmd[1]
-            if proposed_serial_port != "test":
+
+            if proposed_serial_port == "test":
+                self.rn2483_radio = Process(
+                    target=SerialRN2483Emulator,
+                    args=(self.serial_status, self.radio_signal_report, self.rn2483_radio_payloads),
+                    daemon=True,
+                )
+            else:
                 self.rn2483_radio = Process(
                     target=SerialRN2483Radio,
                     args=(
@@ -95,15 +102,11 @@ class SerialManager(Process):
                     ),
                     daemon=True,
                 )
-            else:
-                self.rn2483_radio = Process(
-                    target=SerialRN2483Emulator,
-                    args=(self.serial_status, self.radio_signal_report, self.rn2483_radio_payloads),
-                    daemon=True,
-                )
             self.rn2483_radio.start()
+
         elif radio_ws_cmd == "connect":
             logger.info("Already connected.")
+
         elif radio_ws_cmd == "disconnect" and self.rn2483_radio is not None:
             logger.info("Serial: RN2483 Radio terminating")
             self.serial_status.put("rn2483_connected False")
