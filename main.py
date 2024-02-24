@@ -15,7 +15,7 @@ from modules.misc.config import load_config
 
 from modules.misc.messages import print_cu_rocket
 from modules.serial.serial_manager import SerialManager
-from modules.telemetry.telemetry_utils import Telemetry
+from modules.telemetry.telemetry import Telemetry
 from modules.websocket.websocket import WebSocketHandler
 from modules.misc.cli import parser
 
