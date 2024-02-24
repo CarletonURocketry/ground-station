@@ -546,13 +546,13 @@ class Telemetry(Process):
         return True
 
     def update(self, parsed_data: ParsedBlockData) -> None:
-        """Updates the telemetry buffer with the latest block data."""
+        """Updates the telemetry latest mission time and buffer with the latest block data."""
         if parsed_data.mission_time > self.status.mission.last_mission_time:
             self.status.mission.last_mission_time = parsed_data.mission_time
 
         if self.telemetry.get(parsed_data.block_name) is None:
-            self.telemetry[parsed_data.block_name] = [parsed_data.block]
+            self.telemetry[parsed_data.block_name] = [dict(parsed_data.block)]
         else:
-            self.telemetry[parsed_data.block_name].append(parsed_data.block)
+            self.telemetry[parsed_data.block_name].append(dict(parsed_data.block))
             if len(self.telemetry[parsed_data.block_name]) > self.config.telemetry_buffer_size:
                 self.telemetry[parsed_data.block_name].pop(0)
