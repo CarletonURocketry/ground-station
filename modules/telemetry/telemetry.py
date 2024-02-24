@@ -82,9 +82,7 @@ class ParsedBlockData:
     block: v1db.DataBlock
 
 
-def parse_radio_block(
-    version: int, last_mission_time: int, block_type: int, block_subtype: int, contents: str
-) -> ParsedBlockData:
+def parse_radio_block(version: int, block_type: int, block_subtype: int, contents: str) -> ParsedBlockData:
     """
     Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
     """
@@ -107,45 +105,10 @@ def parse_radio_block(
 
         return ParsedBlockData(block.mission_time, block_name, block)
 
-        # TODO UPDATE FOR V1
-        # Write data to file when recording
-        # logger.debug(f"Recording: {self.status.mission.recording}")
-        # if self.status.mission.recording:
-        #    self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
-        #    if len(self.mission_recording_buffer) >= 512:
-        #        buffer_length = len(self.mission_recording_buffer)
-        #        self.recording_write_bytes(buffer_length - (buffer_length % 512))
-
     except NotImplementedError:
         logger.warning(f"Block parsing for type {block_type}, with subtype {block_subtype} not implemented!")
     except ValueError:
         logger.error("Invalid data block subtype")
-
-
-# Errors
-# class MissionNotFoundError(FileNotFoundError):
-#     """Raised when the desired mission is not found."""
-
-#     def __init__(self, mission_name: str):
-#         self.mission_name = mission_name
-#         self.message = f"The mission recording '{mission_name}' does not exist."
-#         super().__init__(self.message)
-
-
-# class AlreadyRecordingError(Exception):
-#     """Raised if the telemetry process is already recording when instructed to record."""
-
-#     def __init__(self, message: str = "Recording is already in progress."):
-#         self.message: str = message
-#         super().__init__(self.message)
-
-
-# class ReplayPlaybackError(Exception):
-#     """Raised if the telemetry process replay system is active when instructed to record or recording."""
-
-#     def __init__(self, message: str = "Not recording when replay system is active."):
-#         self.message: str = message
-#         super().__init__(self.message)
 
 
 # Main class
@@ -502,15 +465,6 @@ class Telemetry(Process):
                 if len(self.telemetry[block_name]) > self.config.telemetry_buffer_size:
                     self.telemetry[block_name].pop(0)
 
-            # TODO UPDATE FOR V1
-            # Write data to file when recording
-            # logger.debug(f"Recording: {self.status.mission.recording}")
-            # if self.status.mission.recording:
-            #    self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
-            #    if len(self.mission_recording_buffer) >= 512:
-            #        buffer_length = len(self.mission_recording_buffer)
-            #        self.recording_write_bytes(buffer_length - (buffer_length % 512))
-
         except NotImplementedError:
             logger.warning(f"Block parsing for type {block_type}, with subtype {block_subtype} not implemented!")
         except ValueError:
@@ -529,21 +483,8 @@ class Telemetry(Process):
 
         blocks = data[32:]  # Remove the packet header
 
-        if not self.is_valid_packet_header(pkt_hdr): return
-
-        # # Ensure packet is from an approved call sign
-        # if pkt_hdr.callsign in self.config.approved_callsigns:
-        #     logger.info(
-        #         f"Incoming packet from {pkt_hdr.callsign} ({self.config.approved_callsigns.get(pkt_hdr.callsign)})"
-        #     )
-        # else:
-        #     logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
-        #     return
-
-        # Ensure packet version compatibility
-        # if pkt_hdr.version < SUPPORTED_ENCODING_VERSION:
-        #     logger.error(f"This version of ground station does not support encoding below {SUPPORTED_ENCODING_VERSION}")
-        #     return
+        if not self.is_valid_packet_header(pkt_hdr):
+            return
 
         # Parse through all blocks
         while blocks != "":
@@ -565,11 +506,20 @@ class Telemetry(Process):
 
             # Check if message is destined for ground station for processing
             if block_header.destination in [DeviceAddress.GROUND_STATION, DeviceAddress.MULTICAST]:
-                cur_block: ParsedBlockData = parse_radio_block(  # type: ignore
+                cur_block: ParsedBlockData = parse_radio_block(
                     pkt_hdr.version, block_header.message_type, block_header.message_subtype, block_contents
                 )
 
-                self.update(cur_block)  # type: ignore
+                self.update(cur_block)
+
+                # TODO UPDATE FOR V1
+                # Write data to file when recording
+                # if self.status.mission.recording:
+                #     logger.debug(f"Recording: {self.status.mission.recording}")
+                #     self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
+                #     if len(self.mission_recording_buffer) >= 512:
+                #         buffer_length = len(self.mission_recording_buffer)
+                #         self.recording_write_bytes(buffer_length - (buffer_length % 512))
             else:
                 logger.warning("Invalid destination address")
 
@@ -597,8 +547,8 @@ class Telemetry(Process):
 
     def update(self, parsed_data: ParsedBlockData) -> None:
         """Updates the telemetry buffer with the latest block data."""
-        if parsed_data.mission_time > last_mission_time:
-            last_mission_time = parsed_data.mission_time
+        if parsed_data.mission_time > self.status.mission.last_mission_time:
+            self.status.mission.last_mission_time = parsed_data.mission_time
 
         if self.telemetry.get(parsed_data.block_name) is None:
             self.telemetry[parsed_data.block_name] = [parsed_data.block]
