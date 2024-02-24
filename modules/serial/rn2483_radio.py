@@ -11,6 +11,7 @@ from modules.misc.config import RadioParameters
 
 RN2483_BAUD: int = 57600  # The baud rate of the RN2483 radio
 NUM_GPIO: int = 14  # Number of GPIO pins on the RN2483 module
+READ_TIMEOUT: float = 1.0  # Time out for serial read operations
 
 # Radio parameters
 MODULATION_MODES: list[str] = ["lora", "fsk"]
@@ -49,7 +50,6 @@ def wait_for_ok(conn: Serial) -> bool:
         conn: Serial connection to an RN2483 radio.
     """
     rv = str(conn.readline())  # Read from serial line
-    conn.reset_output_buffer()
     return ("ok" in rv) or ("4294967245" in rv)
 
 
@@ -89,6 +89,7 @@ class RN2483Radio:
             stopbits=1,
             rtscts=False,
         )
+        self.serial.timeout = READ_TIMEOUT  # Read timeout of 10 seconds
 
     def init_gpio(self) -> None:
         """Set all GPIO pins to input mode, thereby putting them in a state of high impedance."""
@@ -150,8 +151,8 @@ class RN2483Radio:
         """
         self.reset()
         self.configure(parameters)
-        self.init_gpio()
-        self.serial.reset_output_buffer()
+        # For some reason, initializing GPIO causes issues. We don't need them anyway
+        # self.init_gpio()
 
     def _set_rx_mode(self) -> bool:
         """
@@ -182,11 +183,9 @@ class RN2483Radio:
 
         # Enter receive mode
         if not self._set_rx_mode():
-            print("BAD RX")
             return None
 
         message = str(self.serial.readline())[10:-5]  # Trim off reception indicator
-        print("mess", message)
 
         # Check if message is in hex
         try:
