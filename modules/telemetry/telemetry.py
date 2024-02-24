@@ -99,22 +99,11 @@ def parse_radio_block(
         # logger.debug(f"Data block parsed with mission time {block.mission_time}")
         logger.info(str(block))
 
-        # Increase the last mission time
-        # if block.mission_time > last_mission_time:
-        #     last_mission_time = block.mission_time
-
         # if block == DataBlockSubtype.STATUS:
         #     self.status.rocket = jsp.RocketData.from_data_block(block)
         #     return
 
         block_name = v1db.DataBlockSubtype(block_subtype).name.lower()
-        # Stores the last n packets into the telemetry data buffer
-        # if self.telemetry.get(block_name) is None:
-        #     self.telemetry[block_name] = [dict(block)]  # type:ignore
-        # else:
-        #     self.telemetry[block_name].append(dict(block))  # type:ignore
-        #     if len(self.telemetry[block_name]) > self.config.telemetry_buffer_size:
-        #         self.telemetry[block_name].pop(0)
 
         return ParsedBlockData(block.mission_time, block_name, block)
 
@@ -197,11 +186,11 @@ class Telemetry(Process):
 
         # Replay System
         self.replay = None
-        self.replay_input: Queue[str] = mp.Queue()  # type:ignore
-        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type:ignore
+        self.replay_input: Queue[str] = mp.Queue()
+        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()
 
         # Handle program closing to ensure no orphan processes
-        signal(SIGTERM, shutdown_sequence)  # type:ignore
+        signal(SIGTERM, shutdown_sequence)
 
         # Start Telemetry
         self.update_websocket()
@@ -352,7 +341,7 @@ class Telemetry(Process):
         self.replay = None
 
         # Empty replay output
-        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type: ignore
+        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()
         self.reset_data()
 
     def play_mission(self, mission_name: str | None) -> None:
@@ -507,9 +496,9 @@ class Telemetry(Process):
             block_name = v1db.DataBlockSubtype(block_subtype).name.lower()
             # Stores the last n packets into the telemetry data buffer
             if self.telemetry.get(block_name) is None:
-                self.telemetry[block_name] = [dict(block)]  # type:ignore
+                self.telemetry[block_name] = [dict(block)]
             else:
-                self.telemetry[block_name].append(dict(block))  # type:ignore
+                self.telemetry[block_name].append(dict(block))
                 if len(self.telemetry[block_name]) > self.config.telemetry_buffer_size:
                     self.telemetry[block_name].pop(0)
 
@@ -574,11 +563,11 @@ class Telemetry(Process):
 
             # Check if message is destined for ground station for processing
             if block_header.destination in [DeviceAddress.GROUND_STATION, DeviceAddress.MULTICAST]:
-                cur_block = parse_radio_block(
+                cur_block: ParsedBlockData = parse_radio_block(  # type: ignore
                     pkt_hdr.version, block_header.message_type, block_header.message_subtype, block_contents
                 )
 
-                self.update(cur_block)
+                self.update(cur_block)  # type: ignore
             else:
                 logger.warning("Invalid destination address")
 

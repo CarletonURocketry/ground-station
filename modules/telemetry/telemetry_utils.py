@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 def mission_path(mission_name: str, missions_dir: Path, file_suffix: int = 0) -> Path:
     """Returns the path to the mission file with the matching mission name."""
 
