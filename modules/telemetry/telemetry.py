@@ -529,19 +529,21 @@ class Telemetry(Process):
 
         blocks = data[32:]  # Remove the packet header
 
-        # Ensure packet is from an approved call sign
-        if pkt_hdr.callsign in self.config.approved_callsigns:
-            logger.info(
-                f"Incoming packet from {pkt_hdr.callsign} ({self.config.approved_callsigns.get(pkt_hdr.callsign)})"
-            )
-        else:
-            logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
-            return
+        if not self.is_valid_packet_header(pkt_hdr): return
+
+        # # Ensure packet is from an approved call sign
+        # if pkt_hdr.callsign in self.config.approved_callsigns:
+        #     logger.info(
+        #         f"Incoming packet from {pkt_hdr.callsign} ({self.config.approved_callsigns.get(pkt_hdr.callsign)})"
+        #     )
+        # else:
+        #     logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
+        #     return
 
         # Ensure packet version compatibility
-        if pkt_hdr.version < SUPPORTED_ENCODING_VERSION:
-            logger.error(f"This version of ground station does not support encoding below {SUPPORTED_ENCODING_VERSION}")
-            return
+        # if pkt_hdr.version < SUPPORTED_ENCODING_VERSION:
+        #     logger.error(f"This version of ground station does not support encoding below {SUPPORTED_ENCODING_VERSION}")
+        #     return
 
         # Parse through all blocks
         while blocks != "":
@@ -573,6 +575,25 @@ class Telemetry(Process):
 
             # Remove the data we processed from the whole set, and move onto the next data block
             blocks = blocks[block_len:]
+
+    def is_valid_packet_header(self, pkt_hdr: PacketHeader) -> bool:
+        """Validates the packet header"""
+
+        # Ensure packet is from an approved call sign
+        if pkt_hdr.callsign in self.config.approved_callsigns:
+            logger.info(
+                f"Incoming packet from {pkt_hdr.callsign} ({self.config.approved_callsigns.get(pkt_hdr.callsign)})"
+            )
+        else:
+            logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
+            return False
+
+        # Ensure packet version compatibility
+        if pkt_hdr.version < SUPPORTED_ENCODING_VERSION:
+            logger.error(f"This version of ground station does not support encoding below {SUPPORTED_ENCODING_VERSION}")
+            return False
+
+        return True
 
     def update(self, parsed_data: ParsedBlockData) -> None:
         """Updates the telemetry buffer with the latest block data."""
