@@ -70,4 +70,5 @@ class RN2483RadioProcess(Process):
             # Put serial message in data queue for telemetry
             message = self.radio.receive()
             if message is not None:
+                logger.info(message)
                 self.rn2483_radio_payloads.put(message)

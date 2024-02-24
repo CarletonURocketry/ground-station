@@ -49,6 +49,7 @@ def wait_for_ok(conn: Serial) -> bool:
         conn: Serial connection to an RN2483 radio.
     """
     rv = str(conn.readline())  # Read from serial line
+    conn.reset_output_buffer()
     return ("ok" in rv) or ("4294967245" in rv)
 
 
@@ -148,8 +149,9 @@ class RN2483Radio:
             SerialException: When a radio parameter could not be set.
         """
         self.reset()
-        self.init_gpio()
         self.configure(parameters)
+        self.init_gpio()
+        self.serial.reset_output_buffer()
 
     def _set_rx_mode(self) -> bool:
         """
@@ -162,7 +164,13 @@ class RN2483Radio:
             return False
         if not radio_write_ok(self.serial, "mac pause"):  # This command must be passed before any reception can occur
             return False
-        return radio_write_ok(self.serial, "radio rx 0")  # Command radio to go into continuous reception mode
+
+        # Command radio to go into continuous reception mode
+        radio_write(self.serial, "radio rx 0")
+        result = str(self.serial.readline())
+        if "busy" in result or "ok" in result:
+            return True
+        return False
 
     def receive(self) -> Optional[str]:
         """
@@ -174,12 +182,18 @@ class RN2483Radio:
 
         # Enter receive mode
         if not self._set_rx_mode():
+            print("BAD RX")
             return None
 
-        message = str(self.serial.readline())
-        if message == "b''":
+        message = str(self.serial.readline())[10:-5]  # Trim off reception indicator
+        print("mess", message)
+
+        # Check if message is in hex
+        try:
+            int(message, 16)
+            return message
+        except ValueError:
             return None
-        return message[10:-5]  # Trim unnecessary elements of the message
 
     def signal_report(self) -> int:
         """
