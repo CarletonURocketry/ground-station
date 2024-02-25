@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def rn2483_radio_process(
     serial_status: Queue[str],
-    radio_signal_report: Queue[str],
+    radio_signal_report: Queue[int],
     rn2483_radio_input: Queue[str],
     rn2483_radio_payloads: Queue[str],
     serial_port: str,
@@ -43,7 +43,7 @@ def rn2483_radio_process(
 
             command_string = rn2483_radio_input.get()
             if command_string == "radio get snr":
-                radio_signal_report.put(str(radio.signal_report()))  # TODO: change string to integer
+                radio_signal_report.put(radio.signal_report())
             else:
                 logger.error(f"Radio command '{command_string}' is not implemented.")
 

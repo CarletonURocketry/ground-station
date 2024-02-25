@@ -61,7 +61,7 @@ class SerialManager:
         self,
         serial_status: Queue[str],
         serial_ws_commands: Queue[list[str]],
-        radio_signal_report: Queue[str],
+        radio_signal_report: Queue[int],
         rn2483_radio_input: Queue[str],
         rn2483_radio_payloads: Queue[str],
         config: Config,
@@ -70,7 +70,7 @@ class SerialManager:
         self.serial_ports: list[str] = []
         self.serial_ws_commands: Queue[list[str]] = serial_ws_commands
 
-        self.radio_signal_report: Queue[str] = radio_signal_report
+        self.radio_signal_report: Queue[int] = radio_signal_report
 
         self.rn2483_radio_input: Queue[str] = rn2483_radio_input
         self.rn2483_radio_payloads: Queue[str] = rn2483_radio_payloads
