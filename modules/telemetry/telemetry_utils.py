@@ -63,7 +63,8 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
     # Working with hex strings until this point.
     # Hex/Bytes Demarcation point
     logger.debug(
-        f"Parsing v{pkt_version} type {block_header.message_type} subtype {block_header.message_subtype} contents: {hex_block_contents}"
+        f"Parsing v{pkt_version} type {block_header.message_type} subtype {block_header.message_subtype} contents: \
+            {hex_block_contents}"
     )
     block_bytes: bytes = bytes.fromhex(hex_block_contents)
 
@@ -84,7 +85,8 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
 
     except NotImplementedError:
         logger.warning(
-            f"Block parsing for type {block_header.message_type}, with subtype {block_header.message_subtype} not implemented!"
+            f"Block parsing for type {block_header.message_type}, with subtype {block_header.message_subtype} not \
+                implemented!"
         )
     except ValueError:
         logger.error("Invalid data block subtype")

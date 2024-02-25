@@ -5,7 +5,6 @@
 # Authors:
 # Thomas Selwyn (Devil)
 # Matteo Golin (linguini1)
-from dataclasses import dataclass
 from io import BufferedWriter
 import logging
 import math
