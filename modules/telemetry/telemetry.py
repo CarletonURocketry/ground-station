@@ -33,7 +33,6 @@ from modules.telemetry.telemetry_utils import (
 from modules.telemetry.telemetry_errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
 
 # Types
-
 JSON: TypeAlias = dict[str, Any]
 
 # Constants
@@ -47,6 +46,7 @@ SUPPORTED_ENCODING_VERSION: int = 1
 logger = logging.getLogger(__name__)
 
 
+# Signal handler
 def shutdown_sequence() -> None:
     for child in active_children():
         child.terminate()
@@ -378,10 +378,12 @@ class Telemetry(Process):
 
     def process_transmission(self, data: str) -> None:
         """Processes the incoming radio transmission data."""
-        # Parse the transmission
+
+        # Parse the transmission, is result is not null, update telemetry data
         parsed_transmission = parse_rn2483_transmission(data, self.config)
-        for block in parsed_transmission.blocks:
-            self.update(block)
+        if parsed_transmission and parsed_transmission.blocks:
+            for block in parsed_transmission.blocks:
+                self.update(block)
 
             # TODO UPDATE FOR V1
             # Write data to file when recording
@@ -398,8 +400,8 @@ class Telemetry(Process):
             self.status.mission.last_mission_time = parsed_data.block_contents.mission_time
 
         if self.telemetry.get(parsed_data.block_name) is None:
-            self.telemetry[parsed_data.block_name] = [dict(parsed_data.block_contents)]
+            self.telemetry[parsed_data.block_name] = [dict(parsed_data.block_contents)]  # type:ignore
         else:
-            self.telemetry[parsed_data.block_name].append(dict(parsed_data.block_contents))
+            self.telemetry[parsed_data.block_name].append(dict(parsed_data.block_contents))  # type:ignore
             if len(self.telemetry[parsed_data.block_name]) > self.config.telemetry_buffer_size:
                 self.telemetry[parsed_data.block_name].pop(0)

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import logging
 
 
@@ -55,7 +55,7 @@ class ParsedTransmission:
     blocks: List[ParsedBlock]
 
 
-def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_contents: str) -> ParsedBlock:
+def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_contents: str) -> Optional[ParsedBlock]:
     """
     Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
     """
@@ -80,7 +80,6 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
         #     self.status.rocket = jsp.RocketData.from_data_block(block)
         #     return
 
-        # return ParsedBlock(block.mission_time, block_name, block_header, block)
         return ParsedBlock(block_name, block_header, block_contents)
 
     except NotImplementedError:
@@ -92,8 +91,11 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
         logger.error("Invalid data block subtype")
 
 
-def parse_rn2483_transmission(data: str, config: Config) -> ParsedTransmission:
-    """Parses RN2483 Packets and extracts our telemetry payload blocks"""
+def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTransmission]:
+    """
+    Parses RN2483 Packets and extracts our telemetry payload blocks, returns parsed transmissionobject if packet
+    is valid.
+    """
     # List of parsed blocks
     parsed_blocks: list[ParsedBlock] = []
 
@@ -130,9 +132,9 @@ def parse_rn2483_transmission(data: str, config: Config) -> ParsedTransmission:
 
         # Check if message is destined for ground station for processing
         if block_header.destination in [DeviceAddress.GROUND_STATION, DeviceAddress.MULTICAST]:
-            parsed_blocks.append(
-                parse_radio_block(pkt_hdr.version, block_header, block_contents)
-            )  # Append parsed block to list
+            cur_block = parse_radio_block(pkt_hdr.version, block_header, block_contents)
+            if cur_block:
+                parsed_blocks.append(cur_block)  # Append parsed block to list
         else:
             logger.warning("Invalid destination address")
 
