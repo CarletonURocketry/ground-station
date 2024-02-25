@@ -11,10 +11,11 @@ from queue import Queue
 from re import sub
 import logging
 from typing import TypeAlias, Any
-from modules.misc.config import load_config
+from modules.misc.config import RadioParameters, load_config
 
 from modules.misc.messages import print_cu_rocket
 from modules.serial.serial_manager import SerialManager
+from modules.serial.serial_rn2483_radio import rn2483_radio_process
 from modules.telemetry.telemetry_utils import Telemetry
 from modules.websocket.websocket import WebSocketHandler
 from modules.misc.cli import parser

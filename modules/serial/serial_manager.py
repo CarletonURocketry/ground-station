@@ -11,7 +11,7 @@ from queue import Queue
 from multiprocessing import Process, active_children
 from serial import Serial, SerialException
 from modules.misc.config import Config
-from modules.serial.serial_rn2483_radio import RN2483RadioProcess
+from modules.serial.serial_rn2483_radio import rn2483_radio_process
 from modules.serial.serial_rn2483_emulator import SerialRN2483Emulator
 from signal import signal, SIGTERM
 
@@ -26,7 +26,7 @@ def shutdown_sequence():
     exit(0)
 
 
-class SerialManager(Process):
+class SerialManager:
     def __init__(
         self,
         serial_status: Queue[str],
@@ -36,8 +36,6 @@ class SerialManager(Process):
         rn2483_radio_payloads: Queue[str],
         config: Config,
     ):
-        super().__init__()
-
         self.serial_status: Queue[str] = serial_status
         self.serial_ports: list[str] = []
         self.serial_ws_commands: Queue[list[str]] = serial_ws_commands
@@ -91,7 +89,7 @@ class SerialManager(Process):
                 )
             else:
                 self.rn2483_radio = Process(
-                    target=RN2483RadioProcess,
+                    target=rn2483_radio_process,
                     args=(
                         self.serial_status,
                         self.radio_signal_report,
