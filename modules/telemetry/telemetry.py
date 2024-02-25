@@ -105,7 +105,7 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
 
     try:
         block_subtype = v1db.DataBlockSubtype(block_header.message_subtype)
-        block_contents = v1db.DataBlock.parse(block_header.message_subtype, block_bytes)
+        block_contents = v1db.DataBlock.parse(block_subtype, block_bytes)
         block_name = block_subtype.name.lower()
 
         logger.debug(f"Data block parsed with mission time {block_contents.mission_time}")
@@ -231,11 +231,11 @@ class Telemetry(Process):
 
         # Replay System
         self.replay = None
-        self.replay_input: Queue[str] = mp.Queue()
-        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()
+        self.replay_input: Queue[str] = mp.Queue()  # type:ignore
+        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type:ignore
 
         # Handle program closing to ensure no orphan processes
-        signal(SIGTERM, shutdown_sequence)
+        signal(SIGTERM, shutdown_sequence)  # type:ignore
 
         # Start Telemetry
         self.update_websocket()
@@ -388,7 +388,7 @@ class Telemetry(Process):
         self.replay = None
 
         # Empty replay output
-        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()
+        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type:ignore
         self.reset_data()
 
     def play_mission(self, mission_name: str | None) -> None:
@@ -543,7 +543,7 @@ class Telemetry(Process):
             block_name = v1db.DataBlockSubtype(block_subtype).name.lower()
             # Stores the last n packets into the telemetry data buffer
             if self.telemetry.get(block_name) is None:
-                self.telemetry[block_name] = [dict(block)]
+                self.telemetry[block_name] = [dict(block)]  # type:ignore
             else:
                 self.telemetry[block_name].append(dict(block))
                 if len(self.telemetry[block_name]) > self.config.telemetry_buffer_size:
