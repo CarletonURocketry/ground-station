@@ -1,8 +1,4 @@
-# The unfortunate manager of serial ports
-# Handles connections, specifying what serial port a radio should use and spawning the serial processes
-#
-# Authors:
-# Thomas Selwyn (Devil)
+"""Handles connections, specifying what serial port a radio should use and spawning the serial processes."""
 
 import glob
 import sys
@@ -24,6 +20,40 @@ def shutdown_sequence():
     for child in active_children():
         child.terminate()
     exit(0)
+
+
+def update_serial_ports(serial_status: Queue[str]) -> list[str]:
+    """Finds and updates serial ports on device
+
+    :raises EnvironmentError:
+        On unsupported or unknown platforms
+    :returns:
+        A list of the serial ports available on the system
+    """
+    com_ports: list[str] = [""]
+
+    if sys.platform.startswith("win"):
+        com_ports = ["COM%s" % (i + 1) for i in range(256)]
+    elif sys.platform.startswith("linux") or sys.platform.startswith("cygwin"):
+        # '/dev/tty[A-Za-z]*'
+        com_ports = glob.glob("/dev/ttyUSB*")
+    elif sys.platform.startswith("darwin"):
+        com_ports = glob.glob("/dev/tty.*")
+
+    tested_com_ports: list[str] = []
+
+    # Checks ports if they are potential COM ports
+    for test_port in com_ports:
+        try:
+            ser = Serial(test_port)
+            ser.close()
+            tested_com_ports.append(test_port)
+        except (OSError, SerialException):
+            pass
+
+    tested_com_ports.append("test")
+    serial_status.put(f"serial_ports {tested_com_ports}")
+    return tested_com_ports
 
 
 class SerialManager:
@@ -49,30 +79,29 @@ class SerialManager:
         self.config = config
 
         # Immediately find serial ports
-        self.serial_ports = self.update_serial_ports(self.serial_status)
+        self.serial_ports = update_serial_ports(self.serial_status)
 
         # Handle program closing to ensure no orphan processes
         signal(SIGTERM, shutdown_sequence)  # type:ignore
 
-        self.run()
-
     def run(self):
+
+        logger.info("Serial manager started.")
+
         while True:
             ws_cmd = self.serial_ws_commands.get()
-            self.parse_ws_command(ws_cmd)
 
-    def parse_ws_command(self, ws_cmd: list[str]):
-        """Parses the serial websocket commands"""
-        try:
-            match ws_cmd[0]:
-                case "rn2483_radio":
-                    self.parse_rn2483_radio_ws(ws_cmd[1:])
-                case "update":
-                    self.serial_ports = self.update_serial_ports(self.serial_status)
-                case _:
-                    logger.error("Serial: Invalid device type.")
-        except IndexError:
-            logger.error("Serial: Error parsing ws command")
+            # Parse command
+            try:
+                match ws_cmd[0]:
+                    case "rn2483_radio":
+                        self.parse_rn2483_radio_ws(ws_cmd[1:])
+                    case "update":
+                        self.serial_ports = update_serial_ports(self.serial_status)
+                    case _:
+                        logger.error("Serial: Invalid device type.")
+            except IndexError:
+                logger.error("Serial: Error parsing ws command")
 
     def parse_rn2483_radio_ws(self, ws_cmd: list[str]) -> None:
         """Parses the websocket commands relating to the RN2483_radio"""
@@ -100,6 +129,8 @@ class SerialManager:
                     ),
                     daemon=True,
                 )
+
+            # Start the appropriate process (emulator or real radio)
             self.rn2483_radio.start()
 
         elif radio_ws_cmd == "connect":
@@ -111,39 +142,6 @@ class SerialManager:
             self.serial_status.put("rn2483_port null")
             self.rn2483_radio.terminate()
             self.rn2483_radio = None
+
         elif radio_ws_cmd == "disconnect":
             logger.warning("Serial: RN2483 Radio already disconnected.")
-
-    @staticmethod
-    def update_serial_ports(serial_status: Queue[str]) -> list[str]:
-        """Finds and updates serial ports on device
-
-        :raises EnvironmentError:
-            On unsupported or unknown platforms
-        :returns:
-            A list of the serial ports available on the system
-        """
-        com_ports: list[str] = [""]
-
-        if sys.platform.startswith("win"):
-            com_ports = ["COM%s" % (i + 1) for i in range(256)]
-        elif sys.platform.startswith("linux") or sys.platform.startswith("cygwin"):
-            # '/dev/tty[A-Za-z]*'
-            com_ports = glob.glob("/dev/ttyUSB*")
-        elif sys.platform.startswith("darwin"):
-            com_ports = glob.glob("/dev/tty.*")
-
-        tested_com_ports: list[str] = []
-
-        # Checks ports if they are potential COM ports
-        for test_port in com_ports:
-            try:
-                ser = Serial(test_port)
-                ser.close()
-                tested_com_ports.append(test_port)
-            except (OSError, SerialException):
-                pass
-
-        tested_com_ports.append("test")
-        serial_status.put(f"serial_ports {tested_com_ports}")
-        return tested_com_ports
