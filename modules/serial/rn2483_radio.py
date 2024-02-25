@@ -127,7 +127,6 @@ class RN2483Radio:
         """
 
         for parameter, value in parameters:
-
             # Special case where spread factor value must be preceded by sf
             if parameter == "spread_factor":
                 value = f"sf{value}"

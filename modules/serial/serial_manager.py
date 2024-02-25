@@ -85,7 +85,6 @@ class SerialManager:
         signal(SIGTERM, shutdown_sequence)  # type:ignore
 
     def run(self):
-
         logger.info("Serial manager started.")
 
         while True:

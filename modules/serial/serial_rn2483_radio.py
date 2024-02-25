@@ -40,7 +40,6 @@ def rn2483_radio_process(
     # Get transmissions
     while True:
         while not rn2483_radio_input.empty():
-
             command_string = rn2483_radio_input.get()
             if command_string == "radio get snr":
                 radio_signal_report.put(radio.signal_report())
