@@ -49,7 +49,6 @@ class TelemetryReplay:
                 print(line)
                 if self.speed > 0:
                     replay_data = (RadioBlockType.DATA.value, 0, line)  # TODO: remove hard-coded block type
-                    print(replay_data)
                     self.replay_payloads.put(replay_data)
 
                 if not self.replay_input.empty():
