@@ -22,8 +22,6 @@ import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
 from modules.misc.config import Config
 from modules.telemetry.replay import TelemetryReplay
-from modules.telemetry.sd_block import LoggingMetadataSpacerBlock
-from modules.telemetry.superblock import SuperBlock, Flight
 from modules.telemetry.telemetry_utils import (
     mission_path,
     get_filepath_for_proposed_name,
@@ -86,7 +84,6 @@ class Telemetry(Process):
 
         # Mission Recording
         self.mission_recording_file: BufferedWriter | None = None
-        self.mission_recording_sb: SuperBlock = SuperBlock()
         self.mission_recording_buffer: bytearray = bytearray(b"")
 
         # Replay System
@@ -131,9 +128,6 @@ class Telemetry(Process):
                 case jsp.MissionState.RECORDED:
                     while not self.replay_output.empty():
                         block_type, block_subtype, block_data = self.replay_output.get()  # type: ignore
-                        # logger.debug(("IGNORE", block_type, block_subtype))
-                        # self.parse_rn2483_payload(block_type, block_subtype, block_data)
-                        # self.parse_rn2483_transmission(block_data)
                         self.process_transmission(block_data)
                         self.update_websocket()
                 case _:
@@ -182,7 +176,9 @@ class Telemetry(Process):
 
             # Replay commands
             case WSCommand.REPLAY.value.PLAY:
-                mission_name = None if not parameters else " ".join(parameters)
+                if not parameters:
+                    raise ReplayPlaybackError
+                mission_name = " ".join(parameters)
                 try:
                     self.play_mission(mission_name)
                 except MissionNotFoundError as e:
@@ -251,15 +247,12 @@ class Telemetry(Process):
         self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type:ignore
         self.reset_data()
 
-    def play_mission(self, mission_name: str | None) -> None:
+    def play_mission(self, mission_name: str) -> None:
         """Plays the desired mission recording."""
 
         # Ensure not doing anything silly
         if self.status.mission.recording:
             raise AlreadyRecordingError
-
-        if mission_name is None:
-            raise ReplayPlaybackError
 
         mission_file = mission_path(mission_name, self.missions_dir)
         if mission_file not in self.status.replay.mission_files_list:
@@ -268,25 +261,19 @@ class Telemetry(Process):
         # Set output data to current mission
         self.status.mission.name = mission_name
 
-        try:
-            self.status.mission.epoch = [
-                mission.epoch for mission in self.status.replay.mission_list if mission.name == mission_name
-            ][0]
-        except IndexError:
-            self.status.mission.epoch = -1
-
         # We are not to record when replaying missions
         self.status.mission.state = jsp.MissionState.RECORDED
         self.status.mission.recording = False
 
         # Replay system
         if self.replay is None:
-            # TEMPORARY VERSION CHECK
-            replay_ver = 1 if self.status.mission.epoch == -1 else 0
-
             self.replay = Process(
-                target=TelemetryReplay,
-                args=(self.replay_output, self.replay_input, self.status.replay.speed, mission_file, replay_ver),
+                target=TelemetryReplay(
+                    self.replay_output,
+                    self.replay_input,
+                    self.status.replay.speed,
+                    mission_file,
+                ).run
             )
             self.replay.start()
 
@@ -298,83 +285,13 @@ class Telemetry(Process):
 
     def start_recording(self, mission_name: str | None = None) -> None:
         """Starts recording the current mission. If no mission name is given, the recording epoch is used."""
-
-        # Do not record if already recording or if replay is active
-        if self.status.mission.recording:
-            raise AlreadyRecordingError
-
-        if self.status.replay.state != jsp.ReplayState.DNE:
-            raise ReplayPlaybackError
-
-        logger.info("RECORDING START")
-
-        # Mission Name
-        recording_epoch = int(time())
-        mission_name = str(recording_epoch) if not mission_name else mission_name
-        self.mission_path = get_filepath_for_proposed_name(mission_name, self.missions_dir)
-        self.mission_recording_file = open(self.mission_path, "wb")
-
-        # Create SuperBlock in file
-        flight = Flight(first_block=1, num_blocks=0, timestamp=recording_epoch)
-        self.mission_recording_sb.flights = [flight]
-        _ = self.mission_recording_file.write(self.mission_recording_sb.to_bytes())
-        self.mission_recording_file.flush()
-
-        # Status update
-        self.status.mission.name = mission_name
-        self.status.mission.epoch = recording_epoch
-        self.status.mission.recording = True
+        # TODO
 
     def stop_recording(self) -> None:
         """Stops the current recording."""
 
         logger.info("RECORDING STOP")
-
-        if self.mission_recording_file is None:
-            raise ValueError("mission_recording_file attribute not initialized to a file.")
-
-        # Flush buffer and close off file
-        self.recording_write_bytes(len(self.mission_recording_buffer), spacer=True)
-        self.mission_recording_file.flush()
-        self.mission_recording_file.close()
-
-        # Reset recording data
-        self.mission_recording_file = None
-        self.mission_recording_sb = SuperBlock()
-        self.mission_recording_buffer = bytearray(b"")
-
-        # Reset mission data except state and last mission time
-        self.status.mission = jsp.MissionData(
-            state=self.status.mission.state, last_mission_time=self.status.mission.last_mission_time
-        )
-
-    def recording_write_bytes(self, num_bytes: int, spacer: bool = False) -> None:
-        """Outputs the specified number of bytes from the buffer to the recording file"""
-
-        # If the file is open
-        if self.mission_recording_file is None:
-            return
-
-        # If there's nothing in buffer
-        # Then there's no need to dump buffer
-        if num_bytes == 0:
-            return
-
-        # Update Superblock with new block count
-        self.mission_recording_sb.flights[0].num_blocks += int(math.ceil(num_bytes / 512))
-        _ = self.mission_recording_file.seek(0)
-        _ = self.mission_recording_file.write(self.mission_recording_sb.to_bytes())
-
-        # Dump entire buffer to file
-        blocks = self.mission_recording_buffer[:num_bytes]
-        self.mission_recording_buffer = self.mission_recording_buffer[num_bytes:]
-        _ = self.mission_recording_file.seek(0, 2)
-        _ = self.mission_recording_file.write(blocks)
-
-        # If less than 512 bytes, or a spacer is requested then write a spacer
-        if num_bytes < 512 or spacer:
-            spacer_block = LoggingMetadataSpacerBlock(512 - (num_bytes % 512))
-            _ = self.mission_recording_file.write(spacer_block.to_bytes())
+        # TODO
 
     def process_transmission(self, data: str) -> None:
         """Processes the incoming radio transmission data."""
