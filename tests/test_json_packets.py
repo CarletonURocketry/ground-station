@@ -43,10 +43,6 @@ def test_rocket_data_defaults() -> None:
     rocket_data = jsp.RocketData()
 
     assert rocket_data.mission_time == -1
-    assert rocket_data.kx134_state == -1
-    assert rocket_data.altimeter_state == -1
-    assert rocket_data.imu_state == -1
-    assert rocket_data.sd_driver_state == -1
     assert rocket_data.deployment_state == DeploymentState.DEPLOYMENT_STATE_DNE.value
     assert rocket_data.blocks_recorded == -1
     assert rocket_data.checkouts_missed == -1
@@ -105,10 +101,6 @@ def test_rocket_data_serialization() -> None:
 
     rocket_data = jsp.RocketData(
         mission_time=1983,
-        kx134_state=2,
-        altimeter_state=1,
-        imu_state=3,
-        sd_driver_state=1,
         deployment_state=DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT,
         blocks_recorded=12,
         checkouts_missed=3,
@@ -116,10 +108,6 @@ def test_rocket_data_serialization() -> None:
 
     assert dict(rocket_data) == {
         "mission_time": 1983,
-        "kx134_state": 2,
-        "altimeter_state": 1,
-        "imu_state": 3,
-        "sd_driver_state": 1,
         "deployment_state": DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT.value,
         "blocks_recorded": 12,
         "checkouts_missed": 3,
@@ -147,10 +135,6 @@ def test_status_data_serialization() -> None:
 
     rocket_data = jsp.RocketData(
         mission_time=1983,
-        kx134_state=2,
-        altimeter_state=1,
-        imu_state=3,
-        sd_driver_state=1,
         deployment_state=DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT,
         blocks_recorded=12,
         checkouts_missed=3,
@@ -163,7 +147,7 @@ def test_status_data_serialization() -> None:
 
     # Mission list must be reset so that it can be tested without knowing what is
     # in the missions directory
-    replay_data.mission_list = [jsp.MissionEntry(name="Devil The Rocket", length=3598549, epoch=1668434478)]
+    replay_data.mission_list = [jsp.MissionEntry(name="TestData", length=3598549)]
 
     status_data = jsp.StatusData(
         mission=mission_data,
@@ -189,10 +173,6 @@ def test_status_data_serialization() -> None:
         },
         "rocket": {
             "mission_time": 1983,
-            "kx134_state": 2,
-            "altimeter_state": 1,
-            "imu_state": 3,
-            "sd_driver_state": 1,
             "deployment_state": DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT.value,
             "blocks_recorded": 12,
             "checkouts_missed": 3,
@@ -200,7 +180,7 @@ def test_status_data_serialization() -> None:
         "replay": {
             "state": jsp.ReplayState.PAUSED.value,
             "speed": 2.5,
-            "mission_list": [{"name": "Devil The Rocket", "length": 3598549, "epoch": 1668434478, "version": 0}],
+            "mission_list": [{"name": "TestData", "length": 3598549, "version": 1}],
         },
     }
 
@@ -223,10 +203,6 @@ def test_rocket_data_from_data_block() -> None:
     rocket_data = jsp.RocketData.from_data_block(data_block)
 
     assert rocket_data.mission_time == 145
-    assert rocket_data.kx134_state == SensorStatus(3)
-    assert rocket_data.altimeter_state == SensorStatus(4)
-    assert rocket_data.imu_state == SensorStatus(2)
-    assert rocket_data.sd_driver_state == SDCardStatus(1)
     assert rocket_data.blocks_recorded == 18
     assert rocket_data.deployment_state == DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT
     assert rocket_data.checkouts_missed == 90
