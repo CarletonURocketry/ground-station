@@ -1,17 +1,22 @@
-"""Replays sensor packets from the mission file. Outputs data blocks to the UI."""
+"""Replays radio packets from the mission file, outputting them as replay payloads."""
 
 import logging
 from pathlib import Path
 from queue import Queue
 from time import time
-
 from modules.telemetry.block import RadioBlockType
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 
+# TODO: This should be adjacent to an RN2483 radio emulator that just "receives" each packet in the mission file at the
+# correct mission time.
 class TelemetryReplay:
+    """
+    This class replays telemetry data from a mission file.
+    """
+
     def __init__(
         self,
         replay_payloads: Queue[tuple[int, int, str]],
@@ -32,7 +37,6 @@ class TelemetryReplay:
         self.last_loop_time: int = int(time() * 1000)
         self.total_time_offset: int = 0
         self.speed: float = replay_speed
-        self.block_count: int = 0
 
     def run(self):
         """Run the mission until completion."""
@@ -44,7 +48,7 @@ class TelemetryReplay:
             for line in file:
                 print(line)
                 if self.speed > 0:
-                    replay_data = (RadioBlockType.DATA.value, 0, line)
+                    replay_data = (RadioBlockType.DATA.value, 0, line)  # TODO: remove hard-coded block type
                     print(replay_data)
                     self.replay_payloads.put(replay_data)
 

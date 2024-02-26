@@ -1,30 +1,25 @@
-# Telemetry to parse radio packets, keep history and to log everything
-# Incoming information comes from rn2483_radio_payloads in payload format
-# Outputs information to telemetry_json_output in friendly json for UI
-#
-# Authors:
-# Thomas Selwyn (Devil)
-# Matteo Golin (linguini1)
+"""
+Telemetry to parse radio packets, keep history and to log everything.
+Incoming information comes from rn2483_radio_payloads in payload format.
+Outputs information to telemetry_json_output in friendly JSON for UI.
+"""
+
 from io import BufferedWriter
 import logging
-import math
 from ast import literal_eval
 from queue import Queue
 import multiprocessing as mp
 from multiprocessing import Process, active_children
 from pathlib import Path
-
 from signal import signal, SIGTERM
-from time import time, sleep
+from time import sleep
 from typing import Any, TypeAlias
-
 import modules.telemetry.json_packets as jsp
 import modules.websocket.commands as wsc
 from modules.misc.config import Config
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.telemetry_utils import (
     mission_path,
-    get_filepath_for_proposed_name,
     parse_rn2483_transmission,
     ParsedBlock,
 )
@@ -44,15 +39,14 @@ SUPPORTED_ENCODING_VERSION: int = 1
 logger = logging.getLogger(__name__)
 
 
-# Signal handler
 def shutdown_sequence() -> None:
+    """Kills all children before terminating. Acts as a signal handler for Telemetry class when receiving SIGTERM."""
     for child in active_children():
         child.terminate()
     exit(0)
 
 
-# Main class
-class Telemetry(Process):
+class Telemetry:
     def __init__(
         self,
         serial_status: Queue[str],
