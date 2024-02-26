@@ -2,13 +2,11 @@
 __author__ = "Matteo Golin"
 
 # Imports
-from io import BufferedReader
 import logging
 from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
 from typing import Self
-
 import modules.telemetry.data_block as db
 
 # Constants
@@ -106,10 +104,6 @@ class RocketData:
     """The rocket data packet for the telemetry process."""
 
     mission_time: int = -1
-    kx134_state: int = -1
-    altimeter_state: int = -1
-    imu_state: int = -1
-    sd_driver_state: int = -1
     deployment_state: db.DeploymentState = db.DeploymentState.DEPLOYMENT_STATE_DNE
     blocks_recorded: int = -1
     checkouts_missed: int = -1
@@ -120,10 +114,6 @@ class RocketData:
 
         return cls(
             mission_time=data.mission_time,
-            kx134_state=data.kx134_state,
-            altimeter_state=data.alt_state,
-            imu_state=data.imu_state,
-            sd_driver_state=data.sd_state,
             deployment_state=data.deployment_state,
             blocks_recorded=data.sd_blocks_recorded,
             checkouts_missed=data.sd_checkouts_missed,
@@ -131,10 +121,6 @@ class RocketData:
 
     def __iter__(self):
         yield "mission_time", self.mission_time,
-        yield "kx134_state", self.kx134_state,
-        yield "altimeter_state", self.altimeter_state,
-        yield "imu_state", self.imu_state,
-        yield "sd_driver_state", self.sd_driver_state,
         yield "deployment_state", self.deployment_state.value,
         yield "blocks_recorded", self.blocks_recorded,
         yield "checkouts_missed", self.checkouts_missed,
@@ -188,10 +174,6 @@ class StatusData:
         yield "rn2483_radio", dict(self.rn2483_radio),
         yield "rocket", dict(self.rocket),
         yield "replay", dict(self.replay),
-
-
-class ParsingException(Exception):
-    pass
 
 
 def parse_mission_file(mission_file: Path) -> MissionEntry:

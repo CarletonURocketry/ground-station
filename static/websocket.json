@@ -31,8 +31,6 @@
             "state": -1,
             "speed": 1.0,
             "mission_list": [
-                {"name": "Devil The Rocket", "length": 3598549, "epoch": 1668434478, "version":  0},
-                {"name": "Paige Cessna Flight", "length": 3651361, "epoch": 1670182646, "version":  0}
             ]
         }
     },
