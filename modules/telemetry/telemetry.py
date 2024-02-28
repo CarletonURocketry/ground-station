@@ -24,6 +24,7 @@ from modules.telemetry.telemetry_utils import (
     ParsedBlock,
 )
 from modules.telemetry.telemetry_errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
+from types import FrameType
 
 # Types
 JSON: TypeAlias = dict[str, Any]
@@ -39,7 +40,7 @@ SUPPORTED_ENCODING_VERSION: int = 1
 logger = logging.getLogger(__name__)
 
 
-def shutdown_sequence() -> None:
+def shutdown_sequence(signum: int, stack_frame: FrameType) -> None:
     """Kills all children before terminating. Acts as a signal handler for Telemetry class when receiving SIGTERM."""
     for child in active_children():
         child.terminate()
