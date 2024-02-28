@@ -18,6 +18,7 @@ class DataBlockSubtype(IntEnum):
     ANGULAR_VELOCITY = 0x05
     GNSS_LOCATION = 0x06
     GNSS_METADATA = 0x07
+    HUMIDITY = 0x08
     RESERVED = 0x3F
 
     def __str__(self):
@@ -38,6 +39,8 @@ class DataBlockSubtype(IntEnum):
                 return "GNSS LOCATION"
             case DataBlockSubtype.GNSS_METADATA:
                 return "GNSS METADATA"
+            case DataBlockSubtype.GNSS_METADATA:
+                return "HUMIDITY"
             case _:
                 return "RESERVED"
 
@@ -85,6 +88,7 @@ class DataBlock(ABC):
             DataBlockSubtype.ALTITUDE: AltitudeDB,
             DataBlockSubtype.TEMPERATURE: TemperatureDB,
             DataBlockSubtype.PRESSURE: PressureDB,
+            DataBlockSubtype.HUMIDITY: HumidityDB,
         }
 
         subtype = SUBTYPE_CLASSES.get(block_subtype)
@@ -93,6 +97,31 @@ class DataBlock(ABC):
             raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype} {payload} {payload.hex()}")
 
         return subtype.from_bytes(payload=payload)
+
+
+class DebugMessageDB(DataBlock):
+    """Represents a debug message data block."""
+
+    def __init__(self, mission_time: int, message: str) -> None:
+        super().__init__(mission_time)
+        self.message: str = message
+
+    @classmethod
+    def from_bytes(cls, payload: bytes) -> Self:
+        """
+        Constructs a debug message data block from bytes.
+        Returns:
+            A debug message data block.
+        """
+        raise NotImplementedError
+
+    def __len__(self) -> int:
+        """
+        Get the length of a debug message data block in bytes.
+        Returns:
+            The length of a debug message data block in bytes, not including the block header.
+        """
+        return 4 + len(self.message)
 
 
 class AltitudeDB(DataBlock):
@@ -130,6 +159,39 @@ class AltitudeDB(DataBlock):
     def __iter__(self):
         yield "mission time", self.mission_time
         yield "altitude", {"meters": self.altitude}
+
+
+class TemperatureDB(DataBlock):
+    """Represents a temperature data block."""
+
+    def __init__(self, mission_time: int, temperature: int) -> None:
+        super().__init__(mission_time)
+        self.temperature: int = temperature
+
+    @classmethod
+    def from_bytes(cls, payload: bytes) -> Self:
+        """
+        Constructs a temperature data block from bytes.
+        Returns:
+            A temperature data block.
+        """
+        parts = struct.unpack("<Ii", payload)
+        return cls(parts[0], parts[1])
+
+    def __len__(self) -> int:
+        """
+        Get the length of a temperature data block in bytes.
+        Returns:
+            The length of a temperature data block in bytes, not including the block header.
+        """
+        return 8
+
+    def __str__(self):
+        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, temperature: {self.temperature} mC"
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "temperature", {"millidegrees": self.temperature, "celsius": round(self.temperature / 1000, 2)}
 
 
 class PressureDB(DataBlock):
@@ -173,62 +235,45 @@ class PressureDB(DataBlock):
         yield "pressure", {"pascals": self.pressure}
 
 
-class TemperatureDB(DataBlock):
-    """Represents a temperature data block."""
+class HumidityDB(DataBlock):
+    """Represents a humidity data block."""
 
-    def __init__(self, mission_time: int, temperature: int) -> None:
+    def __init__(self, mission_time: int, humidity: int) -> None:
+        """
+        Constructs a humidity data block.
+
+        Args:
+            mission_time: The mission time the altitude was measured at in milliseconds since launch.
+            humidity: The calculated relative humidity in ten thousandths of a percent.
+
+        """
         super().__init__(mission_time)
-        self.temperature: int = temperature
+        self.humidity: int = humidity
 
     @classmethod
     def from_bytes(cls, payload: bytes) -> Self:
         """
-        Constructs a temperature data block from bytes.
+        Constructs a humidity data block from bytes.
         Returns:
-            A temperature data block.
+            A humidity data block.
         """
-        parts = struct.unpack("<Ii", payload)
+        parts = struct.unpack("<II", payload)
         return cls(parts[0], parts[1])
 
     def __len__(self) -> int:
         """
-        Get the length of a temperature data block in bytes.
+        Get the length of a humidity data block in bytes.
         Returns:
-            The length of a temperature data block in bytes, not including the block header.
+            The length of a humidity data block in bytes, not including the block header.
         """
         return 8
 
     def __str__(self):
-        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, temperature: {self.temperature} mC"
+        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, humidity: {round(self.humidity / 100)}%"
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "temperature", {"millidegrees": self.temperature, "celsius": round(self.temperature / 1000, 2)}
-
-
-class DebugMessageDB(DataBlock):
-    """Represents a debug message data block."""
-
-    def __init__(self, mission_time: int, message: str) -> None:
-        super().__init__(mission_time)
-        self.message: str = message
-
-    @classmethod
-    def from_bytes(cls, payload: bytes) -> Self:
-        """
-        Constructs a debug message data block from bytes.
-        Returns:
-            A debug message data block.
-        """
-        raise NotImplementedError
-
-    def __len__(self) -> int:
-        """
-        Get the length of a debug message data block in bytes.
-        Returns:
-            The length of a debug message data block in bytes, not including the block header.
-        """
-        return 4 + len(self.message)
+        yield "relative", round(self.humidity / 100)
 
 
 def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
@@ -248,6 +293,8 @@ def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
             return AltitudeDB.from_bytes(payload)
         case DataBlockSubtype.PRESSURE:
             return PressureDB.from_bytes(payload)
+        case DataBlockSubtype.HUMIDITY:
+            return HumidityDB.from_bytes(payload)
         case DataBlockSubtype.TEMPERATURE:
             return TemperatureDB.from_bytes(payload)
         case DataBlockSubtype.DEBUG_MESSAGE:
