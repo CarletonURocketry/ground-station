@@ -119,7 +119,7 @@ class AltitudeDB(DataBlock):
         """
 
         parts = struct.unpack("<Ii", payload)
-        return cls(parts[0], parts[1])
+        return cls(parts[0], parts[1] / 1000)  # Altitude is sent in mm
 
     def to_bytes(self) -> bytes:
         return struct.pack("<Ii", int(self.altitude))
