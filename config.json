@@ -4,7 +4,7 @@
     "modulation": "lora",
     "frequency": 433050000,
     "power": 15,
-    "spread_factor": 7,
+    "spread_factor": 9,
     "coding_rate": "4/7",
     "bandwidth": 500,
     "preamble_len": 6,

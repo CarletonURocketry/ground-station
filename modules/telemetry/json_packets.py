@@ -2,19 +2,12 @@
 __author__ = "Matteo Golin"
 
 # Imports
-from io import BufferedReader
 import logging
-import struct
 from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
 from typing import Self
-
 import modules.telemetry.data_block as db
-from modules.telemetry.block import SDBlockSubtype
-from modules.telemetry.sd_block import SDBlockException
-from modules.telemetry.replay import parse_sd_block_header
-from modules.telemetry.superblock import find_superblock
 
 # Constants
 MISSION_EXTENSION: str = "mission"
@@ -45,17 +38,15 @@ class ReplayState(IntEnum):
 class MissionEntry:
     """Represents an available mission for replay."""
 
-    name: str = ""
+    name: str
     length: int = 0
-    epoch: int = 0
     filepath: Path = Path.cwd() / MISSIONS_DIR
-    version: int = 0
+    version: int = 1
     valid: bool = False
 
     def __iter__(self):
         yield "name", self.name
         yield "length", self.length
-        yield "epoch", self.epoch
         yield "version", self.version
 
     def __len__(self) -> int:
@@ -113,10 +104,6 @@ class RocketData:
     """The rocket data packet for the telemetry process."""
 
     mission_time: int = -1
-    kx134_state: int = -1
-    altimeter_state: int = -1
-    imu_state: int = -1
-    sd_driver_state: int = -1
     deployment_state: db.DeploymentState = db.DeploymentState.DEPLOYMENT_STATE_DNE
     blocks_recorded: int = -1
     checkouts_missed: int = -1
@@ -127,10 +114,6 @@ class RocketData:
 
         return cls(
             mission_time=data.mission_time,
-            kx134_state=data.kx134_state,
-            altimeter_state=data.alt_state,
-            imu_state=data.imu_state,
-            sd_driver_state=data.sd_state,
             deployment_state=data.deployment_state,
             blocks_recorded=data.sd_blocks_recorded,
             checkouts_missed=data.sd_checkouts_missed,
@@ -138,10 +121,6 @@ class RocketData:
 
     def __iter__(self):
         yield "mission_time", self.mission_time,
-        yield "kx134_state", self.kx134_state,
-        yield "altimeter_state", self.altimeter_state,
-        yield "imu_state", self.imu_state,
-        yield "sd_driver_state", self.sd_driver_state,
         yield "deployment_state", self.deployment_state.value,
         yield "blocks_recorded", self.blocks_recorded,
         yield "checkouts_missed", self.checkouts_missed,
@@ -197,79 +176,12 @@ class StatusData:
         yield "replay", dict(self.replay),
 
 
-class ParsingException(Exception):
-    pass
-
-
-def get_last_mission_time(file: BufferedReader, num_blocks: int) -> int:
-    """Obtains last recorded telemetry mission time from a flight"""
-
-    # If flight is empty, return no time found
-    if num_blocks <= 0:
-        return -1
-
-    count = 0
-    last_mission_time = 0
-
-    while count <= ((num_blocks * 512) - 4):
-        try:
-            block_header: bytes = file.read(4)
-            block_class, _, block_length = parse_sd_block_header(block_header)
-            block_data = file.read(block_length - 4)
-        except SDBlockException:
-            return last_mission_time
-        except ValueError:
-            return last_mission_time
-
-        count += block_length
-        if count > (num_blocks * 512):
-            raise ParsingException(
-                f"Read block of length {block_length} would read {count} bytes from {num_blocks * 512} byte flight"
-            )
-
-        # Do not unnecessarily parse blocks unless close to end of flight
-        is_telem = block_class == SDBlockSubtype.TELEMETRY_DATA
-        if count > ((num_blocks - 1) * 512) and is_telem:
-            # First four bytes in block data is always mission time.
-            block_time = struct.unpack("<I", block_data[:4])[0]
-            last_mission_time = block_time if block_time > last_mission_time else last_mission_time
-
-    return last_mission_time
-
-
 def parse_mission_file(mission_file: Path) -> MissionEntry:
     """Obtains mission metadata from file"""
 
-    # Find superblock from file and return it
-    superblock_result = find_superblock(mission_file)
+    length = 0
+    with open(mission_file, "r") as file:
+        for _ in file:
+            length += 1
 
-    # Parameters
-    mission_length = 0
-    mission_epoch = -1
-
-    # New format
-    if superblock_result is None:
-        return MissionEntry(
-            name=mission_file.stem, length=mission_length, epoch=mission_epoch, filepath=mission_file, version=1
-        )
-
-    sb_addr, mission_sb = superblock_result
-
-    # Check if flight list is empty
-    if mission_sb.flights:
-        mission_epoch = mission_sb.flights[0].timestamp
-    else:
-        logger.warning(f"Flight list for {mission_file.stem} is empty")
-
-    # Read mission length
-    try:
-        with open(f"{mission_file}", "rb") as file:
-            # Reads last telemetry block of each flight to get final mission time
-            for flight in mission_sb.flights:
-                _ = file.seek((sb_addr + flight.first_block) * 512)
-                mission_length += get_last_mission_time(file, flight.num_blocks)
-    except ParsingException:
-        logger.info(f"Unable to parse mission length from {mission_file.stem}, defaulting to -1")
-
-    # Return mission entry
-    return MissionEntry(name=mission_file.stem, length=mission_length, epoch=mission_epoch, filepath=mission_file)
+    return MissionEntry(name=mission_file.stem, length=length, filepath=mission_file, version=1)
