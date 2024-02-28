@@ -220,7 +220,7 @@ class DebugMessageDB(DataBlock):
         Returns:
             A debug message data block.
         """
-        mission_time = struct.unpack(payload[:4], "<I")
+        mission_time = struct.unpack(payload[:4], "<I")[0]
         message = payload[4:].decode("utf-8")
         raise cls(mission_time, message)
 
@@ -234,7 +234,7 @@ class DebugMessageDB(DataBlock):
 
     def __str__(self):
         return f"{self.__class__.__name__} -> time: {self.mission_time} ms, message: {self.message}"
-    
+
     def __iter__(self):
         yield "mission_time", self.mission_time
         yield "message", {self.message}
