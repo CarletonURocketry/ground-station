@@ -220,9 +220,9 @@ class DebugMessageDB(DataBlock):
         Returns:
             A debug message data block.
         """
-        mission_time = struct.unpack(payload[:4], "<I")[0]
+        mission_time = struct.unpack("<I", payload[:4])[0]
         message = payload[4:].decode("utf-8")
-        raise cls(mission_time, message)
+        return cls(mission_time, message)
 
     def __len__(self) -> int:
         """
