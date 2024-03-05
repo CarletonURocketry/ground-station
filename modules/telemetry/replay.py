@@ -3,8 +3,7 @@
 import logging
 from pathlib import Path
 from queue import Queue
-from time import time
-from modules.telemetry.block import RadioBlockType
+from time import time, sleep
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -19,7 +18,7 @@ class TelemetryReplay:
 
     def __init__(
         self,
-        replay_payloads: Queue[tuple[int, int, str]],
+        replay_payloads: Queue[str],
         replay_input: Queue[str],
         replay_speed: float,
         replay_path: Path,
@@ -27,7 +26,7 @@ class TelemetryReplay:
         super().__init__()
 
         # Replay buffers (Input and output)
-        self.replay_payloads: Queue[tuple[int, int, str]] = replay_payloads
+        self.replay_payloads: Queue[str] = replay_payloads
         self.replay_input: Queue[str] = replay_input
 
         # Misc replay
@@ -40,7 +39,6 @@ class TelemetryReplay:
 
     def run(self):
         """Run the mission until completion."""
-
         # TODO: fix replay speed
 
         # Replay raw radio transmission file
@@ -48,8 +46,7 @@ class TelemetryReplay:
             for line in file:
                 print(line)
                 if self.speed > 0:
-                    replay_data = (RadioBlockType.DATA.value, 0, line)  # TODO: remove hard-coded block type
-                    self.replay_payloads.put(replay_data)
+                    self.replay_payloads.put(line)
 
                 if not self.replay_input.empty():
                     self.parse_input_command(self.replay_input.get())

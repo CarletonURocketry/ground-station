@@ -1,13 +1,16 @@
 # Contains the status data object class
 __author__ = "Matteo Golin"
 
+import json
 # Imports
 import logging
+import os
 from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
-from typing import Self
+from typing import Self, Any
 import modules.telemetry.data_block as db
+from modules.telemetry.telemetry_utils import ParsedBlock
 
 # Constants
 MISSION_EXTENSION: str = "mission"
@@ -96,7 +99,6 @@ class MissionData:
         yield "epoch", self.epoch,
         yield "state", self.state.value,
         yield "recording", self.recording
-        yield "last_mission_time", self.last_mission_time
 
 
 @dataclass
@@ -185,3 +187,133 @@ def parse_mission_file(mission_file: Path) -> MissionEntry:
             length += 1
 
     return MissionEntry(name=mission_file.stem, length=length, filepath=mission_file, version=1)
+
+
+@dataclass
+class TelemetryDataPacketBlock:
+    """A generic block object to store information for telemetry data
+    All stored values must be updated at once!"""
+
+    mission_time: list[int] = field(default_factory=list[int])
+    stored_values: dict[str, list[int]] = field(default_factory=dict)
+
+    def __init__(self, keys: list[str]):
+        """ Initializes a TelemetryDataPacketBlock """
+        self.mission_time = []
+        self.stored_values = dict.fromkeys(keys, [])
+        logger.debug(self)
+
+    def update(self, data: dict, buffer_size: int) -> None:
+        """ Updates the stored values with the given data
+        :param data: Dictionary of data to update containing mission_time and stored_values squashed
+        :param buffer_size: Size of the telemetry buffer to store"""
+        # Ensure you are not half updating the packet
+        # As this can cause the arrays to become out of sync and meaningless.
+        if dict(self).keys() != data.keys():
+            logger.error(f"Block must be updated using a full set of values at the same time!")
+            logger.debug(f"Tried updating {dict(self).keys()} using {data.keys()}!")
+            return
+
+        # Updates stored values with new values
+        for key in data.keys():
+            if key == "mission_time":
+                self.mission_time.append(data["mission_time"])
+            else:
+                self.stored_values[key].append(data[key])
+
+        # Ensure buffer sizes are kept
+        # Note: This uses a while loop incase buffer size shrinks drastically
+        while len(self.mission_time) > buffer_size:
+            self.mission_time.pop(0)
+            for key in self.stored_values.keys():
+                self.stored_values[key].pop(0)
+
+    def clear(self):
+        """ Clears all stored values """
+        self.mission_time = []
+        self.stored_values = dict.fromkeys(self.stored_values.keys(), [])
+
+    def __str__(self):
+        """ Returns a string representation of the TelemetryDataPacketBlock """
+        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, {self.stored_values}"
+
+    def __iter__(self):
+        """ Returns an interator containing all the stored values """
+        yield "mission_time", self.mission_time
+        for key in list(self.stored_values.keys()):
+            yield key, self.stored_values[key]
+
+
+@dataclass
+class TelemetryData:
+    """Contains the output specification for the telemetry data block"""
+    telemetry_buffer_size: int = 20
+
+    last_mission_time: int = -1
+    output_blocks: dict[str, TelemetryDataPacketBlock] = field(default_factory=dict)
+    output_specification: dict[str, dict[str, dict[str, list[int, str]]]] = field(default_factory=dict)
+
+    def __init__(self, telemetry_buffer_size: int = 20):
+        logger.debug(f"Initializing TelemetryData[{telemetry_buffer_size}]")
+        self.telemetry_buffer_size = telemetry_buffer_size
+        self.output_blocks = {}
+
+        # Read packet definition file
+        filepath = os.path.join(Path(__file__).parents[0], "telemetry_packet.json")
+        with open(filepath, "r") as file:
+            self.output_specification = dict(json.load(file))
+
+        # Generate telemetry data packet from output specification
+        telemetry_keys: dict[str, list[str]] = dict.fromkeys(self.output_specification.keys(), [])
+        for key in self.output_specification.keys():
+            telemetry_keys[key] = list(self.output_specification[key].keys())
+
+        # Generate output block objects from telemetry keys
+        for key in telemetry_keys.keys():
+            self.output_blocks[key] = TelemetryDataPacketBlock(telemetry_keys.get(key))
+
+        # Generate very efficient access matrix
+        # loop                                   = {INPUT: OUTPUT}     "dataPacketBlockName.storedValueVariable"
+        # decoder[packet_version][block_subtype] = {"gps_sats_in_use": "sats_in_use.gps_sats_in_use"}
+
+    def updateBufferSize(self, new_buffer_size: int = 20) -> None:
+        """ Allows the updating of telemetry buffer size without recreating object """
+        self.telemetry_buffer_size = new_buffer_size
+
+    def updateTelemetry(self, packet_version: int, blocks: [ParsedBlock]):
+        """ Updates telemetry object from given parsed blocks """
+
+        # Extract all block content into a nice list
+        telemetry_list: [list[dict]] = [[] for i in range(0xFF)]
+        for block in blocks:
+            block_num = block.block_header.message_subtype
+            telemetry_list[block_num].append(block.block_contents)
+
+            logger.debug(f"updateFromParsedBlocks: {block}")
+
+            try:
+                data = block.block_contents
+                if data["mission_time"] > self.last_mission_time:
+                    self.last_mission_time = data["mission_time"]
+
+                # vers = packet_version
+                # type = block.block_header.message_subtype
+                logger.debug(f"{packet_version, block.block_header.message_subtype, data}")
+
+
+            except KeyError as e:
+                logger.error(f"Telemetry parsed block data issue. Missing key {e}")
+
+        #logger.debug(telemetry_list)
+
+    def clear(self):
+        """ Clears the telemetry output data packet """
+        self.last_mission_time = -1
+        for block in self.output_blocks.values():
+            block.clear()
+
+    def __iter__(self):
+        """ Returns an interator containing all the packets """
+        yield "last_mission_time", self.last_mission_time
+        for key in self.output_blocks.keys():
+            yield key, dict(self.output_blocks[key])

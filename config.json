@@ -1,4 +1,6 @@
 {
+  "organization": "CUInSpace",
+  "rocket_name": "Red Ballistic",
   "telemetry_buffer_size": 20,
   "radio_params": {
     "modulation": "lora",

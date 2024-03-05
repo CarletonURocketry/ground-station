@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from typing import Self, Type
 from enum import IntEnum
 import struct
+
+from modules.misc.converter import metres_to_feet
 from modules.telemetry.block import BlockException, BlockUnknownException
 
 
@@ -19,14 +21,14 @@ class DataBlockSubtype(IntEnum):
     GNSS_LOCATION = 0x06
     GNSS_METADATA = 0x07
     HUMIDITY = 0x08
-    RESERVED = 0x3F
+    RESERVED = 0xFF
 
     def __str__(self):
         match self:
             case DataBlockSubtype.DEBUG_MESSAGE:
                 return "DEBUG MESSAGE"
             case DataBlockSubtype.ALTITUDE:
-                return "ANGULAR VELOCITY"
+                return "ALTITUDE"
             case DataBlockSubtype.TEMPERATURE:
                 return "TEMPERATURE"
             case DataBlockSubtype.PRESSURE:
@@ -39,7 +41,7 @@ class DataBlockSubtype(IntEnum):
                 return "GNSS LOCATION"
             case DataBlockSubtype.GNSS_METADATA:
                 return "GNSS METADATA"
-            case DataBlockSubtype.GNSS_METADATA:
+            case DataBlockSubtype.HUMIDITY:
                 return "HUMIDITY"
             case _:
                 return "RESERVED"
@@ -54,7 +56,7 @@ class DataBlockUnknownException(BlockUnknownException):
 
 
 class DataBlock(ABC):
-    """The base interface for all data blocks."""
+    """The abstract base interface for all data blocks."""
 
     def __init__(self, mission_time: int) -> None:
         """Constructs a data block with the given mission time."""
@@ -77,6 +79,16 @@ class DataBlock(ABC):
         Returns:
             The length of a data block in bytes, not include the block header.
         """
+        pass
+
+    @abstractmethod
+    def __str__(self):
+        """ Returns a string of the data block in a human-readable format """
+        pass
+
+    @abstractmethod
+    def __iter__(self):
+        """ Returns an iterator over the data block, typically used to get dictionaries """
         pass
 
     @staticmethod
@@ -123,6 +135,16 @@ class DebugMessageDB(DataBlock):
         """
         return 4 + len(self.message)
 
+    def __str__(self):
+        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, msg: {self.message}"
+
+    def __iter__(self):
+        """
+        Returns the iterator over the debug message
+        """
+        yield "mission time", self.mission_time
+        yield "message", self.message
+
 
 class AltitudeDB(DataBlock):
     """Represents an altitude data block."""
@@ -157,8 +179,8 @@ class AltitudeDB(DataBlock):
         return f"{self.__class__.__name__} -> time: {self.mission_time} ms, altitude: {self.altitude} m"
 
     def __iter__(self):
-        yield "mission time", self.mission_time
-        yield "altitude", {"meters": self.altitude}
+        yield "mission_time", self.mission_time
+        yield "altitude", {"metres": self.altitude, "feet": metres_to_feet(self.altitude)}
 
 
 class TemperatureDB(DataBlock):
@@ -187,7 +209,9 @@ class TemperatureDB(DataBlock):
         return 8
 
     def __str__(self):
-        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, temperature: {self.temperature} mC"
+        return (f"{self.__class__.__name__} -> time: {self.mission_time} ms, "
+                f"temperature: {self.temperature} mC "
+                f"({round(self.temperature / 1000, 1)}°C)")
 
     def __iter__(self):
         yield "mission_time", self.mission_time
@@ -243,7 +267,7 @@ class HumidityDB(DataBlock):
         Constructs a humidity data block.
 
         Args:
-            mission_time: The mission time the altitude was measured at in milliseconds since launch.
+            mission_time: The mission time the humidity was measured at in milliseconds since launch.
             humidity: The calculated relative humidity in ten thousandths of a percent.
 
         """
@@ -273,7 +297,7 @@ class HumidityDB(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "relative", round(self.humidity / 100)
+        yield "percentage", round(self.humidity / 100)
 
 
 def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:

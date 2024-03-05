@@ -10,7 +10,8 @@ from modules.misc.config import Config
 
 MISSION_EXTENSION: str = "mission"
 FILE_CREATION_ATTEMPT_LIMIT: int = 50
-SUPPORTED_ENCODING_VERSION: int = 1
+MIN_SUPPORTED_VERSION: int = 1
+MAX_SUPPORTED_VERSION: int = 1
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class ParsedBlock:
     # mission_time: int
     block_name: str
     block_header: BlockHeader
-    block_contents: v1db.DataBlock
+    block_contents: dict
 
 
 @dataclass
@@ -69,18 +70,19 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
     block_bytes: bytes = bytes.fromhex(hex_block_contents)
 
     try:
+        # TODO Make an interface to support multiple v1/v2/v3 objects
         block_subtype = v1db.DataBlockSubtype(block_header.message_subtype)
         block_contents = v1db.DataBlock.parse(block_subtype, block_bytes)
         block_name = block_subtype.name.lower()
 
-        logger.debug(f"Data block parsed with mission time {block_contents.mission_time}")
         logger.info(str(block_contents))
 
+        # TODO fix at some point
         # if block == DataBlockSubtype.STATUS:
         #     self.status.rocket = jsp.RocketData.from_data_block(block)
         #     return
 
-        return ParsedBlock(block_name, block_header, block_contents)
+        return ParsedBlock(block_name, block_header, dict(block_contents))
 
     except NotImplementedError:
         logger.warning(
@@ -93,7 +95,7 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
 
 def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTransmission]:
     """
-    Parses RN2483 Packets and extracts our telemetry payload blocks, returns parsed transmissionobject if packet
+    Parses RN2483 Packets and extracts our telemetry payload blocks, returns parsed transmission object if packet
     is valid.
     """
     # List of parsed blocks
@@ -102,6 +104,7 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
     # Extract the packet header
     data = data.strip()  # Sometimes some extra whitespace
     logger.debug(f"Full data string: {data}")
+    # TODO Make a generic abstract packet header class to encompass V1 packet header, etc
     pkt_hdr = PacketHeader.from_hex(data[:32])
 
     if len(pkt_hdr) <= 32:  # If this packet nothing more than just the header
@@ -154,8 +157,12 @@ def is_valid_packet_header(pkt_hdr: PacketHeader, approved_callsigns: dict[str, 
         return False
 
     # Ensure packet version compatibility
-    if pkt_hdr.version < SUPPORTED_ENCODING_VERSION:
-        logger.error(f"This version of ground station does not support encoding below {SUPPORTED_ENCODING_VERSION}")
+    if pkt_hdr.version < MIN_SUPPORTED_VERSION:
+        logger.error(f"This version of ground station does not support encoding below {MIN_SUPPORTED_VERSION}")
+        return False
+
+    if pkt_hdr.version > MAX_SUPPORTED_VERSION:
+        logger.error(f"This version of ground station does not support encoding above {MAX_SUPPORTED_VERSION}")
         return False
 
     return True
