@@ -319,14 +319,13 @@ class TelemetryData:
                         self.update_buffer[destinationBlock][destinationValue] = data[key]
 
                 # Check if we filled any packet during this block extraction
-                for key in self.update_buffer:
+                for key in self.update_buffer.keys():
                     if None not in self.update_buffer[key].values():
-                        # Let's update packet then!
+                        # Let's update packet
                         self.output_blocks[key].update(self.update_buffer[key], self.telemetry_buffer_size)
-                        # Clear buffer!
+                        # Clear packets buffer
                         for subkey in self.update_buffer[key].keys():
                             self.update_buffer[key][subkey] = None
-
             except KeyError as e:
                 logger.error(f"Telemetry parsed block data issue. Missing key {e}")
 
@@ -335,8 +334,13 @@ class TelemetryData:
         self.telemetry_buffer_size = new_buffer_size
 
     def clear(self):
-        """ Clears the telemetry output data packet """
+        """ Clears the telemetry output data packet entirely """
         self.last_mission_time = -1
+        # Clear buffer
+        for key in self.update_buffer.keys():
+            for subkey in self.update_buffer[key].keys():
+                self.update_buffer[key][subkey] = None
+        # Clear packet blocks
         for block in self.output_blocks.values():
             block.clear()
 
