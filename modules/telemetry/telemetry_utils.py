@@ -45,7 +45,7 @@ class ParsedBlock:
     # mission_time: int
     block_name: str
     block_header: BlockHeader
-    block_contents: dict
+    block_contents: dict[str, int | dict[str, int]]
 
 
 @dataclass
@@ -82,7 +82,7 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
         #     self.status.rocket = jsp.RocketData.from_data_block(block)
         #     return
 
-        return ParsedBlock(block_name, block_header, dict(block_contents))
+        return ParsedBlock(block_name, block_header, dict(block_contents))  # type: ignore
 
     except NotImplementedError:
         logger.warning(

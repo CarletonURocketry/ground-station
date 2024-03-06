@@ -123,6 +123,7 @@ class RadioParameters:
 class Config:
 
     """Contains the configuration for the ground station process."""
+
     organization: str = "CUInSpace"
     rocket_name: str = "Red Ballistic"
     telemetry_buffer_size: int = 20

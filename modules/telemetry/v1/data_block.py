@@ -83,12 +83,12 @@ class DataBlock(ABC):
 
     @abstractmethod
     def __str__(self):
-        """ Returns a string of the data block in a human-readable format """
+        """Returns a string of the data block in a human-readable format"""
         pass
 
     @abstractmethod
     def __iter__(self):
-        """ Returns an iterator over the data block, typically used to get dictionaries """
+        """Returns an iterator over the data block, typically used to get dictionaries"""
         pass
 
     @staticmethod
@@ -209,9 +209,11 @@ class TemperatureDB(DataBlock):
         return 8
 
     def __str__(self):
-        return (f"{self.__class__.__name__} -> time: {self.mission_time} ms, "
-                f"temperature: {self.temperature} mC "
-                f"({round(self.temperature / 1000, 1)}°C)")
+        return (
+            f"{self.__class__.__name__} -> time: {self.mission_time} ms, "
+            f"temperature: {self.temperature} mC "
+            f"({round(self.temperature / 1000, 1)}°C)"
+        )
 
     def __iter__(self):
         yield "mission_time", self.mission_time

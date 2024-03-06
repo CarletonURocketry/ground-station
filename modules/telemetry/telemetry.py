@@ -21,7 +21,7 @@ from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.telemetry_utils import (
     mission_path,
     parse_rn2483_transmission,
-    ParsedBlock,
+    ParsedTransmission,
 )
 from modules.telemetry.telemetry_errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
 from types import FrameType
@@ -42,15 +42,15 @@ def shutdown_sequence(signum: int, stack_frame: FrameType) -> None:
 
 class Telemetry:
     def __init__(
-            self,
-            serial_status: Queue[str],
-            radio_payloads: Queue[Any],
-            rn2483_radio_input: Queue[str],
-            radio_signal_report: Queue[str],
-            telemetry_json_output: Queue[JSON],
-            telemetry_ws_commands: Queue[list[str]],
-            config: Config,
-            version: str
+        self,
+        serial_status: Queue[str],
+        radio_payloads: Queue[Any],
+        rn2483_radio_input: Queue[str],
+        radio_signal_report: Queue[str],
+        telemetry_json_output: Queue[JSON],
+        telemetry_ws_commands: Queue[list[str]],
+        config: Config,
+        version: str,
     ):
         super().__init__()
         self.config = config
@@ -128,9 +128,13 @@ class Telemetry:
 
     def update_websocket(self) -> None:
         """Updates the websocket with the latest packet using the JSON output process."""
-        websocket_response = {"org": self.config.organization, "rocket": self.config.rocket_name,
-                              "version": self.version, "status": dict(self.status),
-                              "telemetry": dict(self.telemetry)}
+        websocket_response = {
+            "org": self.config.organization,
+            "rocket": self.config.rocket_name,
+            "version": self.version,
+            "status": dict(self.status),
+            "telemetry": dict(self.telemetry),
+        }
         self.telemetry_json_output.put(websocket_response)
 
     def reset_data(self) -> None:
@@ -289,11 +293,10 @@ class Telemetry:
         """Processes the incoming radio transmission data."""
 
         # Parse the transmission, if result is not null, update telemetry data
-        parsed_transmission = parse_rn2483_transmission(data, self.config)
-        packet_version = parsed_transmission.packet_header.version
+        parsed_transmission: ParsedTransmission | None = parse_rn2483_transmission(data, self.config)
         if parsed_transmission and parsed_transmission.blocks:
             # Updates the telemetry buffer with the latest block data and latest mission time
-            self.telemetry.updateTelemetry(packet_version, parsed_transmission.blocks)
+            self.telemetry.updateTelemetry(parsed_transmission.packet_header.version, parsed_transmission.blocks)
 
             # TODO UPDATE FOR V1
             # Write data to file when recording
