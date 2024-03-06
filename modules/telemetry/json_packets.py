@@ -240,71 +240,99 @@ class TelemetryDataPacketBlock:
     def __iter__(self):
         """ Returns an interator containing all the stored values """
         yield "mission_time", self.mission_time
-        for key in list(self.stored_values.keys()):
+        for key in self.stored_values.keys():
             yield key, self.stored_values[key]
 
 
 @dataclass
 class TelemetryData:
     """Contains the output specification for the telemetry data block"""
+    # Configuration
     telemetry_buffer_size: int = 20
+    decoder: list[dict[int, dict[str, str]]] = field(default_factory=list)
 
+    # Current data storage
     last_mission_time: int = -1
     output_blocks: dict[str, TelemetryDataPacketBlock] = field(default_factory=dict)
-    output_specification: dict[str, dict[str, dict[str, list[int, str]]]] = field(default_factory=dict)
+    update_buffer: dict[str, dict[str]] = field(default_factory=dict)
 
     def __init__(self, telemetry_buffer_size: int = 20):
         logger.debug(f"Initializing TelemetryData[{telemetry_buffer_size}]")
         self.telemetry_buffer_size = telemetry_buffer_size
         self.output_blocks = {}
+        self.update_buffer = {}
 
         # Read packet definition file
         filepath = os.path.join(Path(__file__).parents[0], "telemetry_packet.json")
         with open(filepath, "r") as file:
-            self.output_specification = dict(json.load(file))
+            output_specification: dict[str, dict[str, dict[str, list[int, str]]]] = dict(json.load(file))
 
         # Generate telemetry data packet from output specification
-        telemetry_keys: dict[str, list[str]] = dict.fromkeys(self.output_specification.keys(), [])
-        for key in self.output_specification.keys():
-            telemetry_keys[key] = list(self.output_specification[key].keys())
+        telemetry_keys: dict[str, list[str]] = dict.fromkeys(output_specification.keys(), [])
+        for key in output_specification.keys():
+            telemetry_keys[key] = list(output_specification[key].keys())
 
         # Generate output block objects from telemetry keys
         for key in telemetry_keys.keys():
             self.output_blocks[key] = TelemetryDataPacketBlock(telemetry_keys.get(key))
+            self.update_buffer[key] = dict.fromkeys(telemetry_keys.get(key), None)
 
         # Generate very efficient access matrix
         # loop                                   = {INPUT: OUTPUT}     "dataPacketBlockName.storedValueVariable"
         # decoder[packet_version][block_subtype] = {"gps_sats_in_use": "sats_in_use.gps_sats_in_use"}
-
-    def updateBufferSize(self, new_buffer_size: int = 20) -> None:
-        """ Allows the updating of telemetry buffer size without recreating object """
-        self.telemetry_buffer_size = new_buffer_size
+        # TODO Generate matrix on its own as this is temporary
+        self.decoder = [{}, {
+            1: {"altitude.metres": "altitude.metres", "altitude.feet": "altitude.feet"},
+            2: {"temperature.celsius": "temperature.celsius"},
+            3: {"pressure.pascals": "pressure.pascals"},
+            8: {"percentage": "humidity.percentage"}}]
+        # logger.debug(self.decoder)
+        # logger.debug(self.update_buffer)
 
     def updateTelemetry(self, packet_version: int, blocks: [ParsedBlock]):
         """ Updates telemetry object from given parsed blocks """
 
-        # Extract all block content into a nice list
-        telemetry_list: [list[dict]] = [[] for i in range(0xFF)]
+        # Extract block data
         for block in blocks:
             block_num = block.block_header.message_subtype
-            telemetry_list[block_num].append(block.block_contents)
+            block_decode = self.decoder[packet_version][block_num]
+            data = block.block_contents
 
-            logger.debug(f"updateFromParsedBlocks: {block}")
+            logger.debug(f"{block}")
 
             try:
-                data = block.block_contents
+                # Update last mission time
                 if data["mission_time"] > self.last_mission_time:
                     self.last_mission_time = data["mission_time"]
 
-                # vers = packet_version
-                # type = block.block_header.message_subtype
-                logger.debug(f"{packet_version, block.block_header.message_subtype, data}")
+                # Grab input values and put them in update buffer (to fill output packets)
+                for key in block_decode.keys():
+                    destinationBlock = block_decode[key].split('.')[0]
+                    destinationValue = block_decode[key].split('.')[1]
+                    # Extract data and associated mission time to buffer
+                    self.update_buffer[destinationBlock]["mission_time"] = data["mission_time"]
+                    if '.' in key:
+                        datakey = key.split('.')[0]
+                        datasubkey = key.split('.')[1]
+                        self.update_buffer[destinationBlock][destinationValue] = data[datakey][datasubkey]
+                    else:
+                        self.update_buffer[destinationBlock][destinationValue] = data[key]
 
+                # Check if we filled any packet during this block extraction
+                for key in self.update_buffer:
+                    if None not in self.update_buffer[key].values():
+                        # Let's update packet then!
+                        self.output_blocks[key].update(self.update_buffer[key], self.telemetry_buffer_size)
+                        # Clear buffer!
+                        for subkey in self.update_buffer[key].keys():
+                            self.update_buffer[key][subkey] = None
 
             except KeyError as e:
                 logger.error(f"Telemetry parsed block data issue. Missing key {e}")
 
-        #logger.debug(telemetry_list)
+    def updateBufferSize(self, new_buffer_size: int = 20) -> None:
+        """ Allows the updating of telemetry buffer size without recreating object """
+        self.telemetry_buffer_size = new_buffer_size
 
     def clear(self):
         """ Clears the telemetry output data packet """

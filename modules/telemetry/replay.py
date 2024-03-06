@@ -44,7 +44,8 @@ class TelemetryReplay:
         # Replay raw radio transmission file
         with open(self.replay_path, "r") as file:
             for line in file:
-                print(line)
+                # print(line)
+                sleep(0.052)
                 if self.speed > 0:
                     self.replay_payloads.put(line)
 

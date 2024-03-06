@@ -136,7 +136,7 @@ class Telemetry:
     def reset_data(self) -> None:
         """Resets all live data on the telemetry backend to a default state."""
         self.status = jsp.StatusData()
-        self.telemetry = jsp.TelemetryData(self.config.telemetry_buffer_size)
+        self.telemetry.clear()
 
     def parse_serial_status(self, command: str, data: str) -> None:
         """Parses the serial managers status output"""
