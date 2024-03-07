@@ -237,7 +237,7 @@ class DebugMessageDB(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "message", {self.message}
+        yield "message", self.message
 
 
 def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
