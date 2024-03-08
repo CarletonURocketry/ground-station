@@ -220,7 +220,9 @@ class DebugMessageDB(DataBlock):
         Returns:
             A debug message data block.
         """
-        raise NotImplementedError
+        mission_time = struct.unpack("<I", payload[:4])[0]
+        message = payload[4:].decode("utf-8")
+        return cls(mission_time, message)
 
     def __len__(self) -> int:
         """
@@ -229,6 +231,13 @@ class DebugMessageDB(DataBlock):
             The length of a debug message data block in bytes, not including the block header.
         """
         return 4 + len(self.message)
+
+    def __str__(self):
+        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, message: {self.message}"
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "message", self.message
 
 
 def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
