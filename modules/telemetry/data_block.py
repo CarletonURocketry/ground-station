@@ -15,10 +15,16 @@ from modules.misc import converter
 
 
 class DataBlockException(BlockException):
+    """
+        Base exception class for telemetry data block errors.
+        """
     pass
 
 
 class DataBlockUnknownException(BlockUnknownException):
+    """
+        Exception raised for unknown telemetry data block types.
+        """
     pass
 
 
@@ -26,6 +32,14 @@ class DataBlock(ABC):
     """Interface for all telemetry data blocks."""
 
     def __init__(self, subtype: DataBlockSubtype, mission_time: int):
+        """
+                Initialize a telemetry data block
+                :param subtype: The subtype of the data block.
+                :type subtype: DataBlockSubtype
+                :param mission_time: The misiion time associated with the data block.
+                :type mission_time: int
+                """
+
         super().__init__()
         self.mission_time: int = mission_time
         self.subtype: DataBlockSubtype = subtype
@@ -41,11 +55,22 @@ class DataBlock(ABC):
     @classmethod
     @abstractmethod
     def from_payload(cls, payload: bytes) -> DataBlock:
-        """Returns a DataBlock initialized from a payload of bytes."""
+        """
+                Returns a DataBlock initialized from a payload of bytes.
+                :param payload: The payload bytes representing the data block.
+                :type payload: bytes
+                """
 
     @staticmethod
     def parse(block_subtype: DataBlockSubtype, payload: bytes) -> DataBlock:
-        """Unmarshal a bytes object to appropriate block class."""
+        """
+        Unmarshal a bytes object to appropriate block class.
+        :param block_subtype: The subtype of the data block.
+        :type block_subtype: DataBlockSubtype.
+        :param payload: The payload bytes representing the data block/
+        :type payload: bytes
+        :raises DataBlockUnknownException: If the block subtype is unknown.
+        """
 
         SUBTYPE_CLASSES: dict[DataBlockSubtype, Type[DataBlock]] = {
             DataBlockSubtype.DEBUG_MESSAGE: DebugMessageDataBlock,
@@ -70,59 +95,116 @@ class DataBlock(ABC):
 
 # Debug Message
 class DebugMessageDataBlock(DataBlock):
+    """
+        Telemetry data block for debug messages.
+        """
     def __init__(self, mission_time: int, debug_msg: str):
+        """
+                Initialize a debug message data block.
+                :param mission_time: The mission time associated with the debug message.
+                :type mission_time: int
+                :param debug_msg: The debug message content
+                :type debug_msg: str
+                """
         super().__init__(DataBlockSubtype.DEBUG_MESSAGE, mission_time)
         self.debug_msg: str = debug_msg
 
     def __len__(self) -> int:
+        """
+                :return: the length of the debug message data block.
+                """
         return ((len(self.debug_msg.encode("utf-8")) + 3) & ~0x3) + 4
 
     @classmethod
     def from_payload(cls, payload: bytes) -> Self:
+        """
+               Desearialize a bytes object to initialize a debug message data block.
+               :param payload: The payload bytes representing the debug message data block.
+               :type payload: bytes
+               """
         mission_time = struct.unpack("<I", payload[0:4])[0]
         return cls(mission_time, payload[4:].decode("utf-8"))
 
     def to_payload(self) -> bytes:
+        """
+                Serialize the debug message data block to a bytes object
+                """
         b = self.debug_msg.encode("utf-8")
         b = b + (b"\x00" * (((len(b) + 3) & ~0x3) - len(b)))
         return struct.pack("<I", self.mission_time) + b
 
     def __str__(self):
+        """
+                :return: A string representation of the debug message data block.
+                """
         return f'{self.__class__.__name__} -> time: {self.mission_time} ms, message: "{self.debug_msg}"'
 
     def __iter__(self):
+        """
+               Iterate over the attributes f the debug message datablock.
+               """
         yield "mission_time", self.mission_time
         yield "message", self.debug_msg
 
 
 class StartupMessageDataBlock(DataBlock):
+    """
+        Telemetry data block for startup messages.
+        """
     def __init__(self, mission_time: int, startup_msg: str):
+        """
+               Initialize a startup message data block.
+               :param mission_time: The mission time associated with the startup message.
+               :type mission_time: int
+               :param startup_msg:  The startup message content.
+               :type startup_msg: str
+               """
         super().__init__(DataBlockSubtype.STARTUP_MESSAGE, mission_time)
         self.startup_msg: str = startup_msg
 
     def __len__(self) -> int:
+        """
+                :return: The length of the startup message data block
+                """
         return ((len(self.startup_msg.encode("utf-8")) + 3) & ~0x3) + 4
 
     @classmethod
     def from_payload(cls, payload: bytes):
+        """
+                       Deserialize a bytes object to initialize a startup message data block.
+                       :param payload: The payload bytes representing the startup message data block.
+                       :type payload: bytes
+                       """
         mission_time = struct.unpack("<I", payload[0:4])[0]
         return StartupMessageDataBlock(mission_time, payload[4:].decode("utf-8"))
 
     def to_payload(self) -> bytes:
+        """
+                Serialize the startup message data block to a bytes object.
+                """
         b = self.startup_msg.encode("utf-8")
         b = b + (b"\x00" * (((len(b) + 3) & ~0x3) - len(b)))
         return struct.pack("<I", self.mission_time) + b
 
     def __str__(self):
+        """
+                Return a string representation of the startup message data block.
+                """
         return f'{self.__class__.__name__} -> time: {self.mission_time} ms, message: "{self.startup_msg}"'
 
     def __iter__(self):
+        """
+                Iterate over the attributes of the startup message data block.
+                """
         yield "mission_time", self.mission_time
         yield "message", self.startup_msg
 
 
 # Software Status
 class SensorStatus(IntEnum):
+    """
+        Enumeration for sensor status values.
+        """
     SENSOR_STATUS_NONE = 0x0
     SENSOR_STATUS_INITIALIZING = 0x1
     SENSOR_STATUS_RUNNING = 0x2
@@ -130,6 +212,9 @@ class SensorStatus(IntEnum):
     SENSOR_STATUS_FAILED = 0x4
 
     def __str__(self):
+        """
+                Return a human-readable string representation of the sensor status.
+                """
         return {
             SensorStatus.SENSOR_STATUS_NONE: "none",
             SensorStatus.SENSOR_STATUS_INITIALIZING: "initializing",
@@ -140,12 +225,18 @@ class SensorStatus(IntEnum):
 
 
 class SDCardStatus(IntEnum):
+    """
+        Enumeration for SD card status values.
+        """
     SD_CARD_STATUS_NOT_PRESENT = 0x0
     SD_CARD_STATUS_INITIALIZING = 0x1
     SD_CARD_STATUS_READY = 0x2
     SD_CARD_STATUS_FAILED = 0x3
 
     def __str__(self):
+        """
+                :return: A human-readable string representation of the SD card status.
+                """
         return {
             SDCardStatus.SD_CARD_STATUS_NOT_PRESENT: "card not present",
             SDCardStatus.SD_CARD_STATUS_INITIALIZING: "initializing",
@@ -155,6 +246,9 @@ class SDCardStatus(IntEnum):
 
 
 class DeploymentState(IntEnum):
+    """
+    Enumeration for deployment states.
+    """
     DEPLOYMENT_STATE_DNE = -1
     DEPLOYMENT_STATE_IDLE = 0x0
     DEPLOYMENT_STATE_ARMED = 0x1
@@ -167,6 +261,9 @@ class DeploymentState(IntEnum):
     DEPLOYMENT_STATE_RECOVERY = 0x8
 
     def __str__(self):
+        """
+                :return: a human readable sting representation of the deployment state
+                """
         return {
             DeploymentState.DEPLOYMENT_STATE_IDLE: "idle",
             DeploymentState.DEPLOYMENT_STATE_ARMED: "armed",
@@ -195,6 +292,25 @@ class StatusDataBlock(DataBlock):
         sd_blocks_recorded: int,
         sd_checkouts_missed: int,
     ):
+        """
+                Initializa a StatusDataBlock Instance.
+                :param mission_time: The mission time associated with the status data.
+                :type mission_time: int
+                :param kx134_state: The state of the KX134 sensor.
+                :type kx134_state: SensorStatus
+                :param alt_state: The state of the altimeter sensor.
+                :type alt_state: SensorStatus
+                :param imu_state: The state of the IMU sensor.
+                :type imu_state: SensorStatus
+                :param sd_state: The state of the SD card.
+                :type sd_state: SDCardStatus
+                :param deployment_state: The state of the deployment.
+                :type deployment_state: DeploymentState
+                :param sd_blocks_recorded: The number of SD card blocks recorded.
+                :type sd_blocks_recorded: int
+                :param sd_checkouts_missed: The number of SD card checkouts missed.
+                :type sd_checkouts_missed: int
+                """
         super().__init__(DataBlockSubtype.STATUS, mission_time)
         self.kx134_state: SensorStatus = kx134_state
         self.alt_state: SensorStatus = alt_state
@@ -205,10 +321,19 @@ class StatusDataBlock(DataBlock):
         self.sd_checkouts_missed: int = sd_checkouts_missed
 
     def __len__(self) -> int:
+        """
+                :return:         Returns the length of the StatusDataBlock
+                """
         return 16
 
     @classmethod
     def from_payload(cls, payload: bytes):
+        """
+               Deserialize a byte payload into a StatusDataBlock instance.
+               :param payload: The byte payload representing the status data block.
+               :type payload: bytes
+               :raises DataBlockException: If the payload is invalid.
+               """
         parts = struct.unpack("<IIII", payload)
 
         try:
@@ -241,7 +366,11 @@ class StatusDataBlock(DataBlock):
         )
 
     def to_payload(self) -> bytes:
-        """Transforms a StatusData block into a byte payload."""
+        """
+               Transforms a StatusData block into a byte payload.
+               This method convers the StatusData block into a byte payload suitable for transmission or storage.
+               :return: Byte representation of the StatusData block.
+               """
         kx134_state = (self.kx134_state.value & 0x7) << 16
         alt_state = (self.alt_state.value & 0x7) << 19
         imu_state = (self.imu_state.value & 0x7) << 22
@@ -253,6 +382,13 @@ class StatusDataBlock(DataBlock):
         return struct.pack("<IIII", self.mission_time, states, self.sd_blocks_recorded, self.sd_checkouts_missed)
 
     def __str__(self):
+        """
+                Return a human-readable string representation of the StatusData block.
+                This method returns a string containing information about the StatusData block, including its mission time,
+                sensor states, and SD card status.
+                :return: Human-readable string representation of the StatusData block.
+                :rtype: str
+                """
         return (
             f"{self.__class__.__name__} -> time: {self.mission_time} ms, kx134 state: "
             f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
@@ -262,6 +398,12 @@ class StatusDataBlock(DataBlock):
         )
 
     def __iter__(self):
+        """
+                Iterate over the attributes of the StatusData block.
+                This method allows iterating over the attributes of the StatusData block as key-value pairs.
+                :return: An iterator yielding key-value pairs of the attributes of the StatusData block.
+                :rtype: Iterator
+                """
         yield "mission_time", self.mission_time
         yield "kx134_state", self.kx134_state
         yield "altimeter_state", self.alt_state
@@ -274,9 +416,29 @@ class StatusDataBlock(DataBlock):
 
 # Altitude
 class AltitudeDataBlock(DataBlock):
-    """Contains the data pertaining to the altitude block."""
+    """Contains data pertaining to the altitude block.
+         :param mission_time: The mission time in milliseconds.
+        :type mission_time: int
+        :param pressure: The atmospheric pressure in Pascals.
+        :type pressure: int
+        :param temperature: The temperature in Celsius.
+        :type temperature: int
+        :param altitude: The altitude in meters.
+        :type altitude: int
+    """
 
     def __init__(self, mission_time: int, pressure: int, temperature: int, altitude: int):
+        """
+                Initialize an AltitudeDataBlock instance.
+                :param mission_time: The mission time in milliseconds.
+                :type mission_time: int
+                :param pressure: The atmospheric pressure in Pascals.
+                :type pressure: int
+                :param temperature: The temperature in Celsius.
+                :type temperature: int
+                :param altitude: The altitude in meters.
+                :type altitude: int
+                """
         super().__init__(DataBlockSubtype.ALTITUDE, mission_time)
         self.pressure: int = pressure
         self.temperature: int = temperature
@@ -287,21 +449,43 @@ class AltitudeDataBlock(DataBlock):
 
     @classmethod
     def from_payload(cls, payload: bytes):
+        """
+               Construct an AltitudeDataBlock instance from a payload.
+               :param payload: The payload containing the control block data.
+               :type payload: bytes
+               :return: The constructed AltitudeDataBlock instance.
+               :rtype: AltitudeDataBlock
+               """
         parts = struct.unpack("<Iiii", payload)
         return AltitudeDataBlock(parts[0], parts[1], parts[2] / 1000, parts[3] / 1000)
 
     def to_payload(self) -> bytes:
+        """
+               Marshal the altitude data block to a bytes object.
+               :return: The marshaled altitude data block.
+               :rtype: bytes
+               """
         return struct.pack(
             "<Iiii", self.mission_time, int(self.pressure), int(self.temperature * 1000), int(self.altitude * 1000)
         )
 
     def __str__(self):
+        """
+                Get a string representation of the altitude data block.
+                :return: A string representation of the altitude data block.
+                :rtype: str
+                """
         return (
             f"{self.__class__.__name__} -> time: {self.mission_time} ms, pressure: {self.pressure} Pa, "
             f"temperature: {self.temperature} C, altitude: {self.altitude} m"
         )
 
     def __iter__(self):
+        """
+                Iterate over the attributes of the altitude data block.
+                :return: An iterator over attribute name and value tuples.
+                :rtype: Iterator[tuple[str, Any]]
+                """
         yield "mission_time", self.mission_time
         yield "pressure", {"pascals": self.pressure, "psi": converter.pascals_to_psi(self.pressure)}
         yield "altitude", {"metres": self.altitude, "feet": converter.metres_to_feet(self.altitude)}
@@ -312,7 +496,33 @@ class AltitudeDataBlock(DataBlock):
 
 
 class AccelerationDataBlock(DataBlock):
+    """
+        Contains data pertaining to the acceleration block.
+        :param mission_time: The mission time in milliseconds.
+        :type mission_time: int
+        :param fsr: The full-scale range of the accelerometer.
+        :type fsr: int
+        :param x: The acceleration along the x-axis in g.
+        :type x: int
+        :param y: The acceleration along the y-axis in g.
+        :type y: int
+        :param z: The acceleration along the z-axis in g.
+        :type z: int
+        """
     def __init__(self, mission_time: int, fsr: int, x: int, y: int, z: int):
+        """
+               Initialize an AccelerationDataBlock instance.
+               :param mission_time: The mission time in milliseconds.
+               :type mission_time: int
+               :param fsr: The full-scale range of the accelerometer.
+               :type fsr: int
+               :param x: The acceleration along the x-axis in g.
+               :type x: int
+               :param y: The acceleration along the y-axis in g.
+               :type y: int
+               :param z: The acceleration along the z-axis in g.
+               :type z: int
+               """
         super().__init__(DataBlockSubtype.ACCELERATION, mission_time)
         self.mission_time: int = mission_time
         self.fsr: int = fsr
@@ -325,6 +535,13 @@ class AccelerationDataBlock(DataBlock):
 
     @classmethod
     def from_payload(cls, payload: bytes):
+        """
+                Construct an AccelerationDataBlock instance from a payload.
+                :param payload: The payload containing the control block data.
+                :type payload: bytes
+                :return: The constructed AccelerationDataBlock instance.
+                :rtype: AccelerationDataBlock
+                """
         parts = struct.unpack("<IBBhhh", payload)
         fsr = parts[1]
         x = parts[3] * (fsr / (2**15))
@@ -333,18 +550,33 @@ class AccelerationDataBlock(DataBlock):
         return AccelerationDataBlock(parts[0], fsr, x, y, z)
 
     def to_payload(self) -> bytes:
+        """
+                :Marshal the acceleration data block to a bytes object.
+                :return: The marshaled acceleration data block.
+                :rtype: bytes
+                """
         x = round(self.x * ((2**15) / self.fsr))
         y = round(self.y * ((2**15) / self.fsr))
         z = round(self.z * ((2**15) / self.fsr))
         return struct.pack("<IBBhhh", self.mission_time, self.fsr, 0, x, y, z)
 
     def __str__(self):
+        """
+                Get a string representation of the acceleration data block.
+                :return: A string representation of the acceleration data block.
+                :rtype: str
+                """
         return (
             f"{self.__class__.__name__} -> time: {self.mission_time}, fsr: {self.fsr}, "
             f"x: {self.x} g, y: {self.y} g, z: {self.z} g"
         )
 
     def __iter__(self):
+        """
+               Iterate over the attributes of the acceleration data block.
+               :return: An iterator over attribute name and value tuples.
+               :rtype: Iterator[tuple[str, Any]]
+               """
         yield "mission_time", self.mission_time
         yield "fsr", self.fsr
         yield "x", self.x
@@ -354,7 +586,33 @@ class AccelerationDataBlock(DataBlock):
 
 # Angular Velocity
 class AngularVelocityDataBlock(DataBlock):
+    """
+        Contains data pertaining to the angular velocity block.
+        :param mission_time: The mission time in milliseconds.
+        :type mission_time: int
+        :param fsr: The full-scale range of the gyroscope.
+        :type fsr: int
+        :param x: The angular velocity around the x-axis in degrees per second.
+        :type x: int
+        :param y: The angular velocity around the y-axis in degrees per second.
+        :type y: int
+        :param z: The angular velocity around the z-axis in degrees per second.
+        :type z: int
+        """
     def __init__(self, mission_time: int, fsr: int, x: int, y: int, z: int):
+        """
+                Initialize an AngularVelocityDataBlock instance.
+                :param mission_time: The mission time in milliseconds.
+                :type mission_time: int
+                :param fsr: The full-scale range of the gyroscope.
+                :type fsr: int
+                :param x: The angular velocity around the x-axis in degrees per second.
+                :type x: int
+                :param y: The angular velocity around the y-axis in degrees per second.
+                :type y: int
+                :param z: The angular velocity around the z-axis in degrees per second.
+                :type z: int
+                """
         super().__init__(DataBlockSubtype.ANGULAR_VELOCITY, mission_time)
         self.fsr: int = fsr
         self.x: int = x
@@ -366,6 +624,13 @@ class AngularVelocityDataBlock(DataBlock):
 
     @classmethod
     def from_payload(cls, payload: bytes):
+        """
+                Construct an AngularVelocityDataBlock instance from a payload.
+                :param payload: The payload containing the control block data.
+                :type payload: bytes
+                :return: The constructed AngularVelocityDataBlock instance.
+                :rtype: AngularVelocityDataBlock
+                """
         parts = struct.unpack("<IHhhh", payload)
         fsr = parts[1]
         x = parts[2] * (fsr / (2**15))
@@ -374,18 +639,33 @@ class AngularVelocityDataBlock(DataBlock):
         return AngularVelocityDataBlock(parts[0], fsr, x, y, z)
 
     def to_payload(self) -> bytes:
+        """
+                Marshal the angular velocity data block to a bytes object.
+                :return: The marshaled angular velocity data block.
+                :rtype: bytes
+                """
         x = round(self.x * ((2**15) / self.fsr))
         y = round(self.y * ((2**15) / self.fsr))
         z = round(self.z * ((2**15) / self.fsr))
         return struct.pack("<IHhhh", self.mission_time, self.fsr, x, y, z)
 
     def __str__(self):
+        """
+               Get a string representation of the angular velocity data block.
+               :return: A string representation of the angular velocity data block.
+               :rtype: str
+               """
         return (
             f"{self.__class__.__name__} -> time: {self.mission_time}, fsr: {self.fsr}, "
             f"x: {self.x} g, y: {self.y} g, z: {self.z} g"
         )
 
     def __iter__(self):
+        """
+                Iterate over the attributes of the angular velocity data block.
+                :return: An iterator over attribute name and value tuples.
+                :rtype: Iterator[tuple[str, Any]]
+                """
         yield "mission_time", self.mission_time
         yield "fsr", self.fsr
         yield "x", self.x
@@ -395,6 +675,13 @@ class AngularVelocityDataBlock(DataBlock):
 
 # GNSS Location
 class GNSSLocationFixType(IntEnum):
+    """
+        Enumeration for GNSS location fix types.
+        :cvar UNKNOWN: Unknown fix type.
+        :cvar NOT_AVAILABLE: Fix not available.
+        :cvar FIX_2D: 2D fix.
+        :cvar FIX_3D: 3D fix.
+        """
     UNKNOWN = 0
     NOT_AVAILABLE = 1
     FIX_2D = 2
@@ -402,7 +689,33 @@ class GNSSLocationFixType(IntEnum):
 
 
 class GNSSLocationBlock(DataBlock):
-    """The data for GNSS location."""
+    """
+        The data for GNSS location.
+        :param mission_time: The mission time in milliseconds.
+        :type mission_time: int
+        :param latitude: The latitude in microdegrees (degrees * 10^6).
+        :type latitude: int
+        :param longitude: The longitude in microdegrees (degrees * 10^6).
+        :type longitude: int
+        :param utc_time: The Coordinated Universal Time (UTC) time in seconds.
+        :type utc_time: int
+        :param altitude: The altitude in meters.
+        :type altitude: int
+        :param speed: The speed over ground in knots.
+        :type speed: int
+        :param course: The course over ground in degrees.
+        :type course: int
+        :param pdop: The Position Dilution of Precision (PDOP).
+        :type pdop: int
+        :param hdop: The Horizontal Dilution of Precision (HDOP).
+        :type hdop: int
+        :param vdop: The Vertical Dilution of Precision (VDOP).
+        :type vdop: int
+        :param sats: The number of satellites in use.
+        :type sats: int
+        :param fix_type: The GNSS location fix type.
+        :type fix_type: GNSSLocationFixType
+        """
 
     def __init__(
         self,
@@ -419,6 +732,34 @@ class GNSSLocationBlock(DataBlock):
         sats: int,
         fix_type: GNSSLocationFixType,
     ):
+        """
+                Initialize a GNSSLocationBlock instance.
+                :param mission_time: The mission time in milliseconds.
+                :type mission_time: int
+                :param latitude: The latitude in microdegrees (degrees * 10^6).
+                :type latitude: int
+                :param longitude: The longitude in microdegrees (degrees * 10^6).
+                :type longitude: int
+                :param utc_time: The Coordinated Universal Time (UTC) time in seconds.
+                :type utc_time: int
+                :param altitude: The altitude in meters.
+                :type altitude: int
+                :param speed: The speed over ground in knots.
+                :type speed: int
+                :param course: The course over ground in degrees.
+                :type course: int
+                :param pdop: The Position Dilution of Precision (PDOP).
+                :type pdop: int
+                :param hdop: The Horizontal Dilution of Precision (HDOP).
+                :type hdop: int
+                :param vdop: The Vertical Dilution of Precision (VDOP).
+                :type vdop: int
+                :param sats: The number of satellites in use.
+                :type sats: int
+                :param fix_type: The GNSS location fix type.
+                :type fix_type: GNSSLocationFixType
+                """
+
         super().__init__(DataBlockSubtype.GNSS, mission_time)
         self.latitude: int = latitude
         self.longitude: int = longitude
@@ -437,6 +778,14 @@ class GNSSLocationBlock(DataBlock):
 
     @classmethod
     def from_payload(cls, payload: bytes):
+        """
+               Construct a GNSSLocationBlock instance from a payload.
+               :param payload: The payload containing the control block data.
+               :type payload: bytes
+               :return: The constructed GNSSLocationBlock instance.
+               :rtype: GNSSLocationBlock
+               :raises DataBlockException: If an invalid GNSS fix type is encountered.
+               """
         parts = struct.unpack("<IiiIihhHHHBB", payload)
 
         try:
@@ -460,6 +809,11 @@ class GNSSLocationBlock(DataBlock):
         )
 
     def to_payload(self) -> bytes:
+        """
+                Marshal the GNSS location block to a bytes object.
+                :return: The marshaled GNSS location block.
+                :rtype: bytes
+                """
         return struct.pack(
             "<IiiIihhHHHBB",
             self.mission_time,
@@ -478,6 +832,15 @@ class GNSSLocationBlock(DataBlock):
 
     @staticmethod
     def coord_to_str(coord: int, ew: bool = False):
+        """
+                Convert a coordinate in microdegrees to a string representation.
+                :param coord: The coordinate in microdegrees.
+                :type coord: int
+                :param ew: Whether it's an east-west coordinate.
+                :type ew: bool, optional
+                :return: The string representation of the coordinate.
+                :rtype: str
+                """
         direction = coord >= 0
         coord = abs(coord)
         degrees = coord // 600000
@@ -494,6 +857,11 @@ class GNSSLocationBlock(DataBlock):
         return f"{degrees}°{minutes}'{seconds:.3f}{direction_char}"
 
     def __str__(self):
+        """
+                Get a string representation of the GNSS location block.
+                :return: A string representation of the GNSS location block.
+                :rtype: str
+                """
         return (
             f"{self.__class__.__name__} -> time: {self.mission_time}, position: "
             f"{(self.latitude / 600000)} {(self.longitude / 600000)}, utc time: "
@@ -503,6 +871,11 @@ class GNSSLocationBlock(DataBlock):
         )
 
     def __iter__(self):
+        """
+               Iterate over the attributes of the GNSS location block.
+               :return: An iterator over attribute name and value tuples.
+               :rtype: Iterator[tuple[str, Any]]
+               """
         yield "mission_time", self.mission_time
         yield "position", {"latitude": (self.latitude / 600000), "longitude": (self.longitude / 600000)}
         yield "utc_time", self.utc_time
