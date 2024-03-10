@@ -91,7 +91,7 @@ def test_mission_data_serialization() -> None:
         "name": "rocket mission",
         "epoch": 12,
         "state": jsp.MissionState.RECORDED.value,
-        "recording": True
+        "recording": True,
     }
 
 
