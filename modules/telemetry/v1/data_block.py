@@ -317,15 +317,15 @@ def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
     """
 
     match type:
+        case DataBlockSubtype.DEBUG_MESSAGE:
+            return DebugMessageDB.from_bytes(payload)
         case DataBlockSubtype.ALTITUDE:
             return AltitudeDB.from_bytes(payload)
+        case DataBlockSubtype.TEMPERATURE:
+            return TemperatureDB.from_bytes(payload)
         case DataBlockSubtype.PRESSURE:
             return PressureDB.from_bytes(payload)
         case DataBlockSubtype.HUMIDITY:
             return HumidityDB.from_bytes(payload)
-        case DataBlockSubtype.TEMPERATURE:
-            return TemperatureDB.from_bytes(payload)
-        case DataBlockSubtype.DEBUG_MESSAGE:
-            return DebugMessageDB.from_bytes(payload)
         case _:
             raise NotImplementedError
