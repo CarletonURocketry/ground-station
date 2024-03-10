@@ -229,7 +229,7 @@ class TelemetryDataPacketBlock:
             for key in self.stored_values.keys():
                 self.stored_values[key].pop(0)
 
-    def clear(self):
+    def clear(self) -> None:
         """Clears all stored values"""
         self.mission_time = []
         self.stored_values = dict.fromkeys(self.stored_values.keys(), [])
@@ -250,7 +250,7 @@ class TelemetryData:
     """Contains the output specification for the telemetry data block"""
 
     # Configuration
-    telemetry_buffer_size: int = 20
+    buffer_size: int = 20
     decoder: list[dict[int, dict[str, str]]] = field(default_factory=list)
 
     # Current data storage
@@ -260,14 +260,14 @@ class TelemetryData:
 
     def __init__(self, telemetry_buffer_size: int = 20):
         logger.debug(f"Initializing TelemetryData[{telemetry_buffer_size}]")
-        self.telemetry_buffer_size = telemetry_buffer_size
+        self.buffer_size = telemetry_buffer_size
         self.output_blocks = {}
         self.update_buffer = {}
 
         # Read packet definition file
         filepath = os.path.join(Path(__file__).parents[0], "telemetry_packet.json")
         with open(filepath, "r") as file:
-            output_specification: dict[str, dict[str, dict[str, list[str]]]] = dict(json.load(file))
+            output_specification: dict[str, dict[str, dict[str, dict[str, str]]]] = dict(json.load(file))
 
         # Generate telemetry data packet from output specification
         for key in output_specification.keys():
@@ -275,21 +275,20 @@ class TelemetryData:
             self.output_blocks[key] = TelemetryDataPacketBlock(telemetry_keys)
             self.update_buffer[key] = dict.fromkeys(telemetry_keys, None)
 
-        # Generate very efficient access matrix
-        # loop                                   = {INPUT: OUTPUT}     "dataPacketBlockName.storedValueVariable"
+        # Generate extremely efficient access matrix
+        #                                        = {INPUT: OUTPUT}     "dataPacketBlockName.storedValueVariable"
         # decoder[packet_version][block_subtype] = {"gps_sats_in_use": "sats_in_use.gps_sats_in_use"}
-        # TODO Generate matrix on its own as this is temporary
-        self.decoder = [
-            {},
-            {
-                1: {"altitude.metres": "altitude.metres", "altitude.feet": "altitude.feet"},
-                2: {"temperature.celsius": "temperature.celsius"},
-                3: {"pressure.pascals": "pressure.pascals"},
-                8: {"percentage": "humidity.percentage"},
-            },
-        ]
-        # logger.debug(self.decoder)
-        # logger.debug(self.update_buffer)
+        self.decoder = [{}, {}, {}, {}, {}]
+        for data_packet in output_specification.keys():
+            for stored_value in output_specification[data_packet].keys():
+                for version in output_specification[data_packet][stored_value].keys():
+                    for block in output_specification[data_packet][stored_value][version].keys():
+                        input_key: str = output_specification[data_packet][stored_value][version][block]
+                        output_key: str = f"{data_packet}.{stored_value}"
+
+                        existing: dict[str, str] = self.decoder[int(version)].get(int(block), {})
+                        existing[input_key] = output_key
+                        self.decoder[int(version)][int(block)] = existing
 
     def updateTelemetry(self, packet_version: int, blocks: list[ParsedBlock]) -> None:
         """Updates telemetry object from given parsed blocks"""
@@ -326,9 +325,7 @@ class TelemetryData:
                 for key in self.update_buffer.keys():
                     if None not in self.update_buffer[key].values():
                         # Let's update packet
-                        self.output_blocks[key].update(
-                            self.update_buffer[key], self.telemetry_buffer_size  # type: ignore
-                        )
+                        self.output_blocks[key].update(self.update_buffer[key], self.buffer_size)  # type: ignore
                         # Clear packets buffer
                         for subkey in self.update_buffer[key].keys():
                             self.update_buffer[key][subkey] = None
@@ -336,8 +333,8 @@ class TelemetryData:
                 logger.error(f"Telemetry parsed block data issue. Missing key {e}")
 
     def updateBufferSize(self, new_buffer_size: int = 20) -> None:
-        """Allows the updating of telemetry buffer size without recreating object"""
-        self.telemetry_buffer_size = new_buffer_size
+        """Allows updating the telemetry buffer size without recreating object"""
+        self.buffer_size = new_buffer_size
 
     def clear(self):
         """Clears the telemetry output data packet entirely"""
