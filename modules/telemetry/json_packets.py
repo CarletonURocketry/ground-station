@@ -336,7 +336,7 @@ class TelemetryData:
             except KeyError as e:
                 logger.error(f"Telemetry parsed block data issue. Missing key {e}")
 
-    def updateBufferSize(self, new_buffer_size: int = 20) -> None:
+    def update_buffer_size(self, new_buffer_size: int = 20) -> None:
         """Allows updating the telemetry buffer size without recreating object"""
         self.buffer_size = new_buffer_size
 
