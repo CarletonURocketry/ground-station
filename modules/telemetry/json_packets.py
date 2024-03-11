@@ -231,7 +231,7 @@ class TelemetryDataPacketBlock:
     def clear(self) -> None:
         """Clears all stored values"""
         self.mission_time = []
-        self.stored_values = dict.fromkeys(self.stored_values.keys(), [])
+        self.stored_values = {key: [] for key in self.stored_values.keys()}
 
     def __str__(self):
         """Returns a string representation of the TelemetryDataPacketBlock"""
@@ -274,7 +274,7 @@ class TelemetryData:
         for key in output_format.keys():
             telemetry_keys: list[str] = list(output_format[key].keys())
             self.output_blocks[key] = TelemetryDataPacketBlock(stored_values={key: [] for key in telemetry_keys})
-            self.update_buffer[key] = dict.fromkeys(telemetry_keys, None)
+            self.update_buffer[key] = {key: None for key in telemetry_keys}
 
         # Generate extremely efficient access decoder matrix
         #                                        = {INPUT: OUTPUT}     "dataPacketBlockName.storedValueVariable"
@@ -344,9 +344,9 @@ class TelemetryData:
         """Clears the telemetry output data packet entirely"""
         self.last_mission_time = -1
         # Clear buffer
-        for key in self.update_buffer.keys():
-            for subkey in self.update_buffer[key].keys():
-                self.update_buffer[key][subkey] = None
+        for dest_block in self.update_buffer.keys():
+            for dest_value in self.update_buffer[dest_block].keys():
+                self.update_buffer[dest_block][dest_value] = None
         # Clear packet blocks
         for block in self.output_blocks.values():
             block.clear()
