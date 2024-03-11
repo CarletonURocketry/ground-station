@@ -54,7 +54,7 @@ class Telemetry:
     ):
         super().__init__()
         self.config = config
-        self.version = str(version)
+        self.version = version
 
         self.radio_payloads: Queue[str] = radio_payloads
         self.telemetry_json_output: Queue[JSON] = telemetry_json_output
@@ -65,7 +65,7 @@ class Telemetry:
 
         # Telemetry Data holds the last few copies of received data blocks stored under the subtype name as a key.
         self.status: jsp.StatusData = jsp.StatusData()
-        self.telemetry: jsp.TelemetryData = jsp.TelemetryData(self.config.telemetry_buffer_size)
+        self.telemetry_data: jsp.TelemetryData = jsp.TelemetryData(self.config.telemetry_buffer_size)
 
         # Mission System
         self.missions_dir = Path.cwd().joinpath("missions")
@@ -133,14 +133,14 @@ class Telemetry:
             "rocket": self.config.rocket_name,
             "version": self.version,
             "status": dict(self.status),
-            "telemetry": dict(self.telemetry),
+            "telemetry": dict(self.telemetry_data),
         }
         self.telemetry_json_output.put(websocket_response)
 
     def reset_data(self) -> None:
         """Resets all live data on the telemetry backend to a default state."""
         self.status = jsp.StatusData()
-        self.telemetry.clear()
+        self.telemetry_data.clear()
 
     def parse_serial_status(self, command: str, data: str) -> None:
         """Parses the serial managers status output"""
@@ -296,7 +296,7 @@ class Telemetry:
         parsed_transmission: ParsedTransmission | None = parse_rn2483_transmission(data, self.config)
         if parsed_transmission and parsed_transmission.blocks:
             # Updates the telemetry buffer with the latest block data and latest mission time
-            self.telemetry.updateTelemetry(parsed_transmission.packet_header.version, parsed_transmission.blocks)
+            self.telemetry_data.update_telemetry(parsed_transmission.packet_header.version, parsed_transmission.blocks)
 
             # TODO UPDATE FOR V1
             # Write data to file when recording

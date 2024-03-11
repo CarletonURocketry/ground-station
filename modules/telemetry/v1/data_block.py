@@ -5,7 +5,7 @@ from typing import Self, Type
 from enum import IntEnum
 import struct
 
-from modules.misc.converter import metres_to_feet
+from modules.misc.converter import metres_to_feet, milli_degrees_to_celsius, pascals_to_psi
 from modules.telemetry.block import BlockException, BlockUnknownException
 
 
@@ -219,7 +219,7 @@ class TemperatureDB(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "temperature", {"millidegrees": self.temperature, "celsius": round(self.temperature / 1000, 2)}
+        yield "temperature", {"millidegrees": self.temperature, "celsius": milli_degrees_to_celsius(self.temperature)}
 
 
 class PressureDB(DataBlock):
@@ -260,7 +260,7 @@ class PressureDB(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "pressure", {"pascals": self.pressure}
+        yield "pressure", {"pascals": self.pressure, "psi": pascals_to_psi(self.pressure)}
 
 
 class HumidityDB(DataBlock):
