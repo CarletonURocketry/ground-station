@@ -45,12 +45,12 @@ class TelemetryReplay:
         with open(self.replay_path, "r") as file:
             for line in file:
                 # print(line)
-                sleep(0.052)
                 if self.speed > 0:
                     self.replay_payloads.put(line)
 
                 if not self.replay_input.empty():
                     self.parse_input_command(self.replay_input.get())
+                sleep(0.052)
 
     def parse_input_command(self, data: str) -> None:
         cmd_list = data.split(" ")

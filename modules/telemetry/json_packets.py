@@ -273,7 +273,7 @@ class TelemetryData:
         # Generate telemetry data packet from output specification
         for key in output_format.keys():
             telemetry_keys: list[str] = list(output_format[key].keys())
-            self.output_blocks[key] = TelemetryDataPacketBlock(stored_values=dict.fromkeys(telemetry_keys, []))
+            self.output_blocks[key] = TelemetryDataPacketBlock(stored_values={key: [] for key in telemetry_keys})
             self.update_buffer[key] = dict.fromkeys(telemetry_keys, None)
 
         # Generate extremely efficient access decoder matrix
