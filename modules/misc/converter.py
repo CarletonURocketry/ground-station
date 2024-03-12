@@ -4,7 +4,7 @@
 
 
 def milli_degrees_to_celsius(milli_degrees: int) -> float:
-    """Returns the passed milli degrees Celsius value in Celsius as a float.
+    """Returns the passed milli degrees Celsius value in Celsius.
     Args:
         milli_degrees (int): The temperature in milli degrees Celsius
 
@@ -15,9 +15,9 @@ def milli_degrees_to_celsius(milli_degrees: int) -> float:
 
 
 def celsius_to_fahrenheit(celsius: float) -> float:
-    """Returns the passed Celsius value in Fahrenheit as a float.
+    """Returns the passed Celsius value in Fahrenheit.
     Args:
-        celsius (float): The temperature in  Celsius
+        celsius (float): The temperature in Celsius
 
     Returns:
         float: The temperature in Fahrenheit"""
@@ -26,7 +26,7 @@ def celsius_to_fahrenheit(celsius: float) -> float:
 
 
 def metres_to_feet(metres: float) -> float:
-    """Returns the passed metres value in feet as a float.
+    """Returns the passed metres value in feet.
     Args:
         metres (float): The distance in metres
 
@@ -37,7 +37,7 @@ def metres_to_feet(metres: float) -> float:
 
 
 def pascals_to_psi(pascals: int) -> float:
-    """Returns the passed pascals value in psi as a float.
+    """Returns the passed pascals value in psi.
     Args:
         pascals (int): The pressure in pascals
 

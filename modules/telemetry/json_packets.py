@@ -248,13 +248,13 @@ class TelemetryData:
     """Contains the output specification for the telemetry data block"""
 
     # Configuration
-    buffer_size: int = 20
-    decoder: list[dict[int, dict[str, str]]] = field(default_factory=list)
+    buffer_size: int
+    decoder: list[dict[int, dict[str, str]]]
 
     # Current data storage
-    last_mission_time: int = -1
-    output_blocks: dict[str, TelemetryDataPacketBlock] = field(default_factory=dict)
-    update_buffer: dict[str, dict[str, int | None]] = field(default_factory=dict)
+    last_mission_time: int
+    output_blocks: dict[str, TelemetryDataPacketBlock]
+    update_buffer: dict[str, dict[str, float | int | str | None]]
 
     def __init__(self, telemetry_buffer_size: int = 20):
         """Initializes the telemetry data object
@@ -262,6 +262,9 @@ class TelemetryData:
              telemetry_buffer_size (int): The size of the data buffer"""
         logger.debug(f"Initializing TelemetryData[{telemetry_buffer_size}]")
         self.buffer_size = telemetry_buffer_size
+        self.decoder = [{} for i in range(5)]
+
+        self.last_mission_time = -1
         self.output_blocks = {}
         self.update_buffer = {}
 
@@ -279,7 +282,6 @@ class TelemetryData:
         # Generate extremely efficient access decoder matrix
         #                                        = {INPUT: OUTPUT}     "dataPacketBlockName.storedValueVariable"
         # decoder[packet_version][block_subtype] = {"gps_sats_in_use": "sats_in_use.gps_sats_in_use"}
-        self.decoder = [{}, {}, {}, {}, {}]
         for data_packet in output_format.keys():
             for stored_value in output_format[data_packet].keys():
                 for version in output_format[data_packet][stored_value].keys():
