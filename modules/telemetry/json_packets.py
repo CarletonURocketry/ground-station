@@ -247,26 +247,20 @@ class TelemetryDataPacketBlock:
 class TelemetryData:
     """Contains the output specification for the telemetry data block"""
 
-    # Configuration
-    buffer_size: int
-    decoder: list[dict[int, dict[str, str]]]
-
-    # Current data storage
-    last_mission_time: int
-    output_blocks: dict[str, TelemetryDataPacketBlock]
-    update_buffer: dict[str, dict[str, float | int | str | None]]
-
     def __init__(self, telemetry_buffer_size: int = 20):
-        """Initializes the telemetry data object
+        """
+        Initializes the telemetry data object.
         Args:
-             telemetry_buffer_size (int): The size of the data buffer"""
-        logger.debug(f"Initializing TelemetryData[{telemetry_buffer_size}]")
-        self.buffer_size = telemetry_buffer_size
-        self.decoder = [{} for i in range(5)]
+             telemetry_buffer_size: The size of the data buffer.
+        """
 
-        self.last_mission_time = -1
-        self.output_blocks = {}
-        self.update_buffer = {}
+        logger.debug(f"Initializing TelemetryData[{telemetry_buffer_size}]")
+        self.buffer_size: int = telemetry_buffer_size
+        self.decoder: list[dict[int, dict[str, str]]] = [{} for _ in range(5)]
+
+        self.last_mission_time: int = -1
+        self.output_blocks: dict[str, TelemetryDataPacketBlock] = {}
+        self.update_buffer: dict[str, dict[str, float | int | str | None]] = {}
 
         # Read packet definition file
         filepath = os.path.join(Path(__file__).parents[0], "telemetry_packet.json")
@@ -354,7 +348,7 @@ class TelemetryData:
             block.clear()
 
     def __iter__(self):
-        """Returns an interator containing all the packets"""
+        """Returns an iterator containing all the packets"""
         yield "last_mission_time", self.last_mission_time
         for key in self.output_blocks.keys():
             yield key, dict(self.output_blocks[key])
