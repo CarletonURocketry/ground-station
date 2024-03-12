@@ -21,20 +21,13 @@ from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.telemetry_utils import (
     mission_path,
     parse_rn2483_transmission,
-    ParsedBlock,
+    ParsedTransmission,
 )
 from modules.telemetry.telemetry_errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
 from types import FrameType
 
 # Types
 JSON: TypeAlias = dict[str, Any]
-
-# Constants
-ORG: str = "CUInSpace"
-VERSION: str = "0.5.1-DEV"
-MISSION_EXTENSION: str = "mission"
-FILE_CREATION_ATTEMPT_LIMIT: int = 50
-SUPPORTED_ENCODING_VERSION: int = 1
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -57,9 +50,11 @@ class Telemetry:
         telemetry_json_output: Queue[JSON],
         telemetry_ws_commands: Queue[list[str]],
         config: Config,
+        version: str,
     ):
         super().__init__()
         self.config = config
+        self.version = version
 
         self.radio_payloads: Queue[str] = radio_payloads
         self.telemetry_json_output: Queue[JSON] = telemetry_json_output
@@ -70,7 +65,7 @@ class Telemetry:
 
         # Telemetry Data holds the last few copies of received data blocks stored under the subtype name as a key.
         self.status: jsp.StatusData = jsp.StatusData()
-        self.telemetry: dict[str, list[dict[str, str]]] = {}
+        self.telemetry_data: jsp.TelemetryData = jsp.TelemetryData(self.config.telemetry_buffer_size)
 
         # Mission System
         self.missions_dir = Path.cwd().joinpath("missions")
@@ -84,7 +79,7 @@ class Telemetry:
         # Replay System
         self.replay = None
         self.replay_input: Queue[str] = mp.Queue()  # type:ignore
-        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type:ignore
+        self.replay_output: Queue[str] = mp.Queue()  # type:ignore
 
         # Handle program closing to ensure no orphan processes
         signal(SIGTERM, shutdown_sequence)  # type:ignore
@@ -99,13 +94,15 @@ class Telemetry:
             sleep(0.001)
 
             while not self.telemetry_ws_commands.empty():
-                # Parse websocket command into an enum
-                commands: list[str] = self.telemetry_ws_commands.get()
-                command = wsc.parse(commands, wsc.WebsocketCommand)
-                parameters = commands  # Remaining items in the commands list are parameters
                 try:
+                    # Parse websocket command into an enum
+                    commands: list[str] = self.telemetry_ws_commands.get()
+                    command = wsc.parse(commands, wsc.WebsocketCommand)
+                    parameters = commands  # Remaining items in the commands list are parameters
                     self.execute_command(command, parameters)
                 except AttributeError as e:
+                    logger.error(e)
+                except wsc.WebsocketCommandNotFound as e:
                     logger.error(e)
 
             while not self.radio_signal_report.empty():
@@ -122,24 +119,28 @@ class Telemetry:
             match self.status.mission.state:
                 case jsp.MissionState.RECORDED:
                     while not self.replay_output.empty():
-                        block_type, block_subtype, block_data = self.replay_output.get()  # type: ignore
-                        self.process_transmission(block_data)
+                        self.process_transmission(self.replay_output.get())
                         self.update_websocket()
                 case _:
                     while not self.radio_payloads.empty():
-                        # self.parse_rn2483_transmission(self.radio_payloads.get())
                         self.process_transmission(self.radio_payloads.get())
                         self.update_websocket()
 
     def update_websocket(self) -> None:
         """Updates the websocket with the latest packet using the JSON output process."""
-        websocket_response = {"version": VERSION, "org": ORG, "status": dict(self.status), "telemetry": self.telemetry}
+        websocket_response = {
+            "org": self.config.organization,
+            "rocket": self.config.rocket_name,
+            "version": self.version,
+            "status": dict(self.status),
+            "telemetry": dict(self.telemetry_data),
+        }
         self.telemetry_json_output.put(websocket_response)
 
     def reset_data(self) -> None:
         """Resets all live data on the telemetry backend to a default state."""
         self.status = jsp.StatusData()
-        self.telemetry = {}
+        self.telemetry_data.clear()
 
     def parse_serial_status(self, command: str, data: str) -> None:
         """Parses the serial managers status output"""
@@ -239,7 +240,7 @@ class Telemetry:
         self.replay = None
 
         # Empty replay output
-        self.replay_output: Queue[tuple[int, int, str]] = mp.Queue()  # type:ignore
+        self.replay_output: Queue[str] = mp.Queue()  # type:ignore
         self.reset_data()
 
     def play_mission(self, mission_name: str) -> None:
@@ -291,11 +292,11 @@ class Telemetry:
     def process_transmission(self, data: str) -> None:
         """Processes the incoming radio transmission data."""
 
-        # Parse the transmission, is result is not null, update telemetry data
-        parsed_transmission = parse_rn2483_transmission(data, self.config)
+        # Parse the transmission, if result is not null, update telemetry data
+        parsed_transmission: ParsedTransmission | None = parse_rn2483_transmission(data, self.config)
         if parsed_transmission and parsed_transmission.blocks:
-            for block in parsed_transmission.blocks:
-                self.update(block)
+            # Updates the telemetry buffer with the latest block data and latest mission time
+            self.telemetry_data.update_telemetry(parsed_transmission.packet_header.version, parsed_transmission.blocks)
 
             # TODO UPDATE FOR V1
             # Write data to file when recording
@@ -305,15 +306,3 @@ class Telemetry:
             #     if len(self.mission_recording_buffer) >= 512:
             #         buffer_length = len(self.mission_recording_buffer)
             #         self.recording_write_bytes(buffer_length - (buffer_length % 512))
-
-    def update(self, parsed_data: ParsedBlock) -> None:
-        """Updates the telemetry buffer with the latest block data and latest mission time."""
-        if parsed_data.block_contents.mission_time > self.status.mission.last_mission_time:
-            self.status.mission.last_mission_time = parsed_data.block_contents.mission_time
-
-        if self.telemetry.get(parsed_data.block_name) is None:
-            self.telemetry[parsed_data.block_name] = [dict(parsed_data.block_contents)]  # type:ignore
-        else:
-            self.telemetry[parsed_data.block_name].append(dict(parsed_data.block_contents))  # type:ignore
-            if len(self.telemetry[parsed_data.block_name]) > self.config.telemetry_buffer_size:
-                self.telemetry[parsed_data.block_name].pop(0)

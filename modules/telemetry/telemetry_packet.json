@@ -1,0 +1,28 @@
+{
+    "altitude": {
+        "metres": {"1": {"1": "altitude.metres"}},
+        "feet": {"1": {"1": "altitude.feet"}}
+    },
+    "temperature": {
+        "celsius": {"1": {"2": "temperature.celsius"}}
+    },
+    "pressure": {
+        "pascals": {"1": {"3": "pressure.pascals"}}
+    },
+    "velocity": {
+        "x": {"1": {"5": "velocity.x"}},
+        "y": {"1": {"5": "velocity.y"}},
+        "z": {"1": {"5": "velocity.z"}}
+    },
+    "humidity": {
+        "percentage": {"1": {"8": "percentage"}}
+    },
+    "gnss": {
+        "latitude": {"1": {"6": "latitude"}},
+        "longitude": {"1": {"6": "longitude"}}
+    },
+    "sats_in_use": {
+        "gps": {"1": {"6": "gps_sats_in_use"}},
+        "glonass": {"1": {"6": "glonass_sats_in_use"}}
+    }
+}
