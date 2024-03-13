@@ -46,7 +46,7 @@ def invalid_packet_header() -> PacketHeader:
 # Tests
 
 
-# Test a valid header
+# Test valid header
 def test_is_valid_hdr(valid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
     assert is_valid_packet_header(valid_packet_header, approved_callsigns)
 
@@ -61,6 +61,6 @@ def test_is_invalid_hdr2(version_num_zero: PacketHeader, approved_callsigns: dic
     assert not (is_valid_packet_header(version_num_zero, approved_callsigns))
 
 
-# Test inalid header: non approved callsign and incorrect version number
+# Test invalid header: non approved callsign and incorrect version number
 def test_is_invalid_hdr3(invalid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
     assert not (is_valid_packet_header(invalid_packet_header, approved_callsigns))
