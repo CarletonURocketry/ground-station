@@ -1,15 +1,18 @@
 import pytest
-from modules.telemetry.telemetry_utils import parse_rn2483_transmission, parse_radio_block, is_valid_packet_header, ParsedTransmission
+from modules.telemetry.telemetry_utils import is_valid_packet_header
 from modules.telemetry.v1.block import PacketHeader
 from modules.misc.config import load_config
 
 
 config = load_config("config.json")
-# Fixtures 
+
+# Fixtures
+
 
 @pytest.fixture
 def approved_callsigns() -> dict[str, str]:
     return config.approved_callsigns
+
 
 @pytest.fixture
 def valid_packet_header() -> PacketHeader:
@@ -17,17 +20,47 @@ def valid_packet_header() -> PacketHeader:
     hdr = "564133494e490000000c010137000000"
     pkt_hdr = PacketHeader.from_hex(hdr)
     return pkt_hdr
+
+
 @pytest.fixture
-def non_valid_packet() -> PacketHeader:
-    # changed e in valid pakct header fixture to a 2
-    hdr = "5641334942490000000c010137000000"
-    # --------------^ this character
-    pkt_hdr = PacketHeader.from_hex(hdr) 
+def non_approved_callsign() -> PacketHeader:
+    hdr = "52415454204D4F53530c010137000000"
+    pkt_hdr = PacketHeader.from_hex(hdr)
     return pkt_hdr
+
+
+@pytest.fixture
+def version_num_zero() -> PacketHeader:
+    hdr = "564133494e490000000c000137000000"
+    pkt_hdr = PacketHeader.from_hex(hdr)
+    return pkt_hdr
+
+
+@pytest.fixture
+def invalid_packet_header() -> PacketHeader:
+    hdr = "52415454204D4F53530c0b0137000000"
+    pkt_hdr = PacketHeader.from_hex(hdr)
+    return pkt_hdr
+
+
 # Tests
 
-def test_is_valid_hdr(valid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-    assert is_valid_packet_header(valid_packet_header, approved_callsigns) == True
 
-def test_is_non_valid_hdr(non_valid_packet: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-    assert is_valid_packet_header(non_valid_packet, approved_callsigns) == False
+# Test a valid header
+def test_is_valid_hdr(valid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
+    assert is_valid_packet_header(valid_packet_header, approved_callsigns)
+
+
+# Test a invalid header: unapproved call sign
+def test_is_invalid_hdr1(non_approved_callsign: PacketHeader, approved_callsigns: dict[str, str]) -> None:
+    assert not (is_valid_packet_header(non_approved_callsign, approved_callsigns))
+
+
+# Test invalid header: version number 0
+def test_is_invalid_hdr2(version_num_zero: PacketHeader, approved_callsigns: dict[str, str]) -> None:
+    assert not (is_valid_packet_header(version_num_zero, approved_callsigns))
+
+
+# Test inalid header: non approved callsign and incorrect version number
+def test_is_invalid_hdr3(invalid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
+    assert not (is_valid_packet_header(invalid_packet_header, approved_callsigns))
