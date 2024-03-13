@@ -50,7 +50,7 @@ def test_parsing_header1(header1: str):
     assert hdr.message_type == 0
     assert hdr.message_subtype == 1
     assert hdr.destination == 0
-    assert hdr.valid == True
+    assert hdr.valid is True
 
 
 def test_parsing_header2(header2: str):
@@ -61,7 +61,7 @@ def test_parsing_header2(header2: str):
     assert hdr.message_type == 0
     assert hdr.message_subtype == 2
     assert hdr.destination == 0
-    assert hdr.valid == True
+    assert hdr.valid is True
 
 
 def test_parsing_header3(header3: str):
@@ -72,4 +72,4 @@ def test_parsing_header3(header3: str):
     assert hdr.message_type == 0
     assert hdr.message_subtype == 3
     assert hdr.destination == 0
-    assert hdr.valid == True
+    assert hdr.valid is True
