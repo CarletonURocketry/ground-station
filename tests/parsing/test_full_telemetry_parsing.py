@@ -55,7 +55,7 @@ def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_cont
     assert prb.block_header.destination == 0
     assert prb.block_header.valid is True
     assert prb.block_name == 'temperature'
-    assert prb.block_contents.mission_time == 0
+    assert prb.block_contents['mission_time'] == 0
 
 
 def test_invalid_datablock_subtype_test(pkt_version: int, block_header_error: BlockHeader, hex_block_contents: str, caplog) -> None:
