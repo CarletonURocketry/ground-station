@@ -1,13 +1,13 @@
 {
-    "version": "0.5.1-DEV",
     "org": "CUInSpace",
+    "rocket": "Red Ballistic",
+    "version": "0.6.0-DEV",
     "status": {
         "mission": {
             "name": "",
             "epoch": -1,
             "state": 0,
-            "recording": false,
-            "last_mission_time": 8120
+            "recording": false
         },
         "serial": {
             "available_ports": ["COM1", "test"]
@@ -19,9 +19,6 @@
         },
         "rocket": {
             "mission_time": 246246,
-            "kx134_state": 3,
-            "altimeter_state": 2,
-            "imu_state": 2,
             "sd_driver_state": 2,
             "deployment_state": 0,
             "blocks_recorded": 1216,
@@ -31,82 +28,44 @@
             "state": -1,
             "speed": 1.0,
             "mission_list": [
+                {"name": "TestData", "length": 188, "version": 1}
             ]
         }
     },
     "telemetry": {
+        "last_mission_time": 15392,
         "altitude": {
-            "mission_time": 8120,
-            "pressure": {
-                "pascals": 87181,
-                "psi": 12.64
-            },
-            "altitude": {
-                "metres": 400,
-                "feet": 1312
-            },
-            "temperature": {
-                "celsius": 12,
-                "fahrenheit": 54
-            }
+            "mission_time": [3285, 9138, 11312],
+            "metres": [400, 482, 537],
+            "feet": [1312.0, 1581.0, 1761.4]
         },
-        "mpu9250_imu": {
-            "mission_time": 3598549,
-            "accel_x": 0.0388946533203125,
-            "accel_y": 0.0712890625,
-            "accel_z": 0.196533203125,
-            "temperature": 33.28193146417445,
-            "gyro_x": 0.00091552734375,
-            "gyro_y": -0.0024566650390625,
-            "gyro_z": -0.001678466796875,
-            "mag_x": -55.5,
-            "mag_y": 170.49999999999997,
-            "mag_z": -19.7,
-            "mag_ovf": true,
-            "mag_res": 0,
-            "samples": 6,
-            "sensor_sample_rate": 100.0,
-            "accel_fsr": 3,
-            "gyro_fsr": 3
+        "temperature": {
+            "mission_time": [231, 3721, 7120],
+            "celsius": [23.90, 23.98, 24.10]
+        },
+        "pressure": {
+            "mission_time": [3271, 6931, 9312],
+            "pascals": [87181, 88340, 89600]
+        },
+        "velocity": {
+            "mission_time": [3271, 11243, 15392],
+            "x": [12.46, 10.32, 8.61],
+            "y": [49.91, 60.23, 83.96],
+            "z": [60.43, 98.12, 143.21]
+        },
+        "humidity": {
+            "mission_time": [3475, 4832, 6083],
+            "percentage": [64, 69, 73]
         },
         "gnss": {
-            "mission_time": 84020,
-            "position": {
-                "latitude": 44.907956666666664,
-                "longitude": -76.26173
-            },
-            "utc_time": 1668434560,
-            "altitude": 150.701,
-            "speed": 27.49,
-            "course": 139.34,
-            "pdop": 1.15,
-            "hdop": 0.83,
-            "vdop": 0.8,
-            "sats_in_use": 13,
-            "fix_type": 3
+            "mission_time": [8391],
+            "latitude": [44.906938],
+            "longitude": [-76.26802]
         },
-        "gnss_meta": {
-            "mission_time": 81976,
-            "gps_sats_in_use": [2, 5, 10, 13, 15, 18, 23, 24, 27],
-            "glonass_sats_in_use": [69, 70, 79, 85],
-            "sats_in_view": [
-                {"sat_type": "GPS", "elevation": 68, "snr": 32, "id": 18, "azimuth": 64},
-                {"sat_type": "GPS", "elevation": 62, "snr": 33, "id": 23, "azimuth": 224},
-                {"sat_type": "GPS", "elevation": 54, "snr": 26, "id": 15, "azimuth": 480},
-                {"sat_type": "GPS", "elevation": 46, "snr": 35, "id": 24, "azimuth": 256},
-                {"sat_type": "GPS", "elevation": 33, "snr": 28, "id": 2, "azimuth": 64},
-                {"sat_type": "GPS", "elevation": 31, "snr": 35, "id": 10, "azimuth": 320},
-                {"sat_type": "GPS", "elevation": 24, "snr": 19, "id": 13, "azimuth": 416},
-                {"sat_type": "GPS", "elevation": 18, "snr": 22, "id": 27, "azimuth": 352},
-                {"sat_type": "GPS", "elevation": 15, "snr": 27, "id": 5, "azimuth": 160},
-                {"sat_type": "GPS", "elevation": 8, "snr": 18, "id": 0, "azimuth": 0},
-                {"sat_type": "GLONASS", "elevation": 58, "snr": 28, "id": 85, "azimuth": 128},
-                {"sat_type": "GLONASS", "elevation": 57, "snr": 21, "id": 70, "azimuth": 160},
-                {"sat_type": "GLONASS", "elevation": 40, "snr": 32, "id": 69, "azimuth": 128},
-                {"sat_type": "GLONASS", "elevation": 24, "snr": 31, "id": 79, "azimuth": 448},
-                {"sat_type": "GLONASS", "elevation": 16, "snr": 23, "id": 78, "azimuth": 416},
-                {"sat_type": "GLONASS", "elevation": 14, "snr": 20, "id": 71, "azimuth": 192}
-            ]
+        "sats_in_use": {
+            "mission_time": [721, 4391],
+            "gps": [[2, 5, 10, 13], [2, 5, 10, 13, 15, 18, 23, 24, 27]],
+            "glonass": [[69, 70], [69, 70, 79, 85]]
         }
     }
 }

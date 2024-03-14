@@ -92,7 +92,6 @@ def test_mission_data_serialization() -> None:
         "epoch": 12,
         "state": jsp.MissionState.RECORDED.value,
         "recording": True,
-        "last_mission_time": 50,
     }
 
 
@@ -163,7 +162,6 @@ def test_status_data_serialization() -> None:
             "epoch": 12,
             "state": jsp.MissionState.RECORDED.value,
             "recording": True,
-            "last_mission_time": 3921,
         },
         "serial": {"available_ports": ["20", "16"]},
         "rn2483_radio": {

@@ -122,8 +122,10 @@ class RadioParameters:
 @dataclass
 class Config:
 
-    """Contains settings for the ground station process."""
+    """Contains the configuration for the ground station process."""
 
+    organization: str = "CUInSpace"
+    rocket_name: str = "Red Ballistic"
     telemetry_buffer_size: int = 20
     radio_parameters: RadioParameters = field(default_factory=RadioParameters)
     approved_callsigns: dict[str, str] = field(default_factory=dict)
@@ -131,13 +133,17 @@ class Config:
     def __post_init__(self):
         if len(self.approved_callsigns) == 0:
             raise ValueError("You must provide at least one approved callsign.")
+        if self.telemetry_buffer_size < 1:
+            raise ValueError("Telemetry buffer size must be a positive integer.")
 
     @classmethod
     def from_json(cls, data: JSON) -> Self:
         """Creates a new Config object from the JSON data contained in the user config file."""
 
         return cls(
-            telemetry_buffer_size=data.get("telemetry_buffer_size", int(20)),
+            organization=data.get("organization", cls.organization),
+            rocket_name=data.get("rocket_name", cls.rocket_name),
+            telemetry_buffer_size=data.get("telemetry_buffer_size", cls.telemetry_buffer_size),
             radio_parameters=RadioParameters.from_json(data.get("radio_params", dict())),  # type:ignore
             approved_callsigns=data.get("approved_callsigns", dict()),  # type:ignore
         )

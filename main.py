@@ -18,7 +18,6 @@ from modules.websocket.websocket import WebSocketHandler
 from modules.misc.cli import parser
 
 JSON: TypeAlias = dict[str, Any]
-VERSION: str = "0.5.1-DEV"
 STR_TO_LOGGING_MODE: dict[str, int] = {
     "debug": logging.DEBUG,
     "info": logging.INFO,
@@ -26,6 +25,9 @@ STR_TO_LOGGING_MODE: dict[str, int] = {
     "error": logging.ERROR,
     "critical": logging.CRITICAL,
 }
+
+# Constants
+VERSION: str = "0.6.0-DEV"
 
 
 class ShutdownException(Exception):
@@ -59,11 +61,11 @@ def main():
     rn2483_radio_payloads: Queue[str] = mp.Queue()  # type: ignore
     telemetry_json_output: Queue[JSON] = mp.Queue()  # type: ignore
 
-    # Print display screen
-    print_cu_rocket("No Name (Gas Propelled Launching Device)", VERSION)
-
     # Load config file
     config = load_config("config.json")
+
+    # Print display screen
+    print_cu_rocket(config.rocket_name, VERSION)
 
     # Initialize Serial process to communicate with board
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
@@ -94,6 +96,7 @@ def main():
             telemetry_json_output,
             telemetry_ws_commands,
             config,
+            VERSION,
         ),
     )
     telemetry.start()

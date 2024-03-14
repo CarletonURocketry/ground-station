@@ -2,69 +2,99 @@
 
 <html lang="en">
 <head>
-    <title>Websocket Test</title>
+    <title>Ground Station WS</title>
+    <meta charset="utf-8">
+    <style>
+    body {
+      padding: 4px;
+      background-color: black;
+      color: lightgrey;
+      font-size: 16px;
+    }
+
+    .light-mode {
+      background-color: white;
+      color: black;
+    }
+    </style>
     <script type="application/javascript">
         var ws;
 
         function init() {
-            var msglog = document.getElementById("msglog");
-            var altitude = document.getElementById("altitude");
-            var temperature = document.getElementById("temperature");
+            var rocket_name = document.getElementById("rocket_name");
             var rocket_status = document.getElementById("rocket_status");
-            var server_status = document.getElementById("serverstatus");
             var mission_time = document.getElementById("mission_time")
             var speed = document.getElementById("speed");
             var lat = document.getElementById("lat");
             var long = document.getElementById("long");
+            var temperature = document.getElementById("temperature");
+            var pressure = document.getElementById("pressure");
+            var humidity = document.getElementById("humidity");
+            var altitude = document.getElementById("altitude");
+
+            var server_status = document.getElementById("serverstatus");
+            var msglog = document.getElementById("msglog");
 
             ws = new WebSocket("ws://localhost:33845/websocket");
-            ws.onopen = function(){
+            ws.onopen = function() {
                 server_status.innerHTML = ">>> Server Connected";
             };
-            ws.onmessage = function(e){
-                // Log all websocket data streams
-                // msglog.innerHTML = msglog.innerHTML + "<br><<< Received data: " + e.data
-
-                updatedata = JSON.parse(e.data);
-                msglog.innerHTML = ">>> Received data: " + e.data;
-
-                rocket_status.innerHTML = "Rocket State " + updatedata.status.rocket.deployment_state
-                mission_time.innerHTML = "Time " + updatedata.status.mission.last_mission_time + " ms";
-                speed.innerHTML = "Speed " + updatedata.telemetry.gnss[0].speed + " knots";
-                lat.innerHTML = "Lat " + updatedata.telemetry.gnss[0].position.latitude;
-                long.innerHTML = "Long " + updatedata.telemetry.gnss[0].position.longitude;
-                temperature.innerHTML = "Temp " + updatedata.telemetry.altitude[0].temperature.celsius + " *C";
-                altitude.innerHTML = "Altitude " + updatedata.telemetry.altitude[0].altitude.feet + " ft";
-
-            };
-            ws.onclose = function(){
+            ws.onclose = function() {
                 server_status.innerHTML = "<<< Server Disconnected";
                 setTimeout(function() {
                     init();
                 }, 2000);
             };
+            ws.onmessage = function(e) {
+                // Log all websocket data streams
+                // msglog.innerHTML = msglog.innerHTML + "<br><<< Received data: " + e.data
+
+                updatedata = JSON.parse(e.data);
+                msglog.innerHTML = ">>> Received data: " + e.data;
+                rocket_name.innerHTML = "Rocket Name " + updatedata.rocket;
+                rocket_status.innerHTML = "Rocket State " + updatedata.status.rocket.deployment_state
+                mission_time.innerHTML = "Time " + updatedata.telemetry.last_mission_time + " ms";
+                //speed.innerHTML = "Speed " + updatedata.telemetry.speed.knots.slice(-1) + " knots";
+                lat.innerHTML = "Latitude " + updatedata.telemetry.gnss.latitude.slice(-1);
+                long.innerHTML = "Longitude " + updatedata.telemetry.gnss.longitude.slice(-1);
+                temperature.innerHTML = "Temperature " + updatedata.telemetry.temperature.celsius.slice(-1) + "°C";
+                pressure.innerHTML = "Pascals " + updatedata.telemetry.pressure.pascals.slice(-1) + " Pa";
+                humidity.innerHTML = "Humidity " + updatedata.telemetry.humidity.percentage.slice(-1) + "%";
+                altitude.innerHTML = "Altitude " + updatedata.telemetry.altitude.feet.slice(-1) + " ft";
+            };
         }
 
-        function postmsg(){
+        function postMsg() {
             var text = document.getElementById("message").value;
             ws.send(text);
             msglog.innerHTML = msglog.innerHTML + "<br>>>> Data sent: " + text;
         }
 
-
+        function toggleFlashbang() {
+            var element = document.body;
+            element.classList.toggle("light-mode");
+        }
     </script>
 </head>
 <body onload="init();">
-    <form action="" onSubmit="postmsg();return false;">
-        <input type="text" name="message" value="" id="message">
+    <form action="" onSubmit="postMsg();return false;">
+        <label for="message"></label><input type="text" name="message" value="" id="message">
         <input type="submit" name="submit" value="Send" id="submit">
     </form>
+    <br>
+    <button onclick="toggleFlashbang()">Toggle Flashbang</button>
+    <br>
+    <br>
+    <div id="header">--- Latest Rocket Data ---</div>
+    <div id="rocket_name">Rocket Name N/A</div>
     <div id="rocket_status">Rocket State -1</div>
-    <div id="mission_time">Time 0 ms </div>
-    <div id="speed">Speed 0 knots </div>
-    <div id="lat">Lat 0 </div>
-    <div id="long">Long 0 </div>
-    <div id="temperature">Temp 0 *C </div>
+    <div id="mission_time">Time 0 ms</div>
+    <div id="speed">Speed 0 knots</div>
+    <div id="lat">Latitude 0 </div>
+    <div id="long">Longitude 0 </div>
+    <div id="temperature">Temperature 0°C</div>
+    <div id="pressure">Pressure 0 Pa</div>
+    <div id="humidity">Humidity 0%</div>
     <div id="altitude">Altitude 000 ft</div>
     <br>
     <div id="serverstatus"><<< Server Disconnected</div>
