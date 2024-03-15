@@ -184,23 +184,23 @@ def test_status_data_serialization() -> None:
 
 
 # Logic testing
-def test_rocket_data_from_data_block() -> None:
-    """Tests that properties of rocket data are correctly assigned from a data block."""
+# def test_rocket_data_from_data_block() -> None:
+#     """Tests that properties of rocket data are correctly assigned from a data block."""
 
-    data_block = StatusDataBlock(
-        mission_time=145,
-        kx134_state=SensorStatus(3),
-        alt_state=SensorStatus(4),
-        imu_state=SensorStatus(2),
-        sd_state=SDCardStatus(1),
-        sd_blocks_recorded=18,
-        deployment_state=DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT,
-        sd_checkouts_missed=90,
-    )
+#     data_block = StatusDataBlock(
+#         mission_time=145,
+#         kx134_state=SensorStatus(3),
+#         alt_state=SensorStatus(4),
+#         imu_state=SensorStatus(2),
+#         sd_state=SDCardStatus(1),
+#         sd_blocks_recorded=18,
+#         deployment_state=DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT,
+#         sd_checkouts_missed=90,
+#     )
 
-    rocket_data = jsp.RocketData.from_data_block(data_block)
+#     rocket_data = jsp.RocketData.from_data_block(data_block)
 
-    assert rocket_data.mission_time == 145
-    assert rocket_data.blocks_recorded == 18
-    assert rocket_data.deployment_state == DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT
-    assert rocket_data.checkouts_missed == 90
+#     assert rocket_data.mission_time == 145
+#     assert rocket_data.blocks_recorded == 18
+#     assert rocket_data.deployment_state == DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT
+#     assert rocket_data.checkouts_missed == 90

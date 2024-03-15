@@ -10,8 +10,33 @@ import struct
 from abc import ABC, abstractmethod
 from enum import Enum, IntEnum
 from typing import Generator, Self, Type
-from modules.telemetry.block import DataBlockSubtype, BlockException, BlockUnknownException
 from modules.misc import converter
+
+
+class BlockException(Exception):
+    pass
+
+
+class BlockUnknownException(BlockException):
+    pass
+
+
+class DataBlockSubtype(IntEnum):
+    """Lists the subtypes of telemetry data blocks."""
+
+    DEBUG_MESSAGE = 0x00
+    STATUS = 0x01
+    STARTUP_MESSAGE = 0x02
+    ALTITUDE = 0x03
+    ACCELERATION = 0x04
+    ANGULAR_VELOCITY = 0x05
+    GNSS = 0x06
+    GNSS_META = 0x07
+    POWER = 0x08
+    TEMPERATURE = 0x09
+    MPU9250_IMU = 0x0A
+    KX134_1211_ACCEL = 0x0B
+    RESERVED = 0x3F
 
 
 class DataBlockException(BlockException):
