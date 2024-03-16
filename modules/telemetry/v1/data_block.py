@@ -2,8 +2,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Self, Type
-from enum import IntEnum
-from .data_block_enums import *
+from .data_block_enums import DataBlockSubtype, SensorStatus, SDCardStatus, DeploymentState
 import struct
 
 from modules.misc.converter import metres_to_feet, milli_degrees_to_celsius, pascals_to_psi
