@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
 from typing import Self, TypeAlias
-import modules.telemetry.v1.data_block as db
+from modules.telemetry.v1.data_block import StatusDataBlock
 from modules.telemetry.v1.data_block_enums import DeploymentState
 from modules.telemetry.telemetry_utils import ParsedBlock
 
@@ -111,12 +111,12 @@ class RocketData:
     """The rocket data packet for the telemetry process."""
 
     mission_time: int = -1
-    deployment_state: db.DeploymentState = db.DeploymentState.DEPLOYMENT_STATE_DNE
+    deployment_state: DeploymentState = DeploymentState.DEPLOYMENT_STATE_DNE
     blocks_recorded: int = -1
     checkouts_missed: int = -1
 
     @classmethod
-    def from_data_block(cls, data: db.StatusDataBlock) -> Self:
+    def from_data_block(cls, data: StatusDataBlock) -> Self:
         """Creates a rocket data packet from a StatusDataBlock class."""
 
         return cls(
