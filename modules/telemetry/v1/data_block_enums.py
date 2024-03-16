@@ -1,5 +1,6 @@
 from enum import IntEnum
 
+
 class DataBlockSubtype(IntEnum):
     """Lists the subtypes of data blocks that can be sent in Version 1 of the packet encoding format."""
 
@@ -39,7 +40,8 @@ class DataBlockSubtype(IntEnum):
                 return "STATUS"
             case _:
                 return "RESERVED"
-            
+
+
 class SensorStatus(IntEnum):
     SENSOR_STATUS_NONE = 0x0
     SENSOR_STATUS_INITIALIZING = 0x1
@@ -55,6 +57,7 @@ class SensorStatus(IntEnum):
             SensorStatus.SENSOR_STATUS_SELF_TEST_FAILED: "self test failed",
             SensorStatus.SENSOR_STATUS_FAILED: "failed",
         }.get(self, "unknown")
+
 
 class SDCardStatus(IntEnum):
     SD_CARD_STATUS_NOT_PRESENT = 0x0

@@ -24,6 +24,7 @@ class DataBlockException(BlockException):
 class DataBlockUnknownException(BlockUnknownException):
     pass
 
+
 class DataBlock(ABC):
     """The abstract base interface for all data blocks."""
 
@@ -363,7 +364,6 @@ class StatusDataBlock(DataBlock):
         yield "deployment_state", self.deployment_state
         yield "blocks_recorded", self.sd_blocks_recorded
         yield "checkouts_missed", self.sd_checkouts_missed
-
 
 
 def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
