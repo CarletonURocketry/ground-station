@@ -28,6 +28,7 @@ class DataBlockSubtype(IntEnum):
     GNSS_LOCATION = 0x06
     GNSS_METADATA = 0x07
     HUMIDITY = 0x08
+    STATUS = 0x09
     RESERVED = 0xFF
 
     def __str__(self):
@@ -50,6 +51,8 @@ class DataBlockSubtype(IntEnum):
                 return "GNSS METADATA"
             case DataBlockSubtype.HUMIDITY:
                 return "HUMIDITY"
+            case DataBlockSubtype.STATUS:
+                return "STATUS"
             case _:
                 return "RESERVED"
 
@@ -108,6 +111,7 @@ class DataBlock(ABC):
             DataBlockSubtype.TEMPERATURE: TemperatureDB,
             DataBlockSubtype.PRESSURE: PressureDB,
             DataBlockSubtype.HUMIDITY: HumidityDB,
+            DataBlockSubtype.STATUS: StatusDataBlock,
         }
 
         subtype = SUBTYPE_CLASSES.get(block_subtype)
@@ -310,111 +314,154 @@ class HumidityDB(DataBlock):
         yield "mission_time", self.mission_time
         yield "percentage", round(self.humidity / 100)
 
-# class SensorStatus(IntEnum):
-#     SENSOR_STATUS_NONE = 0x0
-#     SENSOR_STATUS_INITIALIZING = 0x1
-#     SENSOR_STATUS_RUNNING = 0x2
-#     SENSOR_STATUS_SELF_TEST_FAILED = 0x3
-#     SENSOR_STATUS_FAILED = 0x4
+class SensorStatus(IntEnum):
+    SENSOR_STATUS_NONE = 0x0
+    SENSOR_STATUS_INITIALIZING = 0x1
+    SENSOR_STATUS_RUNNING = 0x2
+    SENSOR_STATUS_SELF_TEST_FAILED = 0x3
+    SENSOR_STATUS_FAILED = 0x4
 
-#     def __str__(self):
-#         return {
-#             SensorStatus.SENSOR_STATUS_NONE: "none",
-#             SensorStatus.SENSOR_STATUS_INITIALIZING: "initializing",
-#             SensorStatus.SENSOR_STATUS_RUNNING: "running",
-#             SensorStatus.SENSOR_STATUS_SELF_TEST_FAILED: "self test failed",
-#             SensorStatus.SENSOR_STATUS_FAILED: "failed",
-#         }.get(self, "unknown")
+    def __str__(self):
+        return {
+            SensorStatus.SENSOR_STATUS_NONE: "none",
+            SensorStatus.SENSOR_STATUS_INITIALIZING: "initializing",
+            SensorStatus.SENSOR_STATUS_RUNNING: "running",
+            SensorStatus.SENSOR_STATUS_SELF_TEST_FAILED: "self test failed",
+            SensorStatus.SENSOR_STATUS_FAILED: "failed",
+        }.get(self, "unknown")
 
-# class StatusDataBlock(DataBlock):
-#     """Encapsulates the status data."""
+class SDCardStatus(IntEnum):
+    SD_CARD_STATUS_NOT_PRESENT = 0x0
+    SD_CARD_STATUS_INITIALIZING = 0x1
+    SD_CARD_STATUS_READY = 0x2
+    SD_CARD_STATUS_FAILED = 0x3
 
-#     def __init__(
-#         self,
-#         mission_time: int,
-#         kx134_state: SensorStatus,
-#         alt_state: SensorStatus,
-#         imu_state: SensorStatus,
-#         sd_state: SDCardStatus,
-#         deployment_state: DeploymentState,
-#         sd_blocks_recorded: int,
-#         sd_checkouts_missed: int,
-#     ):
-#         super().__init__(DataBlockSubtype.STATUS, mission_time)
-#         self.kx134_state: SensorStatus = kx134_state
-#         self.alt_state: SensorStatus = alt_state
-#         self.imu_state: SensorStatus = imu_state
-#         self.sd_state: SDCardStatus = sd_state
-#         self.deployment_state: DeploymentState = deployment_state
-#         self.sd_blocks_recorded: int = sd_blocks_recorded
-#         self.sd_checkouts_missed: int = sd_checkouts_missed
+    def __str__(self):
+        return {
+            SDCardStatus.SD_CARD_STATUS_NOT_PRESENT: "card not present",
+            SDCardStatus.SD_CARD_STATUS_INITIALIZING: "initializing",
+            SDCardStatus.SD_CARD_STATUS_READY: "ready",
+            SDCardStatus.SD_CARD_STATUS_FAILED: "failed",
+        }.get(self, "unknown")
 
-#     def __len__(self) -> int:
-#         return 16
 
-#     @classmethod
-#     def from_payload(cls, payload: bytes):
-#         parts = struct.unpack("<IIII", payload)
+class DeploymentState(IntEnum):
+    DEPLOYMENT_STATE_DNE = -1
+    DEPLOYMENT_STATE_IDLE = 0x0
+    DEPLOYMENT_STATE_ARMED = 0x1
+    DEPLOYMENT_STATE_POWERED_ASCENT = 0x2
+    DEPLOYMENT_STATE_COASTING_ASCENT = 0x3
+    DEPLOYMENT_STATE_DROGUE_DEPLOY = 0x4
+    DEPLOYMENT_STATE_DROGUE_DESCENT = 0x5
+    DEPLOYMENT_STATE_MAIN_DEPLOY = 0x6
+    DEPLOYMENT_STATE_MAIN_DESCENT = 0x7
+    DEPLOYMENT_STATE_RECOVERY = 0x8
 
-#         try:
-#             kx134_state = SensorStatus((parts[1] >> 16) & 0x7)
-#         except ValueError as error:
-#             raise DataBlockException(f"Invalid KX134 state: {(parts[1] >> 16) & 0x7}") from error
+    def __str__(self):
+        return {
+            DeploymentState.DEPLOYMENT_STATE_IDLE: "idle",
+            DeploymentState.DEPLOYMENT_STATE_ARMED: "armed",
+            DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT: "powered ascent",
+            DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT: "coasting ascent",
+            DeploymentState.DEPLOYMENT_STATE_DROGUE_DEPLOY: "drogue deployed",
+            DeploymentState.DEPLOYMENT_STATE_DROGUE_DESCENT: "drogue descent",
+            DeploymentState.DEPLOYMENT_STATE_MAIN_DEPLOY: "main deployed",
+            DeploymentState.DEPLOYMENT_STATE_MAIN_DESCENT: "main descent",
+            DeploymentState.DEPLOYMENT_STATE_RECOVERY: "recovery",
+            DeploymentState.DEPLOYMENT_STATE_DNE: "",
+        }.get(self, "unknown")
 
-#         try:
-#             alt_state = SensorStatus((parts[1] >> 19) & 0x7)
-#         except ValueError as error:
-#             raise DataBlockException(f"Invalid altimeter state: {(parts[1] >> 19) & 0x7}") from error
+class StatusDataBlock(DataBlock):
+    """Encapsulates the status data."""
 
-#         try:
-#             imu_state = SensorStatus((parts[1] >> 22) & 0x7)
-#         except ValueError as error:
-#             raise DataBlockException(f"Invalid IMU state: {(parts[1] >> 22) & 0x7}") from error
+    def __init__(
+        self,
+        mission_time: int,
+        kx134_state: SensorStatus,
+        alt_state: SensorStatus,
+        imu_state: SensorStatus,
+        sd_state: SDCardStatus,
+        deployment_state: DeploymentState,
+        sd_blocks_recorded: int,
+        sd_checkouts_missed: int,
+    ):
+        super().__init__(mission_time)
+        self.kx134_state: SensorStatus = kx134_state
+        self.alt_state: SensorStatus = alt_state
+        self.imu_state: SensorStatus = imu_state
+        self.sd_state: SDCardStatus = sd_state
+        self.deployment_state: DeploymentState = deployment_state
+        self.sd_blocks_recorded: int = sd_blocks_recorded
+        self.sd_checkouts_missed: int = sd_checkouts_missed
 
-#         try:
-#             sd_state = SDCardStatus((parts[1] >> 25) & 0x7)
-#         except ValueError as error:
-#             raise DataBlockException(f"Invalid SD card state: {(parts[1] >> 25) & 0x7}") from error
+    def __len__(self) -> int:
+        return 16
 
-#         try:
-#             deployment_state = DeploymentState((parts[1] >> 28) & 0xF)
-#         except ValueError as error:
-#             raise DataBlockException(f"Invalid deployment state: {(parts[1] >> 28) & 0xf}") from error
+    @classmethod
+    def from_bytes(cls, payload: bytes):
+        parts = struct.unpack("<IIII", payload)
 
-#         return StatusDataBlock(
-#             parts[0], kx134_state, alt_state, imu_state, sd_state, deployment_state, parts[2], parts[3]
-#         )
+        try:
+            kx134_state = SensorStatus((parts[1] >> 16) & 0x7)
+        except ValueError as error:
+            raise DataBlockException(f"Invalid KX134 state: {(parts[1] >> 16) & 0x7}") from error
 
-#     def to_payload(self) -> bytes:
-#         """Transforms a StatusData block into a byte payload."""
-#         kx134_state = (self.kx134_state.value & 0x7) << 16
-#         alt_state = (self.alt_state.value & 0x7) << 19
-#         imu_state = (self.imu_state.value & 0x7) << 22
-#         sd_state = (self.sd_state.value & 0x7) << 25
-#         deployment_state = (self.deployment_state.value & 0x7) << 28
+        try:
+            alt_state = SensorStatus((parts[1] >> 19) & 0x7)
+        except ValueError as error:
+            raise DataBlockException(f"Invalid altimeter state: {(parts[1] >> 19) & 0x7}") from error
 
-#         states = kx134_state | alt_state | imu_state | sd_state | deployment_state
+        try:
+            imu_state = SensorStatus((parts[1] >> 22) & 0x7)
+        except ValueError as error:
+            raise DataBlockException(f"Invalid IMU state: {(parts[1] >> 22) & 0x7}") from error
 
-#         return struct.pack("<IIII", self.mission_time, states, self.sd_blocks_recorded, self.sd_checkouts_missed)
+        try:
+            sd_state = SDCardStatus((parts[1] >> 25) & 0x7)
+        except ValueError as error:
+            raise DataBlockException(f"Invalid SD card state: {(parts[1] >> 25) & 0x7}") from error
 
-#     def __str__(self):
-#         return (
-#             f"{self.__class__.__name__} -> time: {self.mission_time} ms, kx134 state: "
-#             f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
-#             f"IMU state: {str(self.imu_state)}, SD driver state: {str(self.sd_state)}, "
-#             f"deployment state: {str(self.deployment_state)}, blocks recorded: "
-#             f" {self.sd_blocks_recorded}, checkouts missed: {self.sd_checkouts_missed}"
-#         )
+        try:
+            deployment_state = DeploymentState((parts[1] >> 28) & 0xF)
+        except ValueError as error:
+            raise DataBlockException(f"Invalid deployment state: {(parts[1] >> 28) & 0xf}") from error
 
-#     def __iter__(self):
-#         yield "mission_time", self.mission_time
-#         yield "kx134_state", self.kx134_state
-#         yield "altimeter_state", self.alt_state
-#         yield "imu_state", self.imu_state
-#         yield "sd_driver_state", self.sd_state
-#         yield "deployment_state", self.deployment_state
-#         yield "blocks_recorded", self.sd_blocks_recorded
-#         yield "checkouts_missed", self.sd_checkouts_missed
+        return StatusDataBlock(
+            parts[0], kx134_state, alt_state, imu_state, sd_state, deployment_state, parts[2], parts[3]
+        )
+
+    def to_payload(self) -> bytes:
+        """Transforms a StatusData block into a byte payload."""
+        kx134_state = (self.kx134_state.value & 0x7) << 16
+        alt_state = (self.alt_state.value & 0x7) << 19
+        imu_state = (self.imu_state.value & 0x7) << 22
+        sd_state = (self.sd_state.value & 0x7) << 25
+        deployment_state = (self.deployment_state.value & 0x7) << 28
+
+        states = kx134_state | alt_state | imu_state | sd_state | deployment_state
+
+        return struct.pack("<IIII", self.mission_time, states, self.sd_blocks_recorded, self.sd_checkouts_missed)
+
+    def __str__(self):
+        return (
+            f"{self.__class__.__name__} -> time: {self.mission_time} ms, kx134 state: "
+            f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
+            f"IMU state: {str(self.imu_state)}, SD driver state: {str(self.sd_state)}, "
+            f"deployment state: {str(self.deployment_state)}, blocks recorded: "
+            f" {self.sd_blocks_recorded}, checkouts missed: {self.sd_checkouts_missed}"
+        )
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "kx134_state", self.kx134_state
+        yield "altimeter_state", self.alt_state
+        yield "imu_state", self.imu_state
+        yield "sd_driver_state", self.sd_state
+        yield "deployment_state", self.deployment_state
+        yield "blocks_recorded", self.sd_blocks_recorded
+        yield "checkouts_missed", self.sd_checkouts_missed
+
+
 
 def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
     """
@@ -439,5 +486,7 @@ def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
             return PressureDB.from_bytes(payload)
         case DataBlockSubtype.HUMIDITY:
             return HumidityDB.from_bytes(payload)
+        case DataBlockSubtype.STATUS:
+            return StatusDataBlock.from_bytes(payload)
         case _:
             raise NotImplementedError
