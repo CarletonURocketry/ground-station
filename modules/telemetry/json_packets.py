@@ -11,6 +11,7 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Self, TypeAlias
 import modules.telemetry.v1.data_block as db
+from modules.telemetry.v1.data_block_enums import DeploymentState
 from modules.telemetry.telemetry_utils import ParsedBlock
 
 # Constants
