@@ -9,7 +9,7 @@ import os
 from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
-from typing import Self, TypeAlias
+from typing import TypeAlias
 from modules.telemetry.telemetry_utils import ParsedBlock
 
 # Constants
