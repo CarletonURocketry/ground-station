@@ -3,12 +3,6 @@ __author__ = "Matteo Golin"
 
 # Imports
 import modules.telemetry.json_packets as jsp
-from modules.telemetry.v1.data_block import (
-    DeploymentState,
-    SDCardStatus,
-    SensorStatus,
-    StatusDataBlock,
-)
 
 
 # Default parameter tests
@@ -36,16 +30,6 @@ def test_mission_data_defaults() -> None:
     assert mission_data.state == jsp.MissionState.DNE
     assert mission_data.recording is False
     assert mission_data.last_mission_time == -1
-
-
-def test_rocket_data_defaults() -> None:
-    """Test that the default field values for the rocket data are correct."""
-    rocket_data = jsp.RocketData()
-
-    assert rocket_data.mission_time == -1
-    assert rocket_data.deployment_state == DeploymentState.DEPLOYMENT_STATE_DNE.value
-    assert rocket_data.blocks_recorded == -1
-    assert rocket_data.checkouts_missed == -1
 
 
 def test_replay_data_defaults() -> None:
@@ -95,24 +79,6 @@ def test_mission_data_serialization() -> None:
     }
 
 
-def test_rocket_data_serialization() -> None:
-    """Test that the serialization of rocket data is correct."""
-
-    rocket_data = jsp.RocketData(
-        mission_time=1983,
-        deployment_state=DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT,
-        blocks_recorded=12,
-        checkouts_missed=3,
-    )
-
-    assert dict(rocket_data) == {
-        "mission_time": 1983,
-        "deployment_state": DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT.value,
-        "blocks_recorded": 12,
-        "checkouts_missed": 3,
-    }
-
-
 def test_status_data_serialization() -> None:
     """Test that the serialization of status data is correct."""
 
@@ -132,13 +98,6 @@ def test_status_data_serialization() -> None:
         snr=5,
     )
 
-    rocket_data = jsp.RocketData(
-        mission_time=1983,
-        deployment_state=DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT,
-        blocks_recorded=12,
-        checkouts_missed=3,
-    )
-
     replay_data = jsp.ReplayData(
         state=jsp.ReplayState.PAUSED,
         speed=2.5,
@@ -152,7 +111,6 @@ def test_status_data_serialization() -> None:
         mission=mission_data,
         serial=serial_data,
         rn2483_radio=rn2483_radio_data,
-        rocket=rocket_data,
         replay=replay_data,
     )
 
@@ -169,38 +127,9 @@ def test_status_data_serialization() -> None:
             "connected_port": "20",
             "snr": 5,
         },
-        "rocket": {
-            "mission_time": 1983,
-            "deployment_state": DeploymentState.DEPLOYMENT_STATE_COASTING_ASCENT.value,
-            "blocks_recorded": 12,
-            "checkouts_missed": 3,
-        },
         "replay": {
             "state": jsp.ReplayState.PAUSED.value,
             "speed": 2.5,
             "mission_list": [{"name": "TestData", "length": 3598549, "version": 1}],
         },
     }
-
-
-# Logic testing
-def test_rocket_data_from_data_block() -> None:
-    """Tests that properties of rocket data are correctly assigned from a data block."""
-
-    data_block = StatusDataBlock(
-        mission_time=145,
-        kx134_state=SensorStatus(3),
-        alt_state=SensorStatus(4),
-        imu_state=SensorStatus(2),
-        sd_state=SDCardStatus(1),
-        sd_blocks_recorded=18,
-        deployment_state=DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT,
-        sd_checkouts_missed=90,
-    )
-
-    rocket_data = jsp.RocketData.from_data_block(data_block)
-
-    assert rocket_data.mission_time == 145
-    assert rocket_data.blocks_recorded == 18
-    assert rocket_data.deployment_state == DeploymentState.DEPLOYMENT_STATE_POWERED_ASCENT
-    assert rocket_data.checkouts_missed == 90
