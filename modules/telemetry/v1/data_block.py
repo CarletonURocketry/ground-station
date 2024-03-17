@@ -2,7 +2,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Self, Type
-from .data_block_enums import DataBlockSubtype, SensorStatus, SDCardStatus, DeploymentState
+from enum import IntEnum
 import struct
 
 from modules.misc.converter import metres_to_feet, milli_degrees_to_celsius, pascals_to_psi
@@ -22,6 +22,41 @@ class DataBlockException(BlockException):
 
 class DataBlockUnknownException(BlockUnknownException):
     pass
+
+
+class DataBlockSubtype(IntEnum):
+    """Lists the subtypes of data blocks that can be sent in Version 1 of the packet encoding format."""
+
+    DEBUG_MESSAGE = 0x00
+    ALTITUDE = 0x01
+    TEMPERATURE = 0x02
+    PRESSURE = 0x03
+    ACCELERATION = 0x04
+    ANGULAR_VELOCITY = 0x05
+    GNSS_LOCATION = 0x06
+    GNSS_METADATA = 0x07
+    HUMIDITY = 0x08
+
+    def __str__(self):
+        match self:
+            case DataBlockSubtype.DEBUG_MESSAGE:
+                return "DEBUG MESSAGE"
+            case DataBlockSubtype.ALTITUDE:
+                return "ALTITUDE"
+            case DataBlockSubtype.TEMPERATURE:
+                return "TEMPERATURE"
+            case DataBlockSubtype.PRESSURE:
+                return "PRESSURE"
+            case DataBlockSubtype.ACCELERATION:
+                return "ACCELERATION"
+            case DataBlockSubtype.ANGULAR_VELOCITY:
+                return "ANGULAR VELOCITY"
+            case DataBlockSubtype.GNSS_LOCATION:
+                return "GNSS LOCATION"
+            case DataBlockSubtype.GNSS_METADATA:
+                return "GNSS METADATA"
+            case DataBlockSubtype.HUMIDITY:
+                return "HUMIDITY"
 
 
 class DataBlock(ABC):
@@ -70,7 +105,6 @@ class DataBlock(ABC):
             DataBlockSubtype.TEMPERATURE: TemperatureDB,
             DataBlockSubtype.PRESSURE: PressureDB,
             DataBlockSubtype.HUMIDITY: HumidityDB,
-            DataBlockSubtype.STATUS: StatusDataBlock,
         }
 
         subtype = SUBTYPE_CLASSES.get(block_subtype)
@@ -274,97 +308,6 @@ class HumidityDB(DataBlock):
         yield "percentage", round(self.humidity / 100)
 
 
-class StatusDataBlock(DataBlock):
-    """Encapsulates the status data."""
-
-    def __init__(
-        self,
-        mission_time: int,
-        kx134_state: SensorStatus,
-        alt_state: SensorStatus,
-        imu_state: SensorStatus,
-        sd_state: SDCardStatus,
-        deployment_state: DeploymentState,
-        sd_blocks_recorded: int,
-        sd_checkouts_missed: int,
-    ):
-        super().__init__(mission_time)
-        self.kx134_state: SensorStatus = kx134_state
-        self.alt_state: SensorStatus = alt_state
-        self.imu_state: SensorStatus = imu_state
-        self.sd_state: SDCardStatus = sd_state
-        self.deployment_state: DeploymentState = deployment_state
-        self.sd_blocks_recorded: int = sd_blocks_recorded
-        self.sd_checkouts_missed: int = sd_checkouts_missed
-
-    def __len__(self) -> int:
-        return 16
-
-    @classmethod
-    def from_bytes(cls, payload: bytes):
-        parts = struct.unpack("<IIII", payload)
-
-        try:
-            kx134_state = SensorStatus((parts[1] >> 16) & 0x7)
-        except ValueError as error:
-            raise DataBlockException(f"Invalid KX134 state: {(parts[1] >> 16) & 0x7}") from error
-
-        try:
-            alt_state = SensorStatus((parts[1] >> 19) & 0x7)
-        except ValueError as error:
-            raise DataBlockException(f"Invalid altimeter state: {(parts[1] >> 19) & 0x7}") from error
-
-        try:
-            imu_state = SensorStatus((parts[1] >> 22) & 0x7)
-        except ValueError as error:
-            raise DataBlockException(f"Invalid IMU state: {(parts[1] >> 22) & 0x7}") from error
-
-        try:
-            sd_state = SDCardStatus((parts[1] >> 25) & 0x7)
-        except ValueError as error:
-            raise DataBlockException(f"Invalid SD card state: {(parts[1] >> 25) & 0x7}") from error
-
-        try:
-            deployment_state = DeploymentState((parts[1] >> 28) & 0xF)
-        except ValueError as error:
-            raise DataBlockException(f"Invalid deployment state: {(parts[1] >> 28) & 0xf}") from error
-
-        return StatusDataBlock(
-            parts[0], kx134_state, alt_state, imu_state, sd_state, deployment_state, parts[2], parts[3]
-        )
-
-    def to_payload(self) -> bytes:
-        """Transforms a StatusData block into a byte payload."""
-        kx134_state = (self.kx134_state.value & 0x7) << 16
-        alt_state = (self.alt_state.value & 0x7) << 19
-        imu_state = (self.imu_state.value & 0x7) << 22
-        sd_state = (self.sd_state.value & 0x7) << 25
-        deployment_state = (self.deployment_state.value & 0x7) << 28
-
-        states = kx134_state | alt_state | imu_state | sd_state | deployment_state
-
-        return struct.pack("<IIII", self.mission_time, states, self.sd_blocks_recorded, self.sd_checkouts_missed)
-
-    def __str__(self):
-        return (
-            f"{self.__class__.__name__} -> time: {self.mission_time} ms, kx134 state: "
-            f"{str(self.kx134_state)}, altimeter state: {str(self.alt_state)}, "
-            f"IMU state: {str(self.imu_state)}, SD driver state: {str(self.sd_state)}, "
-            f"deployment state: {str(self.deployment_state)}, blocks recorded: "
-            f" {self.sd_blocks_recorded}, checkouts missed: {self.sd_checkouts_missed}"
-        )
-
-    def __iter__(self):
-        yield "mission_time", self.mission_time
-        yield "kx134_state", self.kx134_state
-        yield "altimeter_state", self.alt_state
-        yield "imu_state", self.imu_state
-        yield "sd_driver_state", self.sd_state
-        yield "deployment_state", self.deployment_state
-        yield "blocks_recorded", self.sd_blocks_recorded
-        yield "checkouts_missed", self.sd_checkouts_missed
-
-
 def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
     """
     Parses a bytes payload into the correct data block type.
@@ -388,7 +331,5 @@ def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
             return PressureDB.from_bytes(payload)
         case DataBlockSubtype.HUMIDITY:
             return HumidityDB.from_bytes(payload)
-        case DataBlockSubtype.STATUS:
-            return StatusDataBlock.from_bytes(payload)
         case _:
             raise NotImplementedError

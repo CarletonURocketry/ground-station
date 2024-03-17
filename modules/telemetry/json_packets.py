@@ -10,8 +10,6 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
 from typing import Self, TypeAlias
-from modules.telemetry.v1.data_block import StatusDataBlock
-from modules.telemetry.v1.data_block_enums import DeploymentState
 from modules.telemetry.telemetry_utils import ParsedBlock
 
 # Constants
@@ -106,33 +104,6 @@ class MissionData:
         yield "recording", self.recording
 
 
-@dataclass
-class RocketData:
-    """The rocket data packet for the telemetry process."""
-
-    mission_time: int = -1
-    deployment_state: DeploymentState = DeploymentState.DEPLOYMENT_STATE_DNE
-    blocks_recorded: int = -1
-    checkouts_missed: int = -1
-
-    @classmethod
-    def from_data_block(cls, data: StatusDataBlock) -> Self:
-        """Creates a rocket data packet from a StatusDataBlock class."""
-
-        return cls(
-            mission_time=data.mission_time,
-            deployment_state=data.deployment_state,
-            blocks_recorded=data.sd_blocks_recorded,
-            checkouts_missed=data.sd_checkouts_missed,
-        )
-
-    def __iter__(self):
-        yield "mission_time", self.mission_time,
-        yield "deployment_state", self.deployment_state.value,
-        yield "blocks_recorded", self.blocks_recorded,
-        yield "checkouts_missed", self.checkouts_missed,
-
-
 # Replay packet class
 @dataclass
 class ReplayData:
@@ -172,14 +143,12 @@ class StatusData:
     mission: MissionData = field(default_factory=MissionData)
     serial: SerialData = field(default_factory=SerialData)
     rn2483_radio: RN2483RadioData = field(default_factory=RN2483RadioData)
-    rocket: RocketData = field(default_factory=RocketData)
     replay: ReplayData = field(default_factory=ReplayData)
 
     def __iter__(self):
         yield "mission", dict(self.mission),
         yield "serial", dict(self.serial),
         yield "rn2483_radio", dict(self.rn2483_radio),
-        yield "rocket", dict(self.rocket),
         yield "replay", dict(self.replay),
 
 
