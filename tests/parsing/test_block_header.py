@@ -41,6 +41,7 @@ def header3() -> str:
     """
     return "02000300"
 
+
 @pytest.fixture
 def header1_invalid_message_type() -> str:
     """
@@ -51,6 +52,7 @@ def header1_invalid_message_type() -> str:
     destination address: 0
     """
     return "02fe0100"
+
 
 @pytest.fixture
 def header1_invalid_message_subtype() -> str:
@@ -63,6 +65,7 @@ def header1_invalid_message_subtype() -> str:
     """
     return "0200fe00"
 
+
 @pytest.fixture
 def header1_invalid_destination() -> str:
     """
@@ -73,6 +76,7 @@ def header1_invalid_destination() -> str:
     destination address: 5
     """
     return "02000105"
+
 
 def test_parsing_header1(header1: str):
     """Ensure that parsing a block header works as expected."""
@@ -103,17 +107,27 @@ def test_parsing_header3(header3: str):
     assert hdr.message_subtype == 3
     assert hdr.destination == 0
 
+
 def test_parsing_header1_invalid_message_type(header1_invalid_message_type: str):
     """Ensure that parsing a block header works as expected."""
-    with pytest.raises(InvalidBlockHeaderFieldValueError, match="Invalid block header field: 254 is not a valid value for BlockType"):
+    with pytest.raises(
+        InvalidBlockHeaderFieldValueError, match="Invalid block header field: 254 is not a valid value for BlockType"
+    ):
         _ = BlockHeader.from_hex(header1_invalid_message_type)
+
 
 def test_parsing_header1_invalid_message_subtype(header1_invalid_message_subtype: str):
     """Ensure that parsing a block header works as expected."""
-    with pytest.raises(InvalidBlockHeaderFieldValueError, match="Invalid block header field: 254 is not a valid value for DataBlockSubtype"):
+    with pytest.raises(
+        InvalidBlockHeaderFieldValueError,
+        match="Invalid block header field: 254 is not a valid value for DataBlockSubtype",
+    ):
         _ = BlockHeader.from_hex(header1_invalid_message_subtype)
+
 
 def test_parsing_header1_invalid_destination(header1_invalid_destination: str):
     """Ensure that parsing a block header works as expected."""
-    with pytest.raises(InvalidBlockHeaderFieldValueError, match="Invalid block header field: 5 is not a valid value for DeviceAddress"):
+    with pytest.raises(
+        InvalidBlockHeaderFieldValueError, match="Invalid block header field: 5 is not a valid value for DeviceAddress"
+    ):
         _ = BlockHeader.from_hex(header1_invalid_destination)

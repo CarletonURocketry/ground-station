@@ -4,7 +4,13 @@ from typing import List, Optional
 import logging
 
 
-from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress, UnsupportedEncodingVersionError, InvalidBlockHeaderFieldValueError
+from modules.telemetry.v1.block import (
+    PacketHeader,
+    BlockHeader,
+    DeviceAddress,
+    UnsupportedEncodingVersionError,
+    InvalidBlockHeaderFieldValueError,
+)
 import modules.telemetry.v1.data_block as v1db
 from modules.misc.config import Config
 
