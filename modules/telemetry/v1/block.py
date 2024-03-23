@@ -18,7 +18,6 @@ class BlockType(IntEnum):
     """The different radio block types for version 1 of the radio packet format."""
 
     DATA = 0x0
-    RESERVED = 0xFF
 
 
 class DeviceAddress(IntEnum):
@@ -41,12 +40,21 @@ class DeviceAddress(IntEnum):
                 return "MULTICAST"
 
 
-class UnsupportedEncodingVersion(Exception):
+class UnsupportedEncodingVersionError(Exception):
     """Exception raised when the encoding version is not supported."""
 
     def __init__(self, version: int):
         self.version = version
         super().__init__(f"Unsupported encoding version: {version}")
+
+
+class InvalidBlockHeaderFieldError(Exception):
+    """Exception raised when an invalid block header field is encountered."""
+
+    def __init__(self, val: str, field: str):
+        self.val = val
+        self.field = field
+        super().__init__(f"Invalid block header field: {val} is not a valid value for {field}")
 
 
 @dataclass
@@ -86,7 +94,7 @@ class PacketHeader:
         packet_num = struct.unpack(">I", struct.pack("<I", int(header[95:127], 2)))[0]
 
         if version < MIN_SUPPORTED_VERSION or version > MAX_SUPPORTED_VERSION:
-            raise UnsupportedEncodingVersion(version)
+            raise UnsupportedEncodingVersionError(version)
 
         return cls(callsign, callzone, length, version, src_addr, packet_num)
 
@@ -106,7 +114,6 @@ class BlockHeader:
     message_type: int
     message_subtype: int
     destination: int
-    valid: bool = True
 
     @classmethod
     def from_hex(cls, payload: str) -> Self:
@@ -118,26 +125,16 @@ class BlockHeader:
 
         unpacked_header = struct.unpack("<BBBB", bytes.fromhex(payload))
 
-        block_length = int(((unpacked_header[0]) + 1) * 4)
-        block_type = int(unpacked_header[1])
-        block_subtype = int(unpacked_header[2])
-        block_destination = int(unpacked_header[3])
-        block_valid = True
+        length = int(((unpacked_header[0]) + 1) * 4)
 
         try:
-            _ = BlockType(block_type)
-            _ = DataBlockSubtype(block_subtype)
-            _ = DeviceAddress(block_destination)
-        except ValueError:
-            block_valid = False
+            message_type = BlockType(unpacked_header[1])
+            message_subtype = DataBlockSubtype(unpacked_header[2])
+            destination = DeviceAddress(unpacked_header[3])
+        except ValueError as e:
+            raise InvalidBlockHeaderFieldError(e.args[0].split()[0], e.args[0].split()[-1])
 
-        return cls(
-            length=block_length,
-            message_type=block_type,
-            message_subtype=block_subtype,
-            destination=block_destination,
-            valid=block_valid,
-        )
+        return cls(length, message_type, message_subtype, destination)
 
     def __len__(self) -> int:
         """

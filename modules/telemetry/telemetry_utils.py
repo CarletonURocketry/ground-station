@@ -4,7 +4,7 @@ from typing import List, Optional
 import logging
 
 
-from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress, UnsupportedEncodingVersion
+from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress, UnsupportedEncodingVersionError
 import modules.telemetry.v1.data_block as v1db
 from modules.misc.config import Config
 
@@ -108,8 +108,8 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
 
     try:
         pkt_hdr = PacketHeader.from_hex(data[:32])
-    except UnsupportedEncodingVersion as e:
-        logger.error(e, " skipping packet")
+    except UnsupportedEncodingVersionError as e:
+        logger.error(f"{e}, skipping packet")
         return
 
     if pkt_hdr.callsign in config.approved_callsigns:
