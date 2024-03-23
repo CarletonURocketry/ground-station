@@ -4,7 +4,7 @@ from typing import List, Optional
 import logging
 
 
-from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress, UnsupportedEncodingVersionError
+from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress, UnsupportedEncodingVersionError, InvalidBlockHeaderFieldValueError
 import modules.telemetry.v1.data_block as v1db
 from modules.misc.config import Config
 
@@ -106,12 +106,14 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
     logger.debug(f"Full data string: {data}")
     # TODO Make a generic abstract packet header class to encompass V1 packet header, etc
 
+    # Catch unsupported encoding versions by skipping packet
     try:
         pkt_hdr = PacketHeader.from_hex(data[:32])
     except UnsupportedEncodingVersionError as e:
         logger.error(f"{e}, skipping packet")
         return
 
+    # We can keep unauthorized callsigns but we'll log them as warnings
     if pkt_hdr.callsign in config.approved_callsigns:
         logger.info(f"Incoming packet from {pkt_hdr.callsign} ({config.approved_callsigns.get(pkt_hdr.callsign)})")
     else:
@@ -127,18 +129,18 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
         # Parse block header
         logger.debug(f"Blocks: {blocks}")
         logger.debug(f"Block header: {blocks[:8]}")
-        block_header = BlockHeader.from_hex(blocks[:8])
+
+        # Catch invalid block headers field values by skipping packet
+        try:
+            block_header = BlockHeader.from_hex(blocks[:8])
+        except InvalidBlockHeaderFieldValueError as e:
+            logger.error(f"{e}, skipping packet")
+            return
 
         # Select block contents
         block_len = len(block_header) * 2  # Convert length in bytes to length in hex symbols
         block_contents = blocks[8:block_len]
         logger.debug(f"Block info: {block_header}")
-
-        # Block Header Validity
-        if not block_header.valid:
-            logger.error("Block header contains invalid block type values, skipping block")
-            blocks = blocks[block_len:]
-            continue
 
         # Check if message is destined for ground station for processing
         if block_header.destination in [DeviceAddress.GROUND_STATION, DeviceAddress.MULTICAST]:

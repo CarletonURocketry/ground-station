@@ -48,7 +48,7 @@ class UnsupportedEncodingVersionError(Exception):
         super().__init__(f"Unsupported encoding version: {version}")
 
 
-class InvalidBlockHeaderFieldError(Exception):
+class InvalidBlockHeaderFieldValueError(Exception):
     """Exception raised when an invalid block header field is encountered."""
 
     def __init__(self, val: str, field: str):
@@ -132,7 +132,7 @@ class BlockHeader:
             message_subtype = DataBlockSubtype(unpacked_header[2])
             destination = DeviceAddress(unpacked_header[3])
         except ValueError as e:
-            raise InvalidBlockHeaderFieldError(e.args[0].split()[0], e.args[0].split()[-1])
+            raise InvalidBlockHeaderFieldValueError(e.args[0].split()[0], e.args[0].split()[-1])
 
         return cls(length, message_type, message_subtype, destination)
 
