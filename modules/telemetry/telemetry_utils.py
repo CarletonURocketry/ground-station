@@ -4,7 +4,7 @@ from typing import List, Optional
 import logging
 
 
-from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress
+from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress, UnsupportedEncodingVersion
 import modules.telemetry.v1.data_block as v1db
 from modules.misc.config import Config
 
@@ -105,15 +105,22 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
     data = data.strip()  # Sometimes some extra whitespace
     logger.debug(f"Full data string: {data}")
     # TODO Make a generic abstract packet header class to encompass V1 packet header, etc
-    pkt_hdr = PacketHeader.from_hex(data[:32])
+
+    try:
+        pkt_hdr = PacketHeader.from_hex(data[:32])
+    except UnsupportedEncodingVersion as e:
+        logger.error(e, " skipping packet")
+        return
+
+    if pkt_hdr.callsign in config.approved_callsigns:
+        logger.info(f"Incoming packet from {pkt_hdr.callsign} ({config.approved_callsigns.get(pkt_hdr.callsign)})")
+    else:
+        logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
 
     if len(pkt_hdr) <= 32:  # If this packet nothing more than just the header
         logger.info(f"{pkt_hdr}")
 
     blocks = data[32:]  # Remove the packet header
-
-    if not is_valid_packet_header(pkt_hdr, config.approved_callsigns):  # Return immediately if packet header is invalid
-        return
 
     # Parse through all blocks
     while blocks != "":
@@ -154,15 +161,6 @@ def is_valid_packet_header(pkt_hdr: PacketHeader, approved_callsigns: dict[str, 
         logger.info(f"Incoming packet from {pkt_hdr.callsign} ({approved_callsigns.get(pkt_hdr.callsign)})")
     else:
         logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
-        return False
-
-    # Ensure packet version compatibility
-    if pkt_hdr.version < MIN_SUPPORTED_VERSION:
-        logger.error(f"This version of ground station does not support encoding below {MIN_SUPPORTED_VERSION}")
-        return False
-
-    if pkt_hdr.version > MAX_SUPPORTED_VERSION:
-        logger.error(f"This version of ground station does not support encoding above {MAX_SUPPORTED_VERSION}")
         return False
 
     return True

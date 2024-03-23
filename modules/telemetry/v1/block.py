@@ -7,6 +7,9 @@ import logging
 
 from modules.telemetry.v1.data_block import DataBlockSubtype
 
+MIN_SUPPORTED_VERSION: int = 1
+MAX_SUPPORTED_VERSION: int = 1
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -38,6 +41,14 @@ class DeviceAddress(IntEnum):
                 return "MULTICAST"
 
 
+class UnsupportedEncodingVersion(Exception):
+    """Exception raised when the encoding version is not supported."""
+
+    def __init__(self, version: int):
+        self.version = version
+        super().__init__(f"Unsupported encoding version: {version}")
+
+
 @dataclass
 class PacketHeader:
     """Represents a V1 packet header."""
@@ -67,14 +78,17 @@ class PacketHeader:
             ham_call_sign = amateur_radio.split("/")[1]
             ham_call_zone = amateur_radio.split("/")[0]
 
-        return cls(
-            callsign=ham_call_sign.strip("/"),
-            callzone=ham_call_zone.strip("/"),
-            length=(int(header[71:79], 2) + 1) * 4,
-            version=int(header[79:87], 2),
-            src_addr=int(header[87:95], 2),
-            packet_num=struct.unpack(">I", struct.pack("<I", int(header[95:127], 2)))[0],
-        )
+        callsign = ham_call_sign.strip("/")
+        callzone = ham_call_zone.strip("/")
+        length = (int(header[71:79], 2) + 1) * 4
+        version = int(header[79:87], 2)
+        src_addr = int(header[87:95], 2)
+        packet_num = struct.unpack(">I", struct.pack("<I", int(header[95:127], 2)))[0]
+
+        if version < MIN_SUPPORTED_VERSION or version > MAX_SUPPORTED_VERSION:
+            raise UnsupportedEncodingVersion(version)
+
+        return cls(callsign, callzone, length, version, src_addr, packet_num)
 
     def __len__(self) -> int:
         """
