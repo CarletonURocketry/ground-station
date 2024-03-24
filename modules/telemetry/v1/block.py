@@ -7,6 +7,9 @@ import logging
 
 from modules.telemetry.v1.data_block import DataBlockSubtype
 
+MIN_SUPPORTED_VERSION: int = 1
+MAX_SUPPORTED_VERSION: int = 1
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -15,7 +18,6 @@ class BlockType(IntEnum):
     """The different radio block types for version 1 of the radio packet format."""
 
     DATA = 0x0
-    RESERVED = 0xFF
 
 
 class DeviceAddress(IntEnum):
@@ -36,6 +38,23 @@ class DeviceAddress(IntEnum):
                 return "RESERVED"
             case DeviceAddress.MULTICAST:
                 return "MULTICAST"
+
+
+class UnsupportedEncodingVersionError(Exception):
+    """Exception raised when the encoding version is not supported."""
+
+    def __init__(self, version: int):
+        self.version = version
+        super().__init__(f"Unsupported encoding version: {version}")
+
+
+class InvalidBlockHeaderFieldValueError(Exception):
+    """Exception raised when an invalid block header field is encountered."""
+
+    def __init__(self, val: str, field: str):
+        self.val = val
+        self.field = field
+        super().__init__(f"Invalid block header field: {val} is not a valid value for {field}")
 
 
 @dataclass
@@ -67,14 +86,17 @@ class PacketHeader:
             ham_call_sign = amateur_radio.split("/")[1]
             ham_call_zone = amateur_radio.split("/")[0]
 
-        return cls(
-            callsign=ham_call_sign.strip("/"),
-            callzone=ham_call_zone.strip("/"),
-            length=(int(header[71:79], 2) + 1) * 4,
-            version=int(header[79:87], 2),
-            src_addr=int(header[87:95], 2),
-            packet_num=struct.unpack(">I", struct.pack("<I", int(header[95:127], 2)))[0],
-        )
+        callsign = ham_call_sign.strip("/")
+        callzone = ham_call_zone.strip("/")
+        length = (int(header[71:79], 2) + 1) * 4
+        version = int(header[79:87], 2)
+        src_addr = int(header[87:95], 2)
+        packet_num = struct.unpack(">I", struct.pack("<I", int(header[95:127], 2)))[0]
+
+        if version < MIN_SUPPORTED_VERSION or version > MAX_SUPPORTED_VERSION:
+            raise UnsupportedEncodingVersionError(version)
+
+        return cls(callsign, callzone, length, version, src_addr, packet_num)
 
     def __len__(self) -> int:
         """
@@ -92,7 +114,6 @@ class BlockHeader:
     message_type: int
     message_subtype: int
     destination: int
-    valid: bool = True
 
     @classmethod
     def from_hex(cls, payload: str) -> Self:
@@ -104,26 +125,16 @@ class BlockHeader:
 
         unpacked_header = struct.unpack("<BBBB", bytes.fromhex(payload))
 
-        block_length = int(((unpacked_header[0]) + 1) * 4)
-        block_type = int(unpacked_header[1])
-        block_subtype = int(unpacked_header[2])
-        block_destination = int(unpacked_header[3])
-        block_valid = True
+        length = int(((unpacked_header[0]) + 1) * 4)
 
         try:
-            _ = BlockType(block_type)
-            _ = DataBlockSubtype(block_subtype)
-            _ = DeviceAddress(block_destination)
-        except ValueError:
-            block_valid = False
+            message_type = BlockType(unpacked_header[1])
+            message_subtype = DataBlockSubtype(unpacked_header[2])
+            destination = DeviceAddress(unpacked_header[3])
+        except ValueError as e:
+            raise InvalidBlockHeaderFieldValueError(e.args[0].split()[0], e.args[0].split()[-1])
 
-        return cls(
-            length=block_length,
-            message_type=block_type,
-            message_subtype=block_subtype,
-            destination=block_destination,
-            valid=block_valid,
-        )
+        return cls(length, message_type, message_subtype, destination)
 
     def __len__(self) -> int:
         """
