@@ -40,18 +40,20 @@ def bad_block_header() -> BlockHeader:
     return bad_header
 
 
-def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_contents:str) -> None:
+def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_contents: str) -> None:
     """
     test a proper line on parse_radio_block
     """
     prb = parse_radio_block(1, block_header, hex_block_contents)
-    assert prb.block_header.length == 12
-    assert prb.block_header.message_type == 0
-    assert prb.block_header.message_subtype == 2
-    assert prb.block_header.destination == 0
-    assert prb.block_header.valid is True
-    assert prb.block_name == 'temperature'
-    assert prb.block_contents['mission_time'] == 0
+    assert prb is not None
+    if prb is not None:
+        assert prb.block_header.length == 12
+        assert prb.block_header.message_type == 0
+        assert prb.block_header.message_subtype == 2
+        assert prb.block_header.destination == 0
+        assert prb.block_header.valid is True
+        assert prb.block_name == "temperature"
+        assert prb.block_contents["mission_time"] == 0
 
 
 def test_invalid_datablock_subtype(pkt_version: int, bad_block_header: BlockHeader, hex_block_contents: str) -> None:
@@ -60,6 +62,7 @@ def test_invalid_datablock_subtype(pkt_version: int, bad_block_header: BlockHead
     """
     with pytest.raises(ValueError):
         parse_radio_block(192, BlockHeader.from_hex("02009A00"), "00000000f0c30000")
+
 
 config = load_config("config.json")
 

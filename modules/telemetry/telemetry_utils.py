@@ -92,6 +92,7 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
         logger.error("Invalid data block subtype")
         raise e
 
+
 def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTransmission]:
     """
     Parses RN2483 Packets and extracts our telemetry payload blocks, returns parsed transmission object if packet
