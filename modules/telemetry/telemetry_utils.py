@@ -9,7 +9,7 @@ from modules.telemetry.v1.block import (
     BlockHeader,
     DeviceAddress,
     UnsupportedEncodingVersionError,
-    InvalidBlockHeaderFieldValueError,
+    InvalidHeaderFieldValueError,
 )
 import modules.telemetry.v1.data_block as v1db
 from modules.misc.config import Config
@@ -139,7 +139,7 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
         # Catch invalid block headers field values by skipping packet
         try:
             block_header = BlockHeader.from_hex(blocks[:8])
-        except InvalidBlockHeaderFieldValueError as e:
+        except InvalidHeaderFieldValueError as e:
             logger.error(f"{e}, skipping packet")
             return
 
