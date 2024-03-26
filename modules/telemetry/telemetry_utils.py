@@ -1,12 +1,11 @@
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
-import logging
 
-
-from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress
 import modules.telemetry.v1.data_block as v1db
 from modules.misc.config import Config
+from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress
 
 MISSION_EXTENSION: str = "mission"
 FILE_CREATION_ATTEMPT_LIMIT: int = 50
@@ -89,9 +88,9 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
             f"Block parsing for type {block_header.message_type}, with subtype {block_header.message_subtype} not \
                 implemented!"
         )
-    except ValueError:
+    except ValueError as e:
         logger.error("Invalid data block subtype")
-
+        raise e
 
 def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTransmission]:
     """
