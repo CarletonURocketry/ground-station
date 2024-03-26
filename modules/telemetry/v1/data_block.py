@@ -105,18 +105,8 @@ class DataBlock(ABC):
 
         subtype = SUBTYPE_CLASSES.get(block_subtype)
 
-        NONIMPLEMENTED_SUBTYPE_CLASSES: list[DataBlockSubtype] = [
-            DataBlockSubtype.ACCELERATION,
-            DataBlockSubtype.ANGULAR_VELOCITY,
-            DataBlockSubtype.GNSS_LOCATION,
-            DataBlockSubtype.GNSS_METADATA,
-            DataBlockSubtype.RESERVED
-        ]
-
-        if block_subtype in NONIMPLEMENTED_SUBTYPE_CLASSES:
+        if subtype is None:
             raise NotImplementedError
-        elif subtype is None:
-            raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype} {payload} {payload.hex()}")
 
         return subtype.from_bytes(payload=payload)
 
