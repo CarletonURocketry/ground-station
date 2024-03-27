@@ -6,7 +6,22 @@ from enum import IntEnum
 import struct
 
 from modules.misc.converter import metres_to_feet, milli_degrees_to_celsius, pascals_to_psi
-from modules.telemetry.block import BlockException, BlockUnknownException
+
+
+class BlockException(Exception):
+    pass
+
+
+class BlockUnknownException(BlockException):
+    pass
+
+
+class DataBlockException(BlockException):
+    pass
+
+
+class DataBlockUnknownException(BlockUnknownException):
+    pass
 
 
 class DataBlockSubtype(IntEnum):
@@ -21,7 +36,6 @@ class DataBlockSubtype(IntEnum):
     GNSS_LOCATION = 0x06
     GNSS_METADATA = 0x07
     HUMIDITY = 0x08
-    RESERVED = 0xFF
 
     def __str__(self):
         match self:
@@ -43,16 +57,6 @@ class DataBlockSubtype(IntEnum):
                 return "GNSS METADATA"
             case DataBlockSubtype.HUMIDITY:
                 return "HUMIDITY"
-            case _:
-                return "RESERVED"
-
-
-class DataBlockException(BlockException):
-    pass
-
-
-class DataBlockUnknownException(BlockUnknownException):
-    pass
 
 
 class DataBlock(ABC):

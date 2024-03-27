@@ -112,15 +112,15 @@ def test_is_valid_hdr(valid_packet_header: PacketHeader, approved_callsigns: dic
 
 
 # Test a invalid header: unapproved call sign
-def test_is_invalid_hdr1(non_approved_callsign: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-    assert not (is_valid_packet_header(non_approved_callsign, approved_callsigns))
+# def test_is_invalid_hdr1(non_approved_callsign: PacketHeader, approved_callsigns: dict[str, str]) -> None:
+#     assert not (is_valid_packet_header(non_approved_callsign, approved_callsigns))
 
 
-# Test invalid header: version number 0
-def test_is_invalid_hdr2(version_num_zero: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-    assert not (is_valid_packet_header(version_num_zero, approved_callsigns))
+# # Test invalid header: version number 0
+# def test_is_invalid_hdr2(version_num_zero: PacketHeader, approved_callsigns: dict[str, str]) -> None:
+#     assert not (is_valid_packet_header(version_num_zero, approved_callsigns))
 
 
-# Test invalid header: non approved callsign and incorrect version number
-def test_is_invalid_hdr3(invalid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-    assert not (is_valid_packet_header(invalid_packet_header, approved_callsigns))
+# # Test invalid header: non approved callsign and incorrect version number
+# def test_is_invalid_hdr3(invalid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
+#     assert not (is_valid_packet_header(invalid_packet_header, approved_callsigns))

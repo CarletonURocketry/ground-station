@@ -14,7 +14,7 @@ def linguini_header() -> str:
 @pytest.fixture
 def zeta_header() -> str:
     """Returns a packet header with call sign VA3ZTA (Darwin Jull)"""
-    return "5641335A54410000000A020600040000"
+    return "5641335A54410000000A010600040000"
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def test_zeta_header(zeta_header: str) -> None:
     assert hdr.callsign == "VA3ZTA"
     assert hdr.callzone == ""
     assert len(hdr) == 44
-    assert hdr.version == 2
+    assert hdr.version == 1
     assert hdr.src_addr == 6
     assert hdr.packet_num == 1024
 
