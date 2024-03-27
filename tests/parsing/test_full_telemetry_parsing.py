@@ -1,7 +1,67 @@
 import pytest
+from modules.telemetry.v1.block import BlockHeader
+from modules.telemetry.telemetry_utils import parse_radio_block
 from modules.telemetry.telemetry_utils import is_valid_packet_header
 from modules.telemetry.v1.block import PacketHeader
 from modules.misc.config import load_config
+
+
+@pytest.fixture
+def pkt_version() -> int:
+    """
+    returns the packet version as an integer:
+    """
+    return 192
+
+
+@pytest.fixture
+def block_header() -> BlockHeader:
+    """
+    returns a blockheader
+    """
+    return BlockHeader.from_hex("02000200")
+
+
+@pytest.fixture
+def hex_block_contents() -> str:
+    """
+    returns the contents
+    """
+    return "00000000f0c30000"
+
+
+@pytest.fixture
+def bad_block_header() -> BlockHeader:
+    """
+    Invalid data block subtype, random non-existant
+    """
+    bad_header = BlockHeader.from_hex("02009A00")
+
+    return bad_header
+
+
+def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_contents: str) -> None:
+    """
+    test a proper line on parse_radio_block
+    """
+    prb = parse_radio_block(1, block_header, hex_block_contents)
+    assert prb is not None
+    if prb is not None:
+        assert prb.block_header.length == 12
+        assert prb.block_header.message_type == 0
+        assert prb.block_header.message_subtype == 2
+        assert prb.block_header.destination == 0
+        assert prb.block_header.valid is True
+        assert prb.block_name == "temperature"
+        assert prb.block_contents["mission_time"] == 0
+
+
+def test_invalid_datablock_subtype(pkt_version: int, bad_block_header: BlockHeader, hex_block_contents: str) -> None:
+    """
+    test for random subtype ValueError
+    """
+    with pytest.raises(ValueError):
+        parse_radio_block(192, BlockHeader.from_hex("02009A00"), "00000000f0c30000")
 
 
 config = load_config("config.json")
