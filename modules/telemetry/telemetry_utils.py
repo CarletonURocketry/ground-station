@@ -1,7 +1,7 @@
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
+import logging
 
 from modules.telemetry.v1.block import (
     PacketHeader,
@@ -10,10 +10,8 @@ from modules.telemetry.v1.block import (
     UnsupportedEncodingVersionError,
     InvalidBlockHeaderFieldValueError,
 )
-
 import modules.telemetry.v1.data_block as v1db
 from modules.misc.config import Config
-from modules.telemetry.v1.block import PacketHeader, BlockHeader, DeviceAddress
 
 MISSION_EXTENSION: str = "mission"
 FILE_CREATION_ATTEMPT_LIMIT: int = 50
