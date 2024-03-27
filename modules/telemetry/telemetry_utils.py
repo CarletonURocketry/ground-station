@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Optional
 import logging
 
+
 from modules.telemetry.v1.block import (
     PacketHeader,
     BlockHeader,
