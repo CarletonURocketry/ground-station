@@ -110,7 +110,7 @@ class DataBlock(ABC):
         subtype = SUBTYPE_CLASSES.get(block_subtype)
 
         if subtype is None:
-            raise DataBlockUnknownException(f"Unknown data block subtype: {block_subtype} {payload} {payload.hex()}")
+            raise NotImplementedError
 
         return subtype.from_bytes(payload=payload)
 
