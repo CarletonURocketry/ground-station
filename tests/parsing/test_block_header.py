@@ -2,7 +2,7 @@
 
 # Imports
 import pytest
-from modules.telemetry.v1.block import BlockHeader, InvalidBlockHeaderFieldValueError
+from modules.telemetry.v1.block import BlockHeader, InvalidHeaderFieldValueError
 
 
 # Fixtures
@@ -109,25 +109,25 @@ def test_parsing_header3(header3: str):
 
 
 def test_parsing_header1_invalid_message_type(header1_invalid_message_type: str):
-    """Ensure that parsing a block header works as expected."""
+    """Ensure that parsing a block header with an invalid message type raises an error."""
     with pytest.raises(
-        InvalidBlockHeaderFieldValueError, match="Invalid block header field: 254 is not a valid value for BlockType"
+        InvalidHeaderFieldValueError, match="Invalid BlockHeader field: 254 is not a valid value for BlockType"
     ):
         _ = BlockHeader.from_hex(header1_invalid_message_type)
 
 
 def test_parsing_header1_invalid_message_subtype(header1_invalid_message_subtype: str):
-    """Ensure that parsing a block header works as expected."""
+    """Ensure that parsing a block header with an invalid message subtype raises an error."""
     with pytest.raises(
-        InvalidBlockHeaderFieldValueError,
-        match="Invalid block header field: 254 is not a valid value for DataBlockSubtype",
+        InvalidHeaderFieldValueError,
+        match="Invalid BlockHeader field: 254 is not a valid value for DataBlockSubtype",
     ):
         _ = BlockHeader.from_hex(header1_invalid_message_subtype)
 
 
 def test_parsing_header1_invalid_destination(header1_invalid_destination: str):
-    """Ensure that parsing a block header works as expected."""
+    """Ensure that parsing a block header an invalid destination raises an error."""
     with pytest.raises(
-        InvalidBlockHeaderFieldValueError, match="Invalid block header field: 5 is not a valid value for DeviceAddress"
+        InvalidHeaderFieldValueError, match="Invalid BlockHeader field: 5 is not a valid value for DeviceAddress"
     ):
         _ = BlockHeader.from_hex(header1_invalid_destination)

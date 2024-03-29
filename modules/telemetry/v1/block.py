@@ -48,13 +48,13 @@ class UnsupportedEncodingVersionError(Exception):
         super().__init__(f"Unsupported encoding version: {version}")
 
 
-class InvalidBlockHeaderFieldValueError(Exception):
-    """Exception raised when an invalid block header field is encountered."""
+class InvalidHeaderFieldValueError(Exception):
+    """Exception raised when an invalid header field is encountered."""
 
-    def __init__(self, val: str, field: str):
+    def __init__(self, cls_name: str, val: str, field: str):
         self.val = val
         self.field = field
-        super().__init__(f"Invalid block header field: {val} is not a valid value for {field}")
+        super().__init__(f"Invalid {cls_name} field: {val} is not a valid value for {field}")
 
 
 @dataclass
@@ -65,7 +65,7 @@ class PacketHeader:
     callzone: Optional[str]
     length: int
     version: int
-    src_addr: int
+    src_addr: DeviceAddress
     packet_num: int
 
     @classmethod
@@ -90,7 +90,11 @@ class PacketHeader:
         callzone = ham_call_zone.strip("/")
         length = (int(header[71:79], 2) + 1) * 4
         version = int(header[79:87], 2)
-        src_addr = int(header[87:95], 2)
+        try:
+            src_addr = DeviceAddress(int(header[87:95], 2))
+        except ValueError as e:
+            raise InvalidHeaderFieldValueError(cls.__name__, e.args[0].split()[0], e.args[0].split()[-1])
+
         packet_num = struct.unpack(">I", struct.pack("<I", int(header[95:127], 2)))[0]
 
         if version < MIN_SUPPORTED_VERSION or version > MAX_SUPPORTED_VERSION:
@@ -113,7 +117,7 @@ class BlockHeader:
     length: int
     message_type: int
     message_subtype: int
-    destination: int
+    destination: DeviceAddress
 
     @classmethod
     def from_hex(cls, payload: str) -> Self:
@@ -132,7 +136,7 @@ class BlockHeader:
             message_subtype = DataBlockSubtype(unpacked_header[2])
             destination = DeviceAddress(unpacked_header[3])
         except ValueError as e:
-            raise InvalidBlockHeaderFieldValueError(e.args[0].split()[0], e.args[0].split()[-1])
+            raise InvalidHeaderFieldValueError(cls.__name__, e.args[0].split()[0], e.args[0].split()[-1])
 
         return cls(length, message_type, message_subtype, destination)
 
