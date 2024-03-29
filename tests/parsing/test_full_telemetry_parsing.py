@@ -1,8 +1,6 @@
 import pytest
-from modules.telemetry.v1.block import BlockHeader
-from modules.telemetry.telemetry_utils import parse_radio_block
-from modules.telemetry.telemetry_utils import is_valid_packet_header
-from modules.telemetry.v1.block import PacketHeader
+from modules.telemetry.v1.block import PacketHeader, BlockHeader, InvalidHeaderFieldValueError
+from modules.telemetry.telemetry_utils import parse_radio_block, is_valid_packet_header
 from modules.misc.config import load_config
 
 
@@ -30,16 +28,6 @@ def hex_block_contents() -> str:
     return "00000000f0c30000"
 
 
-@pytest.fixture
-def bad_block_header() -> BlockHeader:
-    """
-    Invalid data block subtype, random non-existant
-    """
-    bad_header = BlockHeader.from_hex("02009A00")
-
-    return bad_header
-
-
 def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_contents: str) -> None:
     """
     test a proper line on parse_radio_block
@@ -51,17 +39,24 @@ def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_cont
         assert prb.block_header.message_type == 0
         assert prb.block_header.message_subtype == 2
         assert prb.block_header.destination == 0
-        assert prb.block_header.valid is True
         assert prb.block_name == "temperature"
         assert prb.block_contents["mission_time"] == 0
 
 
-def test_invalid_datablock_subtype(pkt_version: int, bad_block_header: BlockHeader, hex_block_contents: str) -> None:
+def test_invalid_datablock_subtype(pkt_version: int, hex_block_contents: str) -> None:
     """
     test for random subtype ValueError
     """
-    with pytest.raises(ValueError):
-        parse_radio_block(192, BlockHeader.from_hex("02009A00"), "00000000f0c30000")
+    with pytest.raises(InvalidHeaderFieldValueError):  # subtype is 154, thus non-existent
+        parse_radio_block(pkt_version, BlockHeader.from_hex("02009A00"), hex_block_contents)
+
+
+def test_not_implemented_error(pkt_version: int, hex_block_contents: str) -> None:
+    """
+    test for a subtye that exists but is not implemented
+    """
+    with pytest.raises(NotImplementedError):
+        parse_radio_block(pkt_version, BlockHeader.from_hex("02000400"), hex_block_contents)
 
 
 config = load_config("config.json")
