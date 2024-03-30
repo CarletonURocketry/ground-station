@@ -93,7 +93,7 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
     except NotImplementedError:
         logger.warning(
             f"Block parsing for type {block_header.message_type}, with subtype {block_header.message_subtype} not \
-            implemented!"
+                implemented!"
         )
         raise NotImplementedError
 
