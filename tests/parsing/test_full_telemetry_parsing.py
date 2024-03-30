@@ -32,7 +32,7 @@ def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_cont
     """
     test a proper line on parse_radio_block
     """
-    prb = parse_radio_block(1, block_header, hex_block_contents)
+    prb = parse_radio_block(pkt_version, block_header, hex_block_contents)
     assert prb is not None
     if prb is not None:
         assert prb.block_header.length == 12
