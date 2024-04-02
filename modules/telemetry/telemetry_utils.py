@@ -90,16 +90,16 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
 
         return ParsedBlock(block_name, block_header, dict(block_contents))  # type: ignore
 
+    except ValueError:
+        logger.error("Invalid data block subtype")
+
     except NotImplementedError:
         logger.warning(
             f"Block parsing for type {block_header.message_type}, with subtype {block_header.message_subtype} not \
                 implemented!"
         )
-        raise NotImplementedError
 
-    except ValueError:
-        logger.error("Invalid data block subtype")
-        raise ValueError
+
 
 
 def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTransmission]:
