@@ -43,20 +43,32 @@ def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_cont
         assert prb.block_contents["mission_time"] == 0
 
 
-def test_invalid_datablock_subtype(pkt_version: int, hex_block_contents: str) -> None:
+# fixtures
+
+
+@pytest.fixture
+def not_implemented_datablock_subtype() -> BlockHeader:
+    return BlockHeader.from_hex("02000400")
+
+
+def test_invalid_datablock_subtype(pkt_version: int, hex_block_contents: str):
     """
     test for random subtype ValueError
     """
-    with pytest.raises(InvalidHeaderFieldValueError):  # subtype is 154, thus non-existent
+    # subtype is 154, thus non-existent
+    with pytest.raises(
+        InvalidHeaderFieldValueError, match="Invalid BlockHeader field: 154 is not a valid value for DataBlockSubtype"
+    ):
         parse_radio_block(pkt_version, BlockHeader.from_hex("02009A00"), hex_block_contents)
 
 
-def test_not_implemented_error(pkt_version: int, hex_block_contents: str) -> None:
+def test_not_implemented_error(
+    pkt_version: int, not_implemented_datablock_subtype: BlockHeader, hex_block_contents: str
+) -> None:
     """
     test for a subtye that exists but is not implemented
     """
-    with pytest.raises(NotImplementedError):
-        parse_radio_block(pkt_version, BlockHeader.from_hex("02000400"), hex_block_contents)
+    assert parse_radio_block(pkt_version, not_implemented_datablock_subtype, hex_block_contents) is None
 
 
 config = load_config("config.json")
