@@ -162,7 +162,7 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
     return ParsedTransmission(pkt_hdr, parsed_blocks)
 
 
-def is_valid_packet_header(pkt_hdr: PacketHeader, approved_callsigns: dict[str, str]) -> bool:
+def is_approved_packet_header(pkt_hdr: PacketHeader, approved_callsigns: dict[str, str]) -> None:
     """Validates the packet header"""
 
     # Ensure packet is from an approved call sign
@@ -170,6 +170,3 @@ def is_valid_packet_header(pkt_hdr: PacketHeader, approved_callsigns: dict[str, 
         logger.info(f"Incoming packet from {pkt_hdr.callsign} ({approved_callsigns.get(pkt_hdr.callsign)})")
     else:
         logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
-        return False
-
-    return True
