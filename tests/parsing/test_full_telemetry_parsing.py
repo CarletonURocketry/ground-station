@@ -1,6 +1,6 @@
 import pytest
 from modules.telemetry.v1.block import PacketHeader, BlockHeader, InvalidHeaderFieldValueError
-from modules.telemetry.telemetry_utils import parse_radio_block, is_valid_packet_header
+from modules.telemetry.telemetry_utils import parse_radio_block, is_approved_packet_header
 from modules.misc.config import load_config
 
 
@@ -115,19 +115,19 @@ def invalid_packet_header() -> PacketHeader:
 
 # Test valid header
 def test_is_valid_hdr(valid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-    assert is_valid_packet_header(valid_packet_header, approved_callsigns)
+    assert is_approved_packet_header(valid_packet_header, approved_callsigns) is None
 
 
 # Test a invalid header: unapproved call sign
 # def test_is_invalid_hdr1(non_approved_callsign: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-#     assert not (is_valid_packet_header(non_approved_callsign, approved_callsigns))
+#     assert not (is_approved_packet_header(non_approved_callsign, approved_callsigns))
 
 
 # # Test invalid header: version number 0
 # def test_is_invalid_hdr2(version_num_zero: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-#     assert not (is_valid_packet_header(version_num_zero, approved_callsigns))
+#     assert not (is_approved_packet_header(version_num_zero, approved_callsigns))
 
 
 # # Test invalid header: non approved callsign and incorrect version number
 # def test_is_invalid_hdr3(invalid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-#     assert not (is_valid_packet_header(invalid_packet_header, approved_callsigns))
+#     assert not (is_approved_packet_header(invalid_packet_header, approved_callsigns))
