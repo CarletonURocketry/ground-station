@@ -163,7 +163,7 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
 
 
 def is_approved_packet_header(pkt_hdr: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-    """Validates the packet header"""
+    """Checks whether the call sign is recognized"""
 
     # Ensure packet is from an approved call sign
     if pkt_hdr.callsign in approved_callsigns:

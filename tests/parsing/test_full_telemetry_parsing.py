@@ -114,7 +114,7 @@ def invalid_packet_header() -> PacketHeader:
 
 
 # Test valid header
-def test_is_valid_hdr(valid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
+def test_is_approved_pkt_hdr(valid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
     assert is_approved_packet_header(valid_packet_header, approved_callsigns) is None
 
 
