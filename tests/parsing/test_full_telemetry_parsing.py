@@ -1,6 +1,13 @@
 import pytest
-from modules.telemetry.v1.block import PacketHeader, BlockHeader, InvalidHeaderFieldValueError
-from modules.telemetry.telemetry_utils import parse_radio_block, is_approved_packet_header
+import logging
+from pytest import LogCaptureFixture
+from modules.telemetry.v1.block import (
+    PacketHeader,
+    BlockHeader,
+    InvalidHeaderFieldValueError,
+    UnsupportedEncodingVersionError,
+)
+from modules.telemetry.telemetry_utils import parse_radio_block, from_approved_callsign
 from modules.misc.config import load_config
 
 
@@ -96,38 +103,40 @@ def non_approved_callsign() -> PacketHeader:
     return pkt_hdr
 
 
-@pytest.fixture
-def version_num_zero() -> PacketHeader:
-    hdr = "564133494e490000000c000137000000"
-    pkt_hdr = PacketHeader.from_hex(hdr)
-    return pkt_hdr
-
-
-@pytest.fixture
-def invalid_packet_header() -> PacketHeader:
-    hdr = "52415454204D4F53530c0b0137000000"
-    pkt_hdr = PacketHeader.from_hex(hdr)
-    return pkt_hdr
-
-
 # Tests
 
 
 # Test valid header
-def test_is_approved_pkt_hdr(valid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-    assert is_approved_packet_header(valid_packet_header, approved_callsigns) is None
+def test_is_approved_pkt_hdr(
+    valid_packet_header: PacketHeader, approved_callsigns: dict[str, str], caplog: LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO)
+    assert from_approved_callsign(valid_packet_header, approved_callsigns)
+    assert (
+        f"Incoming packet from {valid_packet_header.callsign} ({approved_callsigns.get(valid_packet_header.callsign)})"
+        in caplog.text
+    )
 
 
-# Test a invalid header: unapproved call sign
-# def test_is_invalid_hdr1(non_approved_callsign: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-#     assert not (is_approved_packet_header(non_approved_callsign, approved_callsigns))
+# Test an invalid header: unapproved call sign
+def test_is_unauthorized_callsign(
+    non_approved_callsign: PacketHeader, approved_callsigns: dict[str, str], caplog: LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.WARNING)
+    assert not from_approved_callsign(non_approved_callsign, approved_callsigns)
+    assert f"Incoming packet from unauthorized call sign {non_approved_callsign.callsign}" in caplog.text
 
 
-# # Test invalid header: version number 0
-# def test_is_invalid_hdr2(version_num_zero: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-#     assert not (is_approved_packet_header(version_num_zero, approved_callsigns))
+# Test an invalid header: version number 0
+def test_is_invalid_hdr(approved_callsigns: dict[str, str]) -> None:
+    hdr = "564133494e490000000c000137000000"
+    with pytest.raises(UnsupportedEncodingVersionError, match="Unsupported encoding version: 0"):
+        from_approved_callsign(PacketHeader.from_hex(hdr), approved_callsigns)
 
 
-# # Test invalid header: non approved callsign and incorrect version number
-# def test_is_invalid_hdr3(invalid_packet_header: PacketHeader, approved_callsigns: dict[str, str]) -> None:
-#     assert not (is_approved_packet_header(invalid_packet_header, approved_callsigns))
+# Test an invalid header: non approved callsign and incorrect version number
+def test_is_invalid_hdr2(approved_callsigns: dict[str, str]) -> None:
+    hdr = "52415454204D4F53530c0b0137000000"
+
+    with pytest.raises(UnsupportedEncodingVersionError, match="Unsupported encoding version: 11"):
+        from_approved_callsign(PacketHeader.from_hex(hdr), approved_callsigns)
