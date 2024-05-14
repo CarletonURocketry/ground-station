@@ -121,10 +121,7 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
         return
 
     # We can keep unauthorized callsigns but we'll log them as warnings
-    if pkt_hdr.callsign in config.approved_callsigns:
-        logger.info(f"Incoming packet from {pkt_hdr.callsign} ({config.approved_callsigns.get(pkt_hdr.callsign)})")
-    else:
-        logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
+    from_approved_callsign(pkt_hdr, config.approved_callsigns)
 
     if len(pkt_hdr) <= 32:  # If this packet nothing more than just the header
         logger.info(f"{pkt_hdr}")
@@ -162,8 +159,8 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
     return ParsedTransmission(pkt_hdr, parsed_blocks)
 
 
-def is_valid_packet_header(pkt_hdr: PacketHeader, approved_callsigns: dict[str, str]) -> bool:
-    """Validates the packet header"""
+def from_approved_callsign(pkt_hdr: PacketHeader, approved_callsigns: dict[str, str]) -> bool:
+    """Checks whether the call sign is recognized"""
 
     # Ensure packet is from an approved call sign
     if pkt_hdr.callsign in approved_callsigns:
