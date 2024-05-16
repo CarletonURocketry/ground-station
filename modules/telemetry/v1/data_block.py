@@ -309,19 +309,20 @@ class HumidityDB(DataBlock):
         yield "mission_time", self.mission_time
         yield "percentage", round(self.humidity / 100)
 
+
 class LinearAccelerationDB(DataBlock):
     """Represents a linear acceleration data block"""
 
     def __init__(self, mission_time: int, x_axis: int, y_axis: int, z_axis: int) -> None:
         """
         Constructus a linear acceleration data block.
-        
+
         Args:
             mission_time: The mission time the linear acceleration was measured in milliseconds since launch.
             x_axis: The acceleration about the x axis in meters per second squared.
             y_axis: The acceleration about the y axis in meters per second squared.
             z_axis: The acceleration about the z axis in meters per second squared.
-            
+
         """
         super().__init__(mission_time)
         self.x_axis: int = x_axis
@@ -337,7 +338,7 @@ class LinearAccelerationDB(DataBlock):
         """
         parts = struct.unpack("<Ihhh", payload)
         return cls(parts[0], parts[1] / 100, parts[2] / 100, parts[3] / 100)
-    
+
     def __len__(self) -> int:
         """
         Get the length of a linear acceleration data block in bytes
@@ -345,13 +346,14 @@ class LinearAccelerationDB(DataBlock):
             The length of a linear acceleration data block in bytes not including the block header.
         """
         return 10
-    
+
     def __str__(self):
         return f"{self.__class__.__name__} -> time: {self.mission_time} ms, x-axis: {self.x_axis} m/s^2, y-axis: {self.y_axis} m/s^2, z-axis: {self.z_axis} m/s^2"
-    
+
     def __iter__(self):
         yield "mission_time", self.mission_time
         yield "acceleration", {"x_axis": self.x_axis, "y_axis": self.y_axis, "z_axis": self.z_axis}
+
 
 class AngularVelocityDB(DataBlock):
     """Represents an angular velocity data block"""
@@ -359,13 +361,13 @@ class AngularVelocityDB(DataBlock):
     def __init__(self, mission_time: int, x_axis: int, y_axis: int, z_axis: int) -> None:
         """
         Constructus an angular velocity data block.
-        
+
         Args:
             mission_time: The mission time the angular velocity was measured in milliseconds since launch.
             x_axis: The velocity about the x axis in degrees per second.
             y_axis: The velocity about the y axis in degrees per second.
             z_axis: The velocity about the z axis in degrees per second.
-            
+
         """
         super().__init__(mission_time)
         self.x_axis: int = x_axis
@@ -381,7 +383,7 @@ class AngularVelocityDB(DataBlock):
         """
         parts = struct.unpack("<Ihhh", payload)
         return cls(parts[0], parts[1] / 10, parts[2] / 10, parts[3] / 10)
-    
+
     def __len__(self) -> int:
         """
         Get the length of an angular velocity data block in bytes
@@ -389,13 +391,14 @@ class AngularVelocityDB(DataBlock):
             The length of an angular velocity data block in bytes not including the block header.
         """
         return 10
-    
+
     def __str__(self):
         return f"{self.__class__.__name__} -> time: {self.mission_time} ms, x-axis: {self.x_axis} dps, y-axis: {self.y_axis} dps, z-axis: {self.z_axis} dps"
-    
+
     def __iter__(self):
         yield "mission_time", self.mission_time
         yield "velocity", {"x_axis": self.x_axis, "y_axis": self.y_axis, "z_axis": self.z_axis}
+
 
 def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
     """
