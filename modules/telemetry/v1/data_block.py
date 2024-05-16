@@ -348,7 +348,8 @@ class LinearAccelerationDB(DataBlock):
         return 10
 
     def __str__(self):
-        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, x-axis: {self.x_axis} m/s^2, y-axis: {self.y_axis} m/s^2, z-axis: {self.z_axis} m/s^2"
+        return f"""{self.__class__.__name__} -> time: {self.mission_time} ms, x-axis: {self.x_axis} m/s^2, y-axis:
+         {self.y_axis} m/s^2, z-axis: {self.z_axis} m/s^2"""
 
     def __iter__(self):
         yield "mission_time", self.mission_time
@@ -393,7 +394,8 @@ class AngularVelocityDB(DataBlock):
         return 10
 
     def __str__(self):
-        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, x-axis: {self.x_axis} dps, y-axis: {self.y_axis} dps, z-axis: {self.z_axis} dps"
+        return f"""{self.__class__.__name__} -> time: {self.mission_time} ms, x-axis: {self.x_axis} dps, y-axis:
+         {self.y_axis} dps, z-axis: {self.z_axis} dps"""
 
     def __iter__(self):
         yield "mission_time", self.mission_time
