@@ -41,13 +41,12 @@ def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_cont
     """
     prb = parse_radio_block(pkt_version, block_header, hex_block_contents)
     assert prb is not None
-    if prb is not None:
-        assert prb.block_header.length == 12
-        assert prb.block_header.message_type == 0
-        assert prb.block_header.message_subtype == 2
-        assert prb.block_header.destination == 0
-        assert prb.block_name == "temperature"
-        assert prb.block_contents["mission_time"] == 0
+    assert prb.block_header.length == 12
+    assert prb.block_header.message_type == 0
+    assert prb.block_header.message_subtype == 2
+    assert prb.block_header.destination == 0
+    assert prb.block_name == "temperature"
+    assert prb.block_contents["mission_time"] == 0
 
 
 # fixtures
