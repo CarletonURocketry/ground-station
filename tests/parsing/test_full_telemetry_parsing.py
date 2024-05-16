@@ -10,6 +10,8 @@ from modules.telemetry.v1.block import (
 from modules.telemetry.telemetry_utils import parse_radio_block, from_approved_callsign
 from modules.misc.config import load_config
 
+# Fixtures and tests to ensure that parse_radio_block works as expected
+
 
 @pytest.fixture
 def pkt_version() -> int:
@@ -49,12 +51,12 @@ def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_cont
     assert prb.block_contents["mission_time"] == 0
 
 
-# fixtures
+# Fixtures and tests to ensure that parse_radio_block handles errors as expected
 
 
 @pytest.fixture
 def not_implemented_datablock_subtype() -> BlockHeader:
-    return BlockHeader.from_hex("02000400")
+    return BlockHeader.from_hex("02000600")
 
 
 def test_invalid_datablock_subtype(pkt_version: int, hex_block_contents: str):
@@ -79,7 +81,7 @@ def test_not_implemented_error(
 
 config = load_config("config.json")
 
-# Fixtures
+# Fixtures and tests to ensure that from_approved_callsign works as expected
 
 
 @pytest.fixture
@@ -100,9 +102,6 @@ def non_approved_callsign() -> PacketHeader:
     hdr = "52415454204D4F53530c010137000000"
     pkt_hdr = PacketHeader.from_hex(hdr)
     return pkt_hdr
-
-
-# Tests
 
 
 # Test valid header
