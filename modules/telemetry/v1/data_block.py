@@ -105,6 +105,8 @@ class DataBlock(ABC):
             DataBlockSubtype.TEMPERATURE: TemperatureDB,
             DataBlockSubtype.PRESSURE: PressureDB,
             DataBlockSubtype.HUMIDITY: HumidityDB,
+            DataBlockSubtype.ACCELERATION: LinearAccelerationDB,
+            DataBlockSubtype.ANGULAR_VELOCITY: AngularVelocityDB,
         }
 
         subtype = SUBTYPE_CLASSES.get(block_subtype)
@@ -234,7 +236,7 @@ class PressureDB(DataBlock):
         Constructs a pressure data block.
 
         Args:
-            mission_time: The mission time the altitude was measured at in milliseconds since launch.
+            mission_time: The mission time the pressure was measured at in milliseconds since launch.
             pressure: The pressure in millibars.
 
         """
@@ -307,6 +309,93 @@ class HumidityDB(DataBlock):
         yield "mission_time", self.mission_time
         yield "percentage", round(self.humidity / 100)
 
+class LinearAccelerationDB(DataBlock):
+    """Represents a linear acceleration data block"""
+
+    def __init__(self, mission_time: int, x_axis: int, y_axis: int, z_axis: int) -> None:
+        """
+        Constructus a linear acceleration data block.
+        
+        Args:
+            mission_time: The mission time the linear acceleration was measured in milliseconds since launch.
+            x_axis: The acceleration about the x axis in meters per second squared.
+            y_axis: The acceleration about the y axis in meters per second squared.
+            z_axis: The acceleration about the z axis in meters per second squared.
+            
+        """
+        super().__init__(mission_time)
+        self.x_axis: int = x_axis
+        self.y_axis: int = y_axis
+        self.z_axis: int = z_axis
+
+    @classmethod
+    def from_bytes(cls, payload: bytes) -> Self:
+        """
+        Constructs a linear acceleration data block from bytes.
+        Returns:
+            A linear acceleration data block.
+        """
+        parts = struct.unpack("<Ihhh", payload)
+        return cls(parts[0], parts[1] / 100, parts[2] / 100, parts[3] / 100)
+    
+    def __len__(self) -> int:
+        """
+        Get the length of a linear acceleration data block in bytes
+        Returns:
+            The length of a linear acceleration data block in bytes not including the block header.
+        """
+        return 10
+    
+    def __str__(self):
+        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, x-axis: {self.x_axis} m/s^2, y-axis: {self.y_axis} m/s^2, z-axis: {self.z_axis} m/s^2"
+    
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "acceleration", {"x_axis": self.x_axis, "y_axis": self.y_axis, "z_axis": self.z_axis}
+
+class AngularVelocityDB(DataBlock):
+    """Represents an angular velocity data block"""
+
+    def __init__(self, mission_time: int, x_axis: int, y_axis: int, z_axis: int) -> None:
+        """
+        Constructus an angular velocity data block.
+        
+        Args:
+            mission_time: The mission time the angular velocity was measured in milliseconds since launch.
+            x_axis: The velocity about the x axis in degrees per second.
+            y_axis: The velocity about the y axis in degrees per second.
+            z_axis: The velocity about the z axis in degrees per second.
+            
+        """
+        super().__init__(mission_time)
+        self.x_axis: int = x_axis
+        self.y_axis: int = y_axis
+        self.z_axis: int = z_axis
+
+    @classmethod
+    def from_bytes(cls, payload: bytes) -> Self:
+        """
+        Constructs an angular velocity data block from bytes.
+        Returns:
+            An angular velocity data block.
+        """
+        parts = struct.unpack("<Ihhh", payload)
+        return cls(parts[0], parts[1] / 10, parts[2] / 10, parts[3] / 10)
+    
+    def __len__(self) -> int:
+        """
+        Get the length of an angular velocity data block in bytes
+        Returns:
+            The length of an angular velocity data block in bytes not including the block header.
+        """
+        return 10
+    
+    def __str__(self):
+        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, x-axis: {self.x_axis} dps, y-axis: {self.y_axis} dps, z-axis: {self.z_axis} dps"
+    
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "velocity", {"x_axis": self.x_axis, "y_axis": self.y_axis, "z_axis": self.z_axis}
 
 def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
     """
@@ -331,5 +420,9 @@ def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
             return PressureDB.from_bytes(payload)
         case DataBlockSubtype.HUMIDITY:
             return HumidityDB.from_bytes(payload)
+        case DataBlockSubtype.ACCELERATION:
+            return LinearAccelerationDB.from_bytes(payload)
+        case DataBlockSubtype.ANGULAR_VELOCITY:
+            return AngularVelocityDB.from_bytes(payload)
         case _:
             raise NotImplementedError
