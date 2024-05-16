@@ -38,6 +38,7 @@ def linear_acceleration_data_content() -> bytes:
     """
     return b"\x00\x00\x00\x00\x03\x00\xfc\xff\x08\x04\x00\x00"
 
+
 @pytest.fixture
 def angular_velocity_data_content() -> bytes:
     """
@@ -49,7 +50,8 @@ def angular_velocity_data_content() -> bytes:
     Note that the AngularVelocityDb from_bytes method should convert the axis values
     from tenths of a degree per second to degrees per second
     """
-    return b'\x00\x00\x00\x00\x06\x00\x0b\x00\xfd\xff\x00\x00'
+    return b"\x00\x00\x00\x00\x06\x00\x0b\x00\xfd\xff\x00\x00"
+
 
 def test_pressure_data_block(pressure_data_content: bytes) -> None:
     """Test that the pressure data block is parsed correctly."""
@@ -75,6 +77,7 @@ def test_linear_acceleration_data_block(linear_acceleration_data_content: bytes)
     assert lin_acc.x_axis == 0.03
     assert lin_acc.y_axis == -0.04
     assert lin_acc.z_axis == 10.32
+
 
 def test_angular_velocity_data_block(angular_velocity_data_content: bytes) -> None:
     """Test that the angular velocity is parsed correctly."""
