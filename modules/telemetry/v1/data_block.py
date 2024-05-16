@@ -315,7 +315,7 @@ class LinearAccelerationDB(DataBlock):
 
     def __init__(self, mission_time: int, x_axis: int, y_axis: int, z_axis: int) -> None:
         """
-        Constructus a linear acceleration data block.
+        Constructs a linear acceleration data block.
 
         Args:
             mission_time: The mission time the linear acceleration was measured in milliseconds since launch.
@@ -336,7 +336,7 @@ class LinearAccelerationDB(DataBlock):
         Returns:
             A linear acceleration data block.
         """
-        parts = struct.unpack("<Ihhh", payload)
+        parts = struct.unpack("<Ihhhh", payload)
         return cls(parts[0], parts[1] / 100, parts[2] / 100, parts[3] / 100)
 
     def __len__(self) -> int:
@@ -382,7 +382,7 @@ class AngularVelocityDB(DataBlock):
         Returns:
             An angular velocity data block.
         """
-        parts = struct.unpack("<Ihhh", payload)
+        parts = struct.unpack("<Ihhhh", payload)
         return cls(parts[0], parts[1] / 10, parts[2] / 10, parts[3] / 10)
 
     def __len__(self) -> int:
