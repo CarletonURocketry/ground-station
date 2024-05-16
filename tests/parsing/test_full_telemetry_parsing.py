@@ -10,6 +10,8 @@ from modules.telemetry.v1.block import (
 from modules.telemetry.telemetry_utils import parse_radio_block, from_approved_callsign
 from modules.misc.config import load_config
 
+# Fixtures and tests to ensure that parse_radio_block works as expected
+
 
 @pytest.fixture
 def pkt_version() -> int:
@@ -41,21 +43,20 @@ def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_cont
     """
     prb = parse_radio_block(pkt_version, block_header, hex_block_contents)
     assert prb is not None
-    if prb is not None:
-        assert prb.block_header.length == 12
-        assert prb.block_header.message_type == 0
-        assert prb.block_header.message_subtype == 2
-        assert prb.block_header.destination == 0
-        assert prb.block_name == "temperature"
-        assert prb.block_contents["mission_time"] == 0
+    assert prb.block_header.length == 12
+    assert prb.block_header.message_type == 0
+    assert prb.block_header.message_subtype == 2
+    assert prb.block_header.destination == 0
+    assert prb.block_name == "temperature"
+    assert prb.block_contents["mission_time"] == 0
 
 
-# fixtures
+# Fixtures and tests to ensure that parse_radio_block handles errors as expected
 
 
 @pytest.fixture
 def not_implemented_datablock_subtype() -> BlockHeader:
-    return BlockHeader.from_hex("02000400")
+    return BlockHeader.from_hex("02000600")
 
 
 def test_invalid_datablock_subtype(pkt_version: int, hex_block_contents: str):
@@ -80,7 +81,7 @@ def test_not_implemented_error(
 
 config = load_config("config.json")
 
-# Fixtures
+# Fixtures and tests to ensure that from_approved_callsign works as expected
 
 
 @pytest.fixture
@@ -101,9 +102,6 @@ def non_approved_callsign() -> PacketHeader:
     hdr = "52415454204D4F53530c010137000000"
     pkt_hdr = PacketHeader.from_hex(hdr)
     return pkt_hdr
-
-
-# Tests
 
 
 # Test valid header
@@ -131,7 +129,7 @@ def test_is_unauthorized_callsign(
 def test_is_invalid_hdr(approved_callsigns: dict[str, str]) -> None:
     hdr = "564133494e490000000c000137000000"
     with pytest.raises(UnsupportedEncodingVersionError, match="Unsupported encoding version: 0"):
-        from_approved_callsign(PacketHeader.from_hex(hdr), approved_callsigns)
+        PacketHeader.from_hex(hdr)
 
 
 # Test an invalid header: non approved callsign and incorrect version number
@@ -139,4 +137,4 @@ def test_is_invalid_hdr2(approved_callsigns: dict[str, str]) -> None:
     hdr = "52415454204D4F53530c0b0137000000"
 
     with pytest.raises(UnsupportedEncodingVersionError, match="Unsupported encoding version: 11"):
-        from_approved_callsign(PacketHeader.from_hex(hdr), approved_callsigns)
+        PacketHeader.from_hex(hdr)
