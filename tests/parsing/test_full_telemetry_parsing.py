@@ -131,7 +131,7 @@ def test_is_unauthorized_callsign(
 def test_is_invalid_hdr(approved_callsigns: dict[str, str]) -> None:
     hdr = "564133494e490000000c000137000000"
     with pytest.raises(UnsupportedEncodingVersionError, match="Unsupported encoding version: 0"):
-        from_approved_callsign(PacketHeader.from_hex(hdr), approved_callsigns)
+        PacketHeader.from_hex(hdr)
 
 
 # Test an invalid header: non approved callsign and incorrect version number
@@ -139,4 +139,4 @@ def test_is_invalid_hdr2(approved_callsigns: dict[str, str]) -> None:
     hdr = "52415454204D4F53530c0b0137000000"
 
     with pytest.raises(UnsupportedEncodingVersionError, match="Unsupported encoding version: 11"):
-        from_approved_callsign(PacketHeader.from_hex(hdr), approved_callsigns)
+        PacketHeader.from_hex(hdr)
