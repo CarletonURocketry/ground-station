@@ -353,7 +353,7 @@ class LinearAccelerationDB(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "acceleration", {"x_axis": self.x_axis, "y_axis": self.y_axis, "z_axis": self.z_axis}
+        yield "linear_acceleration", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis}
 
 
 class AngularVelocityDB(DataBlock):
@@ -399,7 +399,7 @@ class AngularVelocityDB(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "velocity", {"x_axis": self.x_axis, "y_axis": self.y_axis, "z_axis": self.z_axis}
+        yield "angular_velocity", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis}
 
 
 def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
