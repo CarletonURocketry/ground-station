@@ -62,7 +62,6 @@ class DataBlockSubtype(IntEnum):
                 return "COORDINATES"
 
 
-
 class DataBlock(ABC):
     """The abstract base interface for all data blocks."""
 
@@ -202,6 +201,7 @@ class AltitudeSeaLevelDB(AltitudeDB):
 
     def __init__(self, mission_time: int, altitude: int) -> None:
         super().__init__(mission_time, altitude)
+
 
 class AltitudeLaunchLevelDB(AltitudeDB):
     """Represents an altitude data block with measurements relative to launch level."""
@@ -381,11 +381,13 @@ class RelativeLinearAccelerationDB(LinearAccelerationDB):
     def __init__(self, mission_time: int, x_axis: int, y_axis: int, z_axis: int) -> None:
         super().__init__(mission_time, x_axis, y_axis, z_axis)
 
+
 class AbsoluteLinearAccelerationDB(LinearAccelerationDB):
     """Represents a linear acceleration data block with measurements relative to ground."""
 
     def __init__(self, mission_time: int, x_axis: int, y_axis: int, z_axis: int) -> None:
         super().__init__(mission_time, x_axis, y_axis, z_axis)
+
 
 class AngularVelocityDB(DataBlock):
     """Represents an angular velocity data block"""
