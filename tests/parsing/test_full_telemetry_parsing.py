@@ -2,6 +2,7 @@ import pytest
 import logging
 from pytest import LogCaptureFixture
 from modules.telemetry.v1.block import (
+    BlockType,
     PacketHeader,
     BlockHeader,
     InvalidHeaderFieldValueError,
@@ -9,6 +10,7 @@ from modules.telemetry.v1.block import (
 )
 from modules.telemetry.telemetry_utils import parse_radio_block, from_approved_callsign
 from modules.misc.config import load_config
+from modules.telemetry.v1.data_block import DataBlockSubtype
 
 # Fixtures and tests to ensure that parse_radio_block works as expected
 
@@ -26,7 +28,7 @@ def block_header() -> BlockHeader:
     """
     returns a blockheader
     """
-    return BlockHeader.from_hex("02000200")
+    return BlockHeader.from_hex("02000300")
 
 
 @pytest.fixture
@@ -44,8 +46,8 @@ def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_cont
     prb = parse_radio_block(pkt_version, block_header, hex_block_contents)
     assert prb is not None
     assert prb.block_header.length == 12
-    assert prb.block_header.message_type == 0
-    assert prb.block_header.message_subtype == 2
+    assert prb.block_header.message_type == BlockType.DATA.value
+    assert prb.block_header.message_subtype == DataBlockSubtype.TEMPERATURE.value
     assert prb.block_header.destination == 0
     assert prb.block_name == "temperature"
     assert prb.block_contents["mission_time"] == 0
