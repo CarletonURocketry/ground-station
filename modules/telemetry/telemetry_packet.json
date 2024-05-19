@@ -1,25 +1,38 @@
 {
-    "altitude": {
-        "metres": {"1": {"1": "altitude.metres"}},
-        "feet": {"1": {"1": "altitude.feet"}}
-    },
-    "temperature": {
-        "celsius": {"1": {"2": "temperature.celsius"}}
-    },
-    "pressure": {
-        "pascals": {"1": {"3": "pressure.pascals"}}
-    },
-    "angular_velocity": {
-        "x": {"1": {"5": "angular_velocity.x"}},
-        "y": {"1": {"5": "angular_velocity.y"}},
-        "z": {"1": {"5": "angular_velocity.z"}}
-    },
-    "linear_acceleration": {
-        "x": {"1": {"4": "linear_acceleration.x"}},
-        "y": {"1": {"4": "linear_acceleration.y"}},
-        "z": {"1": {"4": "linear_acceleration.z"}}
-    },
-    "humidity": {
-        "percentage": {"1": {"8": "percentage"}}
-    }
+  "altitude_sea_level": {
+    "metres": { "1": { "1": "altitude.metres" } },
+    "feet": { "1": { "1": "altitude.feet" } }
+  },
+  "altitude_launch_level": {
+    "metres": { "1": { "2": "altitude.metres" } },
+    "feet": { "1": { "2": "altitude.feet" } }
+  },
+  "temperature": {
+    "celsius": { "1": { "3": "temperature.celsius" } }
+  },
+  "pressure": {
+    "pascals": { "1": { "4": "pressure.pascals" } }
+  },
+  "linear_acceleration_rel": {
+    "x": { "1": { "5": "linear_acceleration.x" } },
+    "y": { "1": { "5": "linear_acceleration.y" } },
+    "z": { "1": { "5": "linear_acceleration.z" } }
+  },
+  "linear_acceleration_abs": {
+    "x": { "1": { "6": "linear_acceleration.x" } },
+    "y": { "1": { "6": "linear_acceleration.y" } },
+    "z": { "1": { "6": "linear_acceleration.z" } }
+  },
+  "angular_velocity": {
+    "x": { "1": { "7": "angular_velocity.x" } },
+    "y": { "1": { "7": "angular_velocity.y" } },
+    "z": { "1": { "7": "angular_velocity.z" } }
+  },
+  "humidity": {
+    "percentage": { "1": { "8": "percentage" } }
+  },
+  "coordinates": {
+    "latitude": { "1": { "9": "latitude" } },
+    "longitude": { "1": { "9": "longitude" } }
+  }
 }

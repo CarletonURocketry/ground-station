@@ -28,35 +28,39 @@ class DataBlockSubtype(IntEnum):
     """Lists the subtypes of data blocks that can be sent in Version 1 of the packet encoding format."""
 
     DEBUG_MESSAGE = 0x00
-    ALTITUDE = 0x01
-    TEMPERATURE = 0x02
-    PRESSURE = 0x03
-    ACCELERATION = 0x04
-    ANGULAR_VELOCITY = 0x05
-    GNSS_LOCATION = 0x06
-    GNSS_METADATA = 0x07
+    ALTITUDE_SEA_LEVEL = 0x01
+    ALTITUDE_LAUNCH_LEVEL = 0x02
+    TEMPERATURE = 0x03
+    PRESSURE = 0x04
+    LIN_ACCEL_REL = 0x05
+    LIN_ACCEL_ABS = 0x06
+    ANGULAR_VELOCITY = 0x07
     HUMIDITY = 0x08
+    COORDINATES = 0x09
 
     def __str__(self):
         match self:
             case DataBlockSubtype.DEBUG_MESSAGE:
                 return "DEBUG MESSAGE"
-            case DataBlockSubtype.ALTITUDE:
-                return "ALTITUDE"
+            case DataBlockSubtype.ALTITUDE_SEA_LEVEL:
+                return "SEA LEVEL ALTITUDE"
+            case DataBlockSubtype.ALTITUDE_LAUNCH_LEVEL:
+                return "LAUNCH LEVEL ALTITUDE"
             case DataBlockSubtype.TEMPERATURE:
                 return "TEMPERATURE"
             case DataBlockSubtype.PRESSURE:
                 return "PRESSURE"
-            case DataBlockSubtype.ACCELERATION:
-                return "ACCELERATION"
+            case DataBlockSubtype.LIN_ACCEL_REL:
+                return "RELATIVE LINEAR ACCELERATION"
+            case DataBlockSubtype.LIN_ACCEL_ABS:
+                return "ABSOLUTE LINEAR ACCELERATION"
             case DataBlockSubtype.ANGULAR_VELOCITY:
                 return "ANGULAR VELOCITY"
-            case DataBlockSubtype.GNSS_LOCATION:
-                return "GNSS LOCATION"
-            case DataBlockSubtype.GNSS_METADATA:
-                return "GNSS METADATA"
             case DataBlockSubtype.HUMIDITY:
                 return "HUMIDITY"
+            case DataBlockSubtype.COORDINATES:
+                return "COORDINATES"
+
 
 
 class DataBlock(ABC):
@@ -101,11 +105,13 @@ class DataBlock(ABC):
 
         SUBTYPE_CLASSES: dict[DataBlockSubtype, Type[DataBlock]] = {
             DataBlockSubtype.DEBUG_MESSAGE: DebugMessageDB,
-            DataBlockSubtype.ALTITUDE: AltitudeDB,
+            DataBlockSubtype.ALTITUDE_SEA_LEVEL: AltitudeSeaLevelDB,
+            DataBlockSubtype.ALTITUDE_LAUNCH_LEVEL: AltitudeLaunchLevelDB,
             DataBlockSubtype.TEMPERATURE: TemperatureDB,
             DataBlockSubtype.PRESSURE: PressureDB,
             DataBlockSubtype.HUMIDITY: HumidityDB,
-            DataBlockSubtype.ACCELERATION: LinearAccelerationDB,
+            DataBlockSubtype.LIN_ACCEL_REL: RelativeLinearAccelerationDB,
+            DataBlockSubtype.LIN_ACCEL_REL: AbsoluteLinearAccelerationDB,
             DataBlockSubtype.ANGULAR_VELOCITY: AngularVelocityDB,
         }
 
@@ -189,6 +195,19 @@ class AltitudeDB(DataBlock):
     def __iter__(self):
         yield "mission_time", self.mission_time
         yield "altitude", {"metres": self.altitude, "feet": metres_to_feet(self.altitude)}
+
+
+class AltitudeSeaLevelDB(AltitudeDB):
+    """Represents an altitude data block with measurements relative to sea level."""
+
+    def __init__(self, mission_time: int, altitude: int) -> None:
+        super().__init__(mission_time, altitude)
+
+class AltitudeLaunchLevelDB(AltitudeDB):
+    """Represents an altitude data block with measurements relative to launch level."""
+
+    def __init__(self, mission_time: int, altitude: int) -> None:
+        super().__init__(mission_time, altitude)
 
 
 class TemperatureDB(DataBlock):
@@ -356,6 +375,18 @@ class LinearAccelerationDB(DataBlock):
         yield "linear_acceleration", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis}
 
 
+class RelativeLinearAccelerationDB(LinearAccelerationDB):
+    """Represents a linear acceleration data block with measurements relative to the rocket's position."""
+
+    def __init__(self, mission_time: int, x_axis: int, y_axis: int, z_axis: int) -> None:
+        super().__init__(mission_time, x_axis, y_axis, z_axis)
+
+class AbsoluteLinearAccelerationDB(LinearAccelerationDB):
+    """Represents a linear acceleration data block with measurements relative to ground."""
+
+    def __init__(self, mission_time: int, x_axis: int, y_axis: int, z_axis: int) -> None:
+        super().__init__(mission_time, x_axis, y_axis, z_axis)
+
 class AngularVelocityDB(DataBlock):
     """Represents an angular velocity data block"""
 
@@ -402,6 +433,7 @@ class AngularVelocityDB(DataBlock):
         yield "angular_velocity", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis}
 
 
+# TODO: Remove this function
 def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
     """
     Parses a bytes payload into the correct data block type.
@@ -414,20 +446,4 @@ def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
         ValueError: Raised if the bytes cannot be parsed into the corresponding type.
     """
 
-    match type:
-        case DataBlockSubtype.DEBUG_MESSAGE:
-            return DebugMessageDB.from_bytes(payload)
-        case DataBlockSubtype.ALTITUDE:
-            return AltitudeDB.from_bytes(payload)
-        case DataBlockSubtype.TEMPERATURE:
-            return TemperatureDB.from_bytes(payload)
-        case DataBlockSubtype.PRESSURE:
-            return PressureDB.from_bytes(payload)
-        case DataBlockSubtype.HUMIDITY:
-            return HumidityDB.from_bytes(payload)
-        case DataBlockSubtype.ACCELERATION:
-            return LinearAccelerationDB.from_bytes(payload)
-        case DataBlockSubtype.ANGULAR_VELOCITY:
-            return AngularVelocityDB.from_bytes(payload)
-        case _:
-            raise NotImplementedError
+    return DataBlock.parse(type, payload)
