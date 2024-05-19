@@ -11,7 +11,7 @@ from modules.misc.config import RadioParameters
 
 RN2483_BAUD: int = 57600  # The baud rate of the RN2483 radio
 NUM_GPIO: int = 14  # Number of GPIO pins on the RN2483 module
-READ_TIMEOUT: float = 1.0  # Time out for serial read operations
+READ_TIMEOUT: float = 10.0  # Time out for serial read operations
 
 # Radio parameters
 MODULATION_MODES: list[str] = ["lora", "fsk"]
@@ -61,7 +61,7 @@ def radio_write(conn: Serial, data: str) -> None:
         conn: A serial connection to the RN2483 radio.
         data: The full command or data to be sent to the RN2483 radio.
     """
-    data = str(data) + "\r\n"
+    data += "\r\n"
     conn.flush()  # Flush the serial port
     conn.write(data.encode("utf-8"))  # Encode command_string as bytes and then transmit over serial port
 
@@ -82,14 +82,12 @@ class RN2483Radio:
     def __init__(self, serial_port: str):
         self.serial = Serial(
             port=serial_port,
-            timeout=1,
             baudrate=RN2483_BAUD,
             bytesize=EIGHTBITS,
             parity=PARITY_NONE,
             stopbits=1,
-            rtscts=False,
         )
-        self.serial.timeout = READ_TIMEOUT  # Read timeout of 10 seconds
+        self.serial.timeout = READ_TIMEOUT  # Read timeout
 
     def init_gpio(self) -> None:
         """Set all GPIO pins to input mode, thereby putting them in a state of high impedance."""
@@ -150,6 +148,8 @@ class RN2483Radio:
         """
         self.reset()
         self.configure(parameters)
+        if not radio_write_ok(self.serial, "radio set wdt 0"):  # Turn off watch dog timer
+            raise SerialException("Could not turn off watchdog timer.")
         # For some reason, initializing GPIO causes issues. We don't need them anyway
         # self.init_gpio()
 
@@ -160,8 +160,6 @@ class RN2483Radio:
         Returns:
             True setting receive mode worked, false otherwise.
         """
-        if not radio_write_ok(self.serial, "radio set wdt 0"):  # Turn off watch dog timer
-            return False
         if not radio_write_ok(self.serial, "mac pause"):  # This command must be passed before any reception can occur
             return False
 
