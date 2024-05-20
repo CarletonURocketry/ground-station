@@ -341,12 +341,13 @@ class LinearAccelerationDB(DataBlock):
             x_axis: The acceleration about the x axis in meters per second squared.
             y_axis: The acceleration about the y axis in meters per second squared.
             z_axis: The acceleration about the z axis in meters per second squared.
-
+            magnitude: The magnitude of the linear acceleration in meters per second squared.
         """
         super().__init__(mission_time)
         self.x_axis: int = x_axis
         self.y_axis: int = y_axis
         self.z_axis: int = z_axis
+        self.magnitude: int = (x_axis**2 + y_axis**2 + z_axis**2) ** 0.5
 
     @classmethod
     def from_bytes(cls, payload: bytes) -> Self:
@@ -368,11 +369,12 @@ class LinearAccelerationDB(DataBlock):
 
     def __str__(self):
         return f"""{self.__class__.__name__} -> time: {self.mission_time} ms, x-axis: {self.x_axis} m/s^2, y-axis:
-         {self.y_axis} m/s^2, z-axis: {self.z_axis} m/s^2"""
+         {self.y_axis} m/s^2, z-axis: {self.z_axis} m/s^2, magnitude: {self.magnitude} m/s^2"""
 
     def __iter__(self):
         yield "mission_time", self.mission_time
         yield "linear_acceleration", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis}
+        yield "magnitude", self.magnitude
 
 
 class RelativeLinearAccelerationDB(LinearAccelerationDB):
@@ -401,12 +403,15 @@ class AngularVelocityDB(DataBlock):
             x_axis: The velocity about the x axis in degrees per second.
             y_axis: The velocity about the y axis in degrees per second.
             z_axis: The velocity about the z axis in degrees per second.
-
+            magnitude: The magnitude of the angular velocity in degrees per second.
+            heading: The heading of the angular velocity in degrees.
         """
         super().__init__(mission_time)
         self.x_axis: int = x_axis
         self.y_axis: int = y_axis
         self.z_axis: int = z_axis
+        self.magnitude: int = (x_axis**2 + y_axis**2 + z_axis**2) ** 0.5
+        self.heading: int = 0
 
     @classmethod
     def from_bytes(cls, payload: bytes) -> Self:
