@@ -347,7 +347,7 @@ class LinearAccelerationDB(DataBlock):
         self.x_axis: int = x_axis
         self.y_axis: int = y_axis
         self.z_axis: int = z_axis
-        self.magnitude: int = (x_axis**2 + y_axis**2 + z_axis**2) ** 0.5
+        self.magnitude: int = round((abs(x_axis)**2 + abs(y_axis)**2 + abs(z_axis)**2) ** 0.5, 2)
 
     @classmethod
     def from_bytes(cls, payload: bytes) -> Self:
@@ -404,14 +404,12 @@ class AngularVelocityDB(DataBlock):
             y_axis: The velocity about the y axis in degrees per second.
             z_axis: The velocity about the z axis in degrees per second.
             magnitude: The magnitude of the angular velocity in degrees per second.
-            heading: The heading of the angular velocity in degrees.
         """
         super().__init__(mission_time)
         self.x_axis: int = x_axis
         self.y_axis: int = y_axis
         self.z_axis: int = z_axis
-        self.magnitude: int = (x_axis**2 + y_axis**2 + z_axis**2) ** 0.5
-        self.heading: int = 0
+        self.magnitude: int = round((abs(x_axis)**2 + abs(y_axis)**2 + abs(z_axis)**2) ** 0.5, 2)
 
     @classmethod
     def from_bytes(cls, payload: bytes) -> Self:

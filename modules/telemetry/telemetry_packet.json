@@ -30,7 +30,6 @@
     "y": { "1": { "7": "angular_velocity.y" } },
     "z": { "1": { "7": "angular_velocity.z" } },
     "magnitude": { "1": { "7": "angular_velocity.magnitude" } },
-    "heading": { "1": { "7": "angular_velocity.heading" } }
   },
   "humidity": {
     "percentage": { "1": { "8": "percentage" } }
