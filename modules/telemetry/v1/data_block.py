@@ -110,7 +110,7 @@ class DataBlock(ABC):
             DataBlockSubtype.PRESSURE: PressureDB,
             DataBlockSubtype.HUMIDITY: HumidityDB,
             DataBlockSubtype.LIN_ACCEL_REL: RelativeLinearAccelerationDB,
-            DataBlockSubtype.LIN_ACCEL_REL: AbsoluteLinearAccelerationDB,
+            DataBlockSubtype.LIN_ACCEL_ABS: AbsoluteLinearAccelerationDB,
             DataBlockSubtype.ANGULAR_VELOCITY: AngularVelocityDB,
         }
 
