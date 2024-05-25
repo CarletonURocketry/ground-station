@@ -373,8 +373,7 @@ class LinearAccelerationDB(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "linear_acceleration", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis}
-        yield "magnitude", self.magnitude
+        yield "linear_acceleration", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis, "magnitude": self.magnitude}
 
 
 class RelativeLinearAccelerationDB(LinearAccelerationDB):
@@ -435,7 +434,7 @@ class AngularVelocityDB(DataBlock):
 
     def __iter__(self):
         yield "mission_time", self.mission_time
-        yield "angular_velocity", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis}
+        yield "angular_velocity", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis, "magnitude": self.magnitude}
 
 
 # TODO: Remove this function
