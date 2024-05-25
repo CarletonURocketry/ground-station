@@ -16,17 +16,20 @@
   "linear_acceleration_rel": {
     "x": { "1": { "5": "linear_acceleration.x" } },
     "y": { "1": { "5": "linear_acceleration.y" } },
-    "z": { "1": { "5": "linear_acceleration.z" } }
+    "z": { "1": { "5": "linear_acceleration.z" } },
+    "magnitude": { "1": { "5": "linear_acceleration.magnitude" } }
   },
   "linear_acceleration_abs": {
     "x": { "1": { "6": "linear_acceleration.x" } },
     "y": { "1": { "6": "linear_acceleration.y" } },
-    "z": { "1": { "6": "linear_acceleration.z" } }
+    "z": { "1": { "6": "linear_acceleration.z" } },
+    "magnitude": { "1": { "6": "linear_acceleration.magnitude" } }
   },
   "angular_velocity": {
     "x": { "1": { "7": "angular_velocity.x" } },
     "y": { "1": { "7": "angular_velocity.y" } },
-    "z": { "1": { "7": "angular_velocity.z" } }
+    "z": { "1": { "7": "angular_velocity.z" } },
+    "magnitude": { "1": { "7": "angular_velocity.magnitude" } },
   },
   "humidity": {
     "percentage": { "1": { "8": "percentage" } }

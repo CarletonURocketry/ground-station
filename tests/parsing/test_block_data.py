@@ -77,6 +77,7 @@ def test_linear_acceleration_data_block(linear_acceleration_data_content: bytes)
     assert lin_acc.x_axis == 0.03
     assert lin_acc.y_axis == -0.04
     assert lin_acc.z_axis == 10.32
+    assert lin_acc.magnitude == 10.32
 
 
 def test_angular_velocity_data_block(angular_velocity_data_content: bytes) -> None:
@@ -87,3 +88,4 @@ def test_angular_velocity_data_block(angular_velocity_data_content: bytes) -> No
     assert ang_vel.x_axis == 0.6
     assert ang_vel.y_axis == 1.1
     assert ang_vel.z_axis == -0.3
+    assert ang_vel.magnitude == 1.29
