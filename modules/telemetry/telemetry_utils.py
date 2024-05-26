@@ -81,7 +81,7 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
         block_contents = v1db.DataBlock.parse(block_subtype, block_bytes)
         block_name = block_subtype.name.lower()
 
-        logger.info(str(block_contents))
+        logger.debug(str(block_contents))
 
         # TODO fix at some point
         # if block == DataBlockSubtype.STATUS:
@@ -124,7 +124,7 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
     from_approved_callsign(pkt_hdr, config.approved_callsigns)
 
     if len(pkt_hdr) <= 32:  # If this packet nothing more than just the header
-        logger.info(f"{pkt_hdr}")
+        logger.debug(f"{pkt_hdr}")
 
     blocks = data[32:]  # Remove the packet header
 
@@ -164,7 +164,7 @@ def from_approved_callsign(pkt_hdr: PacketHeader, approved_callsigns: dict[str, 
 
     # Ensure packet is from an approved call sign
     if pkt_hdr.callsign in approved_callsigns:
-        logger.info(f"Incoming packet from {pkt_hdr.callsign} ({approved_callsigns.get(pkt_hdr.callsign)})")
+        logger.debug(f"Incoming packet from {pkt_hdr.callsign} ({approved_callsigns.get(pkt_hdr.callsign)})")
     else:
         logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
         return False
