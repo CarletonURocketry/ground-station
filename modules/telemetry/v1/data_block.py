@@ -8,20 +8,13 @@ import struct
 from modules.misc.converter import metres_to_feet, milli_degrees_to_celsius, pascals_to_psi
 
 
-class BlockException(Exception):
-    pass
+class DataBlockException(Exception):
+    """Exception raised when an error occurs while parsing a data block."""
 
-
-class BlockUnknownException(BlockException):
-    pass
-
-
-class DataBlockException(BlockException):
-    pass
-
-
-class DataBlockUnknownException(BlockUnknownException):
-    pass
+    def __init__(self, subtype_name: str, error: str):
+        self.subtype_name = subtype_name
+        self.error = error
+        super().__init__(f"Error parsing {subtype_name} block: {error}")
 
 
 class DataBlockSubtype(IntEnum):
@@ -119,7 +112,12 @@ class DataBlock(ABC):
         if subtype is None:
             raise NotImplementedError
 
-        return subtype.from_bytes(payload=payload)
+        try:
+            subtype_instance = subtype.from_bytes(payload)
+        except Exception as e:
+            raise DataBlockException(subtype.__name__, str(e))
+
+        return subtype_instance
 
 
 class DebugMessageDB(DataBlock):

@@ -76,28 +76,36 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
     block_bytes: bytes = bytes.fromhex(hex_block_contents)
 
     try:
-        # TODO Make an interface to support multiple v1/v2/v3 objects
         block_subtype = v1db.DataBlockSubtype(block_header.message_subtype)
-        block_contents = v1db.DataBlock.parse(block_subtype, block_bytes)
-        block_name = block_subtype.name.lower()
-
-        logger.debug(str(block_contents))
-
-        # TODO fix at some point
-        # if block == DataBlockSubtype.STATUS:
-        #     self.status.rocket = jsp.RocketData.from_data_block(block)
-        #     return
-
-        return ParsedBlock(block_name, block_header, dict(block_contents))  # type: ignore
-
     except ValueError:
-        logger.error("Invalid data block subtype")
+        logger.error(f"Invalid data block subtype {block_header.message_subtype}!")
+        return
 
+    try:
+        # TODO Make an interface to support multiple v1/v2/v3 objects
+        block_contents = v1db.DataBlock.parse(block_subtype, block_bytes)
     except NotImplementedError:
         logger.warning(
             f"Block parsing for type {block_header.message_type}, with subtype {block_header.message_subtype} not \
                 implemented!"
         )
+        return
+    except v1db.DataBlockException as e:
+        logger.error(e)
+        logger.error(f"Block header: {block_header}")
+        logger.error(f"Block contents: {hex_block_contents}")
+        return
+
+    block_name = block_subtype.name.lower()
+
+    logger.debug(str(block_contents))
+
+    # TODO fix at some point
+    # if block == DataBlockSubtype.STATUS:
+    #     self.status.rocket = jsp.RocketData.from_data_block(block)
+    #     return
+
+    return ParsedBlock(block_name, block_header, dict(block_contents))  # type: ignore
 
 
 def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTransmission]:
