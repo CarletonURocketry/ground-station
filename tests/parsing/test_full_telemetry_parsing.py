@@ -58,7 +58,7 @@ def test_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_cont
 
 @pytest.fixture
 def not_implemented_datablock_subtype() -> BlockHeader:
-    return BlockHeader.from_hex("02000600")
+    return BlockHeader.from_hex("02000a00")
 
 
 def test_invalid_datablock_subtype(pkt_version: int, hex_block_contents: str):
@@ -70,15 +70,6 @@ def test_invalid_datablock_subtype(pkt_version: int, hex_block_contents: str):
         InvalidHeaderFieldValueError, match="Invalid BlockHeader field: 154 is not a valid value for DataBlockSubtype"
     ):
         parse_radio_block(pkt_version, BlockHeader.from_hex("02009A00"), hex_block_contents)
-
-
-def test_not_implemented_error(
-    pkt_version: int, not_implemented_datablock_subtype: BlockHeader, hex_block_contents: str
-) -> None:
-    """
-    test for a subtye that exists but is not implemented
-    """
-    assert parse_radio_block(pkt_version, not_implemented_datablock_subtype, hex_block_contents) is None
 
 
 config = load_config("config.json")
@@ -110,7 +101,7 @@ def non_approved_callsign() -> PacketHeader:
 def test_is_approved_pkt_hdr(
     valid_packet_header: PacketHeader, approved_callsigns: dict[str, str], caplog: LogCaptureFixture
 ) -> None:
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG)
     assert from_approved_callsign(valid_packet_header, approved_callsigns)
     assert (
         f"Incoming packet from {valid_packet_header.callsign} ({approved_callsigns.get(valid_packet_header.callsign)})"

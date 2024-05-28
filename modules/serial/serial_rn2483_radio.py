@@ -34,7 +34,7 @@ def rn2483_radio_process(
         except SerialException:
             serial_status.put("rn2483_connected False")
             serial_status.put("rn2483_port null")
-            logger.info("RN2483 Radio: Error communicating with serial device.")
+            logger.error("RN2483 Radio: Error communicating with serial device.")
             time.sleep(3)
 
     # Get transmissions

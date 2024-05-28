@@ -76,28 +76,36 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
     block_bytes: bytes = bytes.fromhex(hex_block_contents)
 
     try:
-        # TODO Make an interface to support multiple v1/v2/v3 objects
         block_subtype = v1db.DataBlockSubtype(block_header.message_subtype)
-        block_contents = v1db.DataBlock.parse(block_subtype, block_bytes)
-        block_name = block_subtype.name.lower()
-
-        logger.info(str(block_contents))
-
-        # TODO fix at some point
-        # if block == DataBlockSubtype.STATUS:
-        #     self.status.rocket = jsp.RocketData.from_data_block(block)
-        #     return
-
-        return ParsedBlock(block_name, block_header, dict(block_contents))  # type: ignore
-
     except ValueError:
-        logger.error("Invalid data block subtype")
+        logger.error(f"Invalid data block subtype {block_header.message_subtype}!")
+        return
 
+    try:
+        # TODO Make an interface to support multiple v1/v2/v3 objects
+        block_contents = v1db.DataBlock.parse(block_subtype, block_bytes)
     except NotImplementedError:
         logger.warning(
             f"Block parsing for type {block_header.message_type}, with subtype {block_header.message_subtype} not \
                 implemented!"
         )
+        return
+    except v1db.DataBlockException as e:
+        logger.error(e)
+        logger.error(f"Block header: {block_header}")
+        logger.error(f"Block contents: {hex_block_contents}")
+        return
+
+    block_name = block_subtype.name.lower()
+
+    logger.debug(str(block_contents))
+
+    # TODO fix at some point
+    # if block == DataBlockSubtype.STATUS:
+    #     self.status.rocket = jsp.RocketData.from_data_block(block)
+    #     return
+
+    return ParsedBlock(block_name, block_header, dict(block_contents))  # type: ignore
 
 
 def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTransmission]:
@@ -124,7 +132,7 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
     from_approved_callsign(pkt_hdr, config.approved_callsigns)
 
     if len(pkt_hdr) <= 32:  # If this packet nothing more than just the header
-        logger.info(f"{pkt_hdr}")
+        logger.debug(f"{pkt_hdr}")
 
     blocks = data[32:]  # Remove the packet header
 
@@ -164,7 +172,7 @@ def from_approved_callsign(pkt_hdr: PacketHeader, approved_callsigns: dict[str, 
 
     # Ensure packet is from an approved call sign
     if pkt_hdr.callsign in approved_callsigns:
-        logger.info(f"Incoming packet from {pkt_hdr.callsign} ({approved_callsigns.get(pkt_hdr.callsign)})")
+        logger.debug(f"Incoming packet from {pkt_hdr.callsign} ({approved_callsigns.get(pkt_hdr.callsign)})")
     else:
         logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
         return False
