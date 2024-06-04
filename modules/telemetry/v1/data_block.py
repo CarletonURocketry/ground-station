@@ -108,7 +108,7 @@ class DataBlock(ABC):
             DataBlockSubtype.LIN_ACCEL_REL: RelativeLinearAccelerationDB,
             DataBlockSubtype.LIN_ACCEL_ABS: AbsoluteLinearAccelerationDB,
             DataBlockSubtype.ANGULAR_VELOCITY: AngularVelocityDB,
-            DataBlockSubtype.VOLTAGE: VoltageDB 
+            DataBlockSubtype.VOLTAGE: VoltageDB,
         }
 
         subtype = SUBTYPE_CLASSES.get(block_subtype)
@@ -438,6 +438,7 @@ class AngularVelocityDB(DataBlock):
         yield "mission_time", self.mission_time
         yield "angular_velocity", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis, "magnitude": self.magnitude}
 
+
 class VoltageDB(DataBlock):
     """Represents a voltage data block"""
 
@@ -473,10 +474,11 @@ class VoltageDB(DataBlock):
         return 8
 
     def __str__(self):
-        return f"""{self.__class__.__name__} -> time: {self.mission_time} ms, id: {self.id}, voltage: {self.voltage} mV"""
+        return (
+            f"""{self.__class__.__name__} -> time: {self.mission_time} ms, id: {self.id}, voltage: {self.voltage} mV"""
+        )
 
     def __iter__(self):
         yield "mission_time", self.mission_time
         yield "id", self.id
         yield "voltage", self.voltage
-
