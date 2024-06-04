@@ -480,18 +480,3 @@ class VoltageDB(DataBlock):
         yield "id", self.id
         yield "voltage", self.voltage
 
-
-# TODO: Remove this function
-def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
-    """
-    Parses a bytes payload into the correct data block type.
-    Args:
-        type: The type of data block to parse the bytes into.
-        payload: The bytes payload to parse into a data block.
-    Returns:
-        The parse data block.
-    Raises:
-        ValueError: Raised if the bytes cannot be parsed into the corresponding type.
-    """
-
-    return DataBlock.parse(type, payload)
