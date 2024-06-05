@@ -37,5 +37,9 @@
   "coordinates": {
     "latitude": { "1": { "9": "latitude" } },
     "longitude": { "1": { "9": "longitude" } }
+  },
+  "voltage": {
+    "id": { "1": { "10": "id" } },
+    "voltage": { "1": { "10": "voltage"} }
   }
 }

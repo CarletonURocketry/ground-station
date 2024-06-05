@@ -30,6 +30,7 @@ class DataBlockSubtype(IntEnum):
     ANGULAR_VELOCITY = 0x07
     HUMIDITY = 0x08
     COORDINATES = 0x09
+    VOLTAGE = 0x0A
 
     def __str__(self):
         match self:
@@ -53,6 +54,8 @@ class DataBlockSubtype(IntEnum):
                 return "HUMIDITY"
             case DataBlockSubtype.COORDINATES:
                 return "COORDINATES"
+            case DataBlockSubtype.VOLTAGE:
+                return "VOLTAGE"
 
 
 class DataBlock(ABC):
@@ -105,6 +108,7 @@ class DataBlock(ABC):
             DataBlockSubtype.LIN_ACCEL_REL: RelativeLinearAccelerationDB,
             DataBlockSubtype.LIN_ACCEL_ABS: AbsoluteLinearAccelerationDB,
             DataBlockSubtype.ANGULAR_VELOCITY: AngularVelocityDB,
+            DataBlockSubtype.VOLTAGE: VoltageDB,
         }
 
         subtype = SUBTYPE_CLASSES.get(block_subtype)
@@ -435,17 +439,46 @@ class AngularVelocityDB(DataBlock):
         yield "angular_velocity", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis, "magnitude": self.magnitude}
 
 
-# TODO: Remove this function
-def parse_data_block(type: DataBlockSubtype, payload: bytes) -> DataBlock:
-    """
-    Parses a bytes payload into the correct data block type.
-    Args:
-        type: The type of data block to parse the bytes into.
-        payload: The bytes payload to parse into a data block.
-    Returns:
-        The parse data block.
-    Raises:
-        ValueError: Raised if the bytes cannot be parsed into the corresponding type.
-    """
+class VoltageDB(DataBlock):
+    """Represents a voltage data block"""
 
-    return DataBlock.parse(type, payload)
+    def __init__(self, mission_time: int, id: int, voltage: int) -> None:
+        """
+        Constructus a voltage data block.
+
+        Args:
+            mission_time: The mission time the voltage was measured in milliseconds since launch.
+            id: A numerical id associated with the voltage measurement for identification by the receiver
+            voltage: The measured voltage in units of millivolts
+        """
+        super().__init__(mission_time)
+        self.id: int = id
+        self.voltage: int = voltage
+
+    @classmethod
+    def from_bytes(cls, payload: bytes) -> Self:
+        """
+        Constructs a voltage data block from bytes.
+        Returns:
+            A voltage data block.
+        """
+        parts = struct.unpack("<IHh", payload)
+        return cls(parts[0], parts[1], parts[2])
+
+    def __len__(self) -> int:
+        """
+        Get the length of a voltage data block in bytes
+        Returns:
+            The length of a voltage data block in bytes not including the block header.
+        """
+        return 8
+
+    def __str__(self):
+        return (
+            f"""{self.__class__.__name__} -> time: {self.mission_time} ms, id: {self.id}, voltage: {self.voltage} mV"""
+        )
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "id", self.id
+        yield "voltage", self.voltage

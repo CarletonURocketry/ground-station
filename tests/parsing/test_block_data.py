@@ -2,7 +2,13 @@
 __author__ = "Elias Hawa"
 
 import pytest
-from modules.telemetry.v1.data_block import PressureDB, TemperatureDB, LinearAccelerationDB, AngularVelocityDB
+from modules.telemetry.v1.data_block import (
+    PressureDB,
+    TemperatureDB,
+    LinearAccelerationDB,
+    AngularVelocityDB,
+    VoltageDB,
+)
 
 
 @pytest.fixture
@@ -53,6 +59,19 @@ def angular_velocity_data_content() -> bytes:
     return b"\x00\x00\x00\x00\x06\x00\x0b\x00\xfd\xff\x00\x00"
 
 
+@pytest.fixture
+# 9b0d00000200ee0c
+# DEBUG:modules.telemetry.telemetry_utils:VoltageDB -> time: 3483 ms, id: 2, voltage: 3310 mV
+def voltage_data_content() -> bytes:
+    """
+    Returns a voltage sensor reading with the following attributes
+    mission time: 3483 ms
+    id: 2
+    voltage: 3310 mV
+    """
+    return b"\x9b\x0d\x00\x00\x02\x00\xee\x0c"
+
+
 def test_pressure_data_block(pressure_data_content: bytes) -> None:
     """Test that the pressure data block is parsed correctly."""
     pdb = PressureDB.from_bytes(pressure_data_content)
@@ -89,3 +108,12 @@ def test_angular_velocity_data_block(angular_velocity_data_content: bytes) -> No
     assert ang_vel.y_axis == 1.1
     assert ang_vel.z_axis == -0.3
     assert ang_vel.magnitude == 1.29
+
+
+def test_voltage_data_block(voltage_data_content: bytes) -> None:
+    """Test that the voltage data block is parsed correctly."""
+    vdb = VoltageDB.from_bytes(voltage_data_content)
+
+    assert vdb.mission_time == 3483
+    assert vdb.id == 2
+    assert vdb.voltage == 3310
