@@ -439,6 +439,7 @@ class HumidityDB(DataBlock):
         yield "mission_time", self.mission_time
         yield "percentage", round(self.humidity / 100)
 
+
 class CoordinatesDB(DataBlock):
     """Represents a coordinates data block"""
 
@@ -474,14 +475,14 @@ class CoordinatesDB(DataBlock):
         return 12
 
     def __str__(self):
-        return (
-            f"""{self.__class__.__name__} -> time: {self.mission_time} ms, latitude: {(self.latitude / pow(10, 7))}°, longitude: {(self.longitude / pow(10, 7))}°"""
-        )
+        return f"""{self.__class__.__name__} -> time: {self.mission_time} ms, latitude: {(self.latitude / pow(10, 7))}°
+        , longitude: {(self.longitude / pow(10, 7))}°"""
 
     def __iter__(self):
         yield "mission_time", self.mission_time
         yield "latitude", self.latitude
         yield "longitude", self.longitude
+
 
 class VoltageDB(DataBlock):
     """Represents a voltage data block"""

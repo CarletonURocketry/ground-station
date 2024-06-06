@@ -60,6 +60,7 @@ def angular_velocity_data_content() -> bytes:
     """
     return b"\x00\x00\x00\x00\x06\x00\x0b\x00\xfd\xff\x00\x00"
 
+
 @pytest.fixture
 def humidity_data_content() -> bytes:
     """
@@ -68,6 +69,7 @@ def humidity_data_content() -> bytes:
     humidity: 44%
     """
     return b"\x19\x10\x00\x00\xfe\x10\x00\x00"
+
 
 @pytest.fixture
 def coordinates_data_content() -> bytes:
@@ -78,6 +80,7 @@ def coordinates_data_content() -> bytes:
     longitude: 0
     """
     return b"\x0c\x0d\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+
 
 @pytest.fixture
 def voltage_data_content() -> bytes:
@@ -127,12 +130,14 @@ def test_angular_velocity_data_block(angular_velocity_data_content: bytes) -> No
     assert ang_vel.z_axis == -0.3
     assert ang_vel.magnitude == 1.29
 
+
 def test_humidity_data_block(humidity_data_content: bytes) -> None:
     """Test that the humidity data block is parsed correctly."""
     hdb = HumidityDB.from_bytes(humidity_data_content)
 
     assert hdb.mission_time == 4121
     assert hdb.humidity == 4350
+
 
 def test_coordinates_data_block(coordinates_data_content: bytes) -> None:
     """Test that the coordinates data block is parsed correctly."""
@@ -141,6 +146,7 @@ def test_coordinates_data_block(coordinates_data_content: bytes) -> None:
     assert cdb.mission_time == 3340
     assert cdb.latitude == 0
     assert cdb.longitude == 0
+
 
 def test_voltage_data_block(voltage_data_content: bytes) -> None:
     """Test that the voltage data block is parsed correctly."""
