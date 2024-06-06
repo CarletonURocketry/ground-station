@@ -104,10 +104,11 @@ class DataBlock(ABC):
             DataBlockSubtype.ALTITUDE_LAUNCH_LEVEL: AltitudeLaunchLevelDB,
             DataBlockSubtype.TEMPERATURE: TemperatureDB,
             DataBlockSubtype.PRESSURE: PressureDB,
-            DataBlockSubtype.HUMIDITY: HumidityDB,
             DataBlockSubtype.LIN_ACCEL_REL: RelativeLinearAccelerationDB,
             DataBlockSubtype.LIN_ACCEL_ABS: AbsoluteLinearAccelerationDB,
             DataBlockSubtype.ANGULAR_VELOCITY: AngularVelocityDB,
+            DataBlockSubtype.HUMIDITY: HumidityDB,
+            DataBlockSubtype.COORDINATES: CoordinatesDB,
             DataBlockSubtype.VOLTAGE: VoltageDB,
         }
 
@@ -290,47 +291,6 @@ class PressureDB(DataBlock):
         yield "pressure", {"pascals": self.pressure, "psi": pascals_to_psi(self.pressure)}
 
 
-class HumidityDB(DataBlock):
-    """Represents a humidity data block."""
-
-    def __init__(self, mission_time: int, humidity: int) -> None:
-        """
-        Constructs a humidity data block.
-
-        Args:
-            mission_time: The mission time the humidity was measured at in milliseconds since launch.
-            humidity: The calculated relative humidity in ten thousandths of a percent.
-
-        """
-        super().__init__(mission_time)
-        self.humidity: int = humidity
-
-    @classmethod
-    def from_bytes(cls, payload: bytes) -> Self:
-        """
-        Constructs a humidity data block from bytes.
-        Returns:
-            A humidity data block.
-        """
-        parts = struct.unpack("<II", payload)
-        return cls(parts[0], parts[1])
-
-    def __len__(self) -> int:
-        """
-        Get the length of a humidity data block in bytes.
-        Returns:
-            The length of a humidity data block in bytes, not including the block header.
-        """
-        return 8
-
-    def __str__(self):
-        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, humidity: {round(self.humidity / 100)}%"
-
-    def __iter__(self):
-        yield "mission_time", self.mission_time
-        yield "percentage", round(self.humidity / 100)
-
-
 class LinearAccelerationDB(DataBlock):
     """Represents a linear acceleration data block"""
 
@@ -438,6 +398,90 @@ class AngularVelocityDB(DataBlock):
         yield "mission_time", self.mission_time
         yield "angular_velocity", {"x": self.x_axis, "y": self.y_axis, "z": self.z_axis, "magnitude": self.magnitude}
 
+
+class HumidityDB(DataBlock):
+    """Represents a humidity data block."""
+
+    def __init__(self, mission_time: int, humidity: int) -> None:
+        """
+        Constructs a humidity data block.
+
+        Args:
+            mission_time: The mission time the humidity was measured at in milliseconds since launch.
+            humidity: The calculated relative humidity in ten thousandths of a percent.
+
+        """
+        super().__init__(mission_time)
+        self.humidity: int = humidity
+
+    @classmethod
+    def from_bytes(cls, payload: bytes) -> Self:
+        """
+        Constructs a humidity data block from bytes.
+        Returns:
+            A humidity data block.
+        """
+        parts = struct.unpack("<II", payload)
+        return cls(parts[0], parts[1])
+
+    def __len__(self) -> int:
+        """
+        Get the length of a humidity data block in bytes.
+        Returns:
+            The length of a humidity data block in bytes, not including the block header.
+        """
+        return 8
+
+    def __str__(self):
+        return f"{self.__class__.__name__} -> time: {self.mission_time} ms, humidity: {round(self.humidity / 100)}%"
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "percentage", round(self.humidity / 100)
+
+class CoordinatesDB(DataBlock):
+    """Represents a coordinates data block"""
+
+    def __init__(self, mission_time: int, latitude: int, longitude: int) -> None:
+        """
+        Constructs a coordinates data block.
+
+        Args:
+            mission_time: The mission time the coordinates were measured in milliseconds since launch.
+            latitude: The latitude in units of micro-degrees.
+            longitude: The longitude in units of micro-degrees.
+        """
+        super().__init__(mission_time)
+        self.latitude: int = latitude
+        self.longitude: int = longitude
+
+    @classmethod
+    def from_bytes(cls, payload: bytes) -> Self:
+        """
+        Constructs a coordinates data block from bytes.
+        Returns:
+            A coordinates data block.
+        """
+        parts = struct.unpack("<Iii", payload)
+        return cls(parts[0], parts[1], parts[2])
+
+    def __len__(self) -> int:
+        """
+        Get the length of a coordinates data block in bytes
+        Returns:
+            The length of a coordinates data block in bytes not including the block header.
+        """
+        return 12
+
+    def __str__(self):
+        return (
+            f"""{self.__class__.__name__} -> time: {self.mission_time} ms, latitude: {self.latitude}°, longitude: {self.longitude}°"""
+        )
+
+    def __iter__(self):
+        yield "mission_time", self.mission_time
+        yield "latitude", self.latitude
+        yield "longitude", self.longitude
 
 class VoltageDB(DataBlock):
     """Represents a voltage data block"""
