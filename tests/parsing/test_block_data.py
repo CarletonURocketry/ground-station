@@ -7,6 +7,7 @@ from modules.telemetry.v1.data_block import (
     TemperatureDB,
     LinearAccelerationDB,
     AngularVelocityDB,
+    CoordinatesDB,
     VoltageDB,
 )
 
@@ -58,10 +59,17 @@ def angular_velocity_data_content() -> bytes:
     """
     return b"\x00\x00\x00\x00\x06\x00\x0b\x00\xfd\xff\x00\x00"
 
+@pytest.fixture
+def coordinates_data_content() -> bytes:
+    """
+    Returns a coordinates sensor reading with the following attributes
+    mission time: 3340ms
+    latitude: 0
+    longitude: 0
+    """
+    return b"\x0c\x0d\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 
 @pytest.fixture
-# 9b0d00000200ee0c
-# DEBUG:modules.telemetry.telemetry_utils:VoltageDB -> time: 3483 ms, id: 2, voltage: 3310 mV
 def voltage_data_content() -> bytes:
     """
     Returns a voltage sensor reading with the following attributes
@@ -109,6 +117,13 @@ def test_angular_velocity_data_block(angular_velocity_data_content: bytes) -> No
     assert ang_vel.z_axis == -0.3
     assert ang_vel.magnitude == 1.29
 
+def test_coordinates_data_block(coordinates_data_content: bytes) -> None:
+    """Test that the coordinates data block is parsed correctly."""
+    cdb = CoordinatesDB.from_bytes(coordinates_data_content)
+
+    assert cdb.mission_time == 3340
+    assert cdb.latitude == 0
+    assert cdb.longitude == 0
 
 def test_voltage_data_block(voltage_data_content: bytes) -> None:
     """Test that the voltage data block is parsed correctly."""
