@@ -475,7 +475,7 @@ class CoordinatesDB(DataBlock):
 
     def __str__(self):
         return (
-            f"""{self.__class__.__name__} -> time: {self.mission_time} ms, latitude: {self.latitude}°, longitude: {self.longitude}°"""
+            f"""{self.__class__.__name__} -> time: {self.mission_time} ms, latitude: {(self.latitude / pow(10, 7))}°, longitude: {(self.longitude / pow(10, 7))}°"""
         )
 
     def __iter__(self):
