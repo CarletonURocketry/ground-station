@@ -449,8 +449,8 @@ class CoordinatesDB(DataBlock):
 
         Args:
             mission_time: The mission time the coordinates were measured in milliseconds since launch.
-            latitude: The latitude in units of micro-degrees.
-            longitude: The longitude in units of micro-degrees.
+            latitude: The latitude in units of degrees.
+            longitude: The longitude in units of degrees.
         """
         super().__init__(mission_time)
         self.latitude: int = latitude
@@ -464,7 +464,7 @@ class CoordinatesDB(DataBlock):
             A coordinates data block.
         """
         parts = struct.unpack("<Iii", payload)
-        return cls(parts[0], parts[1], parts[2])
+        return cls(parts[0], parts[1] / 1e7, parts[2] / 1e7)
 
     def __len__(self) -> int:
         """
