@@ -38,6 +38,7 @@ def update_serial_ports(serial_status: Queue[str]) -> list[str]:
     elif sys.platform.startswith("linux") or sys.platform.startswith("cygwin"):
         # '/dev/tty[A-Za-z]*'
         com_ports = glob.glob("/dev/ttyUSB*")
+        com_ports += glob.glob("/dev/ACM*")
     elif sys.platform.startswith("darwin"):
         com_ports = glob.glob("/dev/tty.*")
 
