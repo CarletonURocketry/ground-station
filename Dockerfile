@@ -4,7 +4,7 @@ FROM python:3.11-slim
 MAINTAINER Jacob Terkuc
 
 # Update and upgrade packages
-RUN apt-get update && apt-get upgrade && pip install --upgrade pip
+RUN apt-get update && apt-get upgrade -y && pip install --upgrade pip
 
 # Install Virtual Env
 RUN pip install virtualenv
