@@ -453,8 +453,8 @@ class CoordinatesDB(DataBlock):
             longitude: The longitude in units of degrees.
         """
         super().__init__(mission_time)
-        self.latitude: int = latitude
-        self.longitude: int = longitude
+        self.latitude: float = latitude
+        self.longitude: float = longitude
 
     @classmethod
     def from_bytes(cls, payload: bytes) -> Self:
