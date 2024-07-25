@@ -15,7 +15,8 @@ from signal import signal, SIGTERM
 from time import sleep
 from typing import Any, TypeAlias
 import modules.telemetry.json_packets as jsp
-import modules.websocket.commands as wsc
+# import modules.websocket.commands as wsc
+import modules.telemetry.telemetry_websocket_commands as wsc
 from modules.misc.config import Config
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.telemetry_utils import (
