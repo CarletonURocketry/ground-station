@@ -15,7 +15,6 @@ from signal import signal, SIGTERM
 from time import sleep
 from typing import Any, TypeAlias
 import modules.telemetry.json_packets as jsp
-# import modules.websocket.commands as wsc
 import modules.telemetry.telemetry_websocket_commands as wsc
 from modules.misc.config import Config
 from modules.telemetry.replay import TelemetryReplay
@@ -45,7 +44,7 @@ class Telemetry:
     def __init__(
         self,
         serial_status: Queue[str],
-        radio_payloads: Queue[Any],
+        rn2483_radio_payloads: Queue[Any],
         rn2483_radio_input: Queue[str],
         radio_signal_report: Queue[str],
         telemetry_json_output: Queue[JSON],
@@ -54,15 +53,15 @@ class Telemetry:
         version: str,
     ):
         super().__init__()
-        self.config = config
-        self.version = version
-
-        self.radio_payloads: Queue[str] = radio_payloads
-        self.telemetry_json_output: Queue[JSON] = telemetry_json_output
-        self.telemetry_ws_commands: Queue[list[str]] = telemetry_ws_commands
+        self.serial_status: Queue[str] = serial_status
+        self.rn2483_radio_payloads: Queue[str] = rn2483_radio_payloads
         self.rn2483_radio_input: Queue[str] = rn2483_radio_input
         self.radio_signal_report: Queue[str] = radio_signal_report
-        self.serial_status: Queue[str] = serial_status
+        self.telemetry_json_output: Queue[JSON] = telemetry_json_output
+        self.telemetry_ws_commands: Queue[list[str]] = telemetry_ws_commands
+        
+        self.config = config
+        self.version = version
 
         # Telemetry Data holds the last few copies of received data blocks stored under the subtype name as a key.
         self.status: jsp.StatusData = jsp.StatusData()
@@ -123,8 +122,8 @@ class Telemetry:
                         self.process_transmission(self.replay_output.get())
                         self.update_websocket()
                 case _:
-                    while not self.radio_payloads.empty():
-                        self.process_transmission(self.radio_payloads.get())
+                    while not self.rn2483_radio_payloads.empty():
+                        self.process_transmission(self.rn2483_radio_payloads.get())
                         self.update_websocket()
 
     def update_websocket(self) -> None:
