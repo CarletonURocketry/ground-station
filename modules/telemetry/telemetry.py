@@ -15,15 +15,15 @@ from signal import signal, SIGTERM
 from time import sleep
 from typing import Any, TypeAlias
 import modules.telemetry.json_packets as jsp
-import modules.telemetry.telemetry_websocket_commands as wsc
+import modules.telemetry.websocket_commands as wsc
 from modules.misc.config import Config
 from modules.telemetry.replay import TelemetryReplay
-from modules.telemetry.telemetry_utils import (
+from modules.telemetry.utils import (
     mission_path,
     parse_rn2483_transmission,
     ParsedTransmission,
 )
-from modules.telemetry.telemetry_errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
+from modules.telemetry.errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
 from types import FrameType
 
 # Types

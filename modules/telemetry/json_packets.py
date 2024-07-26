@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
 from typing import TypeAlias
-from modules.telemetry.telemetry_utils import ParsedBlock
+from modules.telemetry.utils import ParsedBlock
 
 # Constants
 MISSION_EXTENSION: str = "mission"
