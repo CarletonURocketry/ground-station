@@ -14,17 +14,18 @@ from pathlib import Path
 from signal import signal, SIGTERM
 from time import sleep
 from typing import Any, TypeAlias
-import modules.telemetry.json_packets as jsp
-import modules.websocket.commands as wsc
+from types import FrameType
+
+from modules.telemetry.data import TelemetryData
+from modules.telemetry.status import TelemetryStatus, MissionState, ReplayState
+import modules.telemetry.websocket_commands as wsc
 from modules.misc.config import Config
 from modules.telemetry.replay import TelemetryReplay
-from modules.telemetry.telemetry_utils import (
-    mission_path,
-    parse_rn2483_transmission,
-    ParsedTransmission,
-)
-from modules.telemetry.telemetry_errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
-from types import FrameType
+from modules.telemetry.parsing_utils import parse_rn2483_transmission, ParsedTransmission
+from modules.telemetry.errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
+
+# Constants
+MISSION_EXTENSION: str = "mission"
 
 # Types
 JSON: TypeAlias = dict[str, Any]
@@ -44,7 +45,7 @@ class Telemetry:
     def __init__(
         self,
         serial_status: Queue[str],
-        radio_payloads: Queue[Any],
+        rn2483_radio_payloads: Queue[Any],
         rn2483_radio_input: Queue[str],
         radio_signal_report: Queue[str],
         telemetry_json_output: Queue[JSON],
@@ -53,26 +54,28 @@ class Telemetry:
         version: str,
     ):
         super().__init__()
+        # Multiprocessing Queues to communicate with SerialManager and WebSocketHandler processes
+        self.serial_status: Queue[str] = serial_status
+        self.rn2483_radio_payloads: Queue[str] = rn2483_radio_payloads
+        self.rn2483_radio_input: Queue[str] = rn2483_radio_input
+        self.radio_signal_report: Queue[str] = radio_signal_report
+        self.telemetry_json_output: Queue[JSON] = telemetry_json_output
+        self.telemetry_ws_commands: Queue[list[str]] = telemetry_ws_commands
+
         self.config = config
         self.version = version
 
-        self.radio_payloads: Queue[str] = radio_payloads
-        self.telemetry_json_output: Queue[JSON] = telemetry_json_output
-        self.telemetry_ws_commands: Queue[list[str]] = telemetry_ws_commands
-        self.rn2483_radio_input: Queue[str] = rn2483_radio_input
-        self.radio_signal_report: Queue[str] = radio_signal_report
-        self.serial_status: Queue[str] = serial_status
-
+        # Telemetry Status holds the current status of the telemetry backend
         # Telemetry Data holds the last few copies of received data blocks stored under the subtype name as a key.
-        self.status: jsp.StatusData = jsp.StatusData()
-        self.telemetry_data: jsp.TelemetryData = jsp.TelemetryData(self.config.telemetry_buffer_size)
+        self.status: TelemetryStatus = TelemetryStatus()
+        self.telemetry_data: TelemetryData = TelemetryData(self.config.telemetry_buffer_size)
 
-        # Mission System
+        # Mission File System
         self.missions_dir = Path.cwd().joinpath("missions")
         self.missions_dir.mkdir(parents=True, exist_ok=True)
         self.mission_path: Path | None = None
 
-        # Mission Recording
+        # Mission Recording (not in use)
         self.mission_recording_file: BufferedWriter | None = None
         self.mission_recording_buffer: bytearray = bytearray(b"")
 
@@ -117,13 +120,13 @@ class Telemetry:
 
             # Switch data queues between replay and radio depending on mission state
             match self.status.mission.state:
-                case jsp.MissionState.RECORDED:
+                case MissionState.RECORDED:
                     while not self.replay_output.empty():
                         self.process_transmission(self.replay_output.get())
                         self.update_websocket()
                 case _:
-                    while not self.radio_payloads.empty():
-                        self.process_transmission(self.radio_payloads.get())
+                    while not self.rn2483_radio_payloads.empty():
+                        self.process_transmission(self.rn2483_radio_payloads.get())
                         self.update_websocket()
 
     def update_websocket(self) -> None:
@@ -139,7 +142,7 @@ class Telemetry:
 
     def reset_data(self) -> None:
         """Resets all live data on the telemetry backend to a default state."""
-        self.status = jsp.StatusData()
+        self.status = TelemetryStatus()
         self.telemetry_data.clear()
 
     def parse_serial_status(self, command: str, data: str) -> None:
@@ -150,15 +153,15 @@ class Telemetry:
             case "rn2483_connected":
                 self.status.rn2483_radio.connected = bool(data)
             case "rn2483_port":
-                if self.status.mission.state != jsp.MissionState.DNE:
+                if self.status.mission.state != MissionState.DNE:
                     self.reset_data()
                 self.status.rn2483_radio.connected_port = data
 
                 match self.status.rn2483_radio.connected_port:
                     case "":
-                        self.status.mission.state = jsp.MissionState.DNE
+                        self.status.mission.state = MissionState.DNE
                     case _:
-                        self.status.mission.state = jsp.MissionState.LIVE
+                        self.status.mission.state = MissionState.LIVE
             case _:
                 return None
 
@@ -221,13 +224,13 @@ class Telemetry:
         # Set replay status based on speed
         # If mission is not recorded, replay should be in DNE state.
         # if else, set to pause/playing based on speed
-        if self.status.mission.state != jsp.MissionState.RECORDED:
-            self.status.replay.state = jsp.ReplayState.DNE
+        if self.status.mission.state != MissionState.RECORDED:
+            self.status.replay.state = ReplayState.DNE
         elif speed == 0.0:
-            self.status.replay.state = jsp.ReplayState.PAUSED
+            self.status.replay.state = ReplayState.PAUSED
             self.replay_input.put(f"speed {speed}")
         else:
-            self.status.replay.state = jsp.ReplayState.PLAYING
+            self.status.replay.state = ReplayState.PLAYING
             self.replay_input.put(f"speed {speed}")
 
     def stop_replay(self) -> None:
@@ -250,7 +253,7 @@ class Telemetry:
         if self.status.mission.recording:
             raise AlreadyRecordingError
 
-        mission_file = mission_path(mission_name, self.missions_dir)
+        mission_file = self.missions_dir.joinpath(f"{mission_name}.{MISSION_EXTENSION}")
         if mission_file not in self.status.replay.mission_files_list:
             raise MissionNotFoundError(mission_name)
 
@@ -258,7 +261,7 @@ class Telemetry:
         self.status.mission.name = mission_name
 
         # We are not to record when replaying missions
-        self.status.mission.state = jsp.MissionState.RECORDED
+        self.status.mission.state = MissionState.RECORDED
         self.status.mission.recording = False
 
         # Replay system

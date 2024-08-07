@@ -27,7 +27,7 @@ STR_TO_LOGGING_MODE: dict[str, int] = {
 }
 
 # Constants
-VERSION: str = "0.6.0-DEV"
+VERSION: str = "1.0.0-DEV"
 
 
 class ShutdownException(Exception):
