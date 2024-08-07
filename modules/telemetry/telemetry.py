@@ -21,12 +21,11 @@ from modules.telemetry.status import TelemetryStatus, MissionState, ReplayState
 import modules.telemetry.websocket_commands as wsc
 from modules.misc.config import Config
 from modules.telemetry.replay import TelemetryReplay
-from modules.telemetry.utils import (
-    mission_path,
-    parse_rn2483_transmission,
-    ParsedTransmission,
-)
+from modules.telemetry.parsing_utils import parse_rn2483_transmission, ParsedTransmission
 from modules.telemetry.errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
+
+# Constants
+MISSION_EXTENSION: str = "mission"
 
 # Types
 JSON: TypeAlias = dict[str, Any]
@@ -254,7 +253,7 @@ class Telemetry:
         if self.status.mission.recording:
             raise AlreadyRecordingError
 
-        mission_file = mission_path(mission_name, self.missions_dir)
+        mission_file = self.missions_dir.joinpath(f"{mission_name}.{MISSION_EXTENSION}")
         if mission_file not in self.status.replay.mission_files_list:
             raise MissionNotFoundError(mission_name)
 

@@ -8,7 +8,7 @@ from modules.telemetry.v1.block import (
     InvalidHeaderFieldValueError,
     UnsupportedEncodingVersionError,
 )
-from modules.telemetry.utils import parse_radio_block, from_approved_callsign
+from modules.telemetry.parsing_utils import parse_radio_block, from_approved_callsign
 from modules.misc.config import load_config
 from modules.telemetry.v1.data_block import DataBlockSubtype
 

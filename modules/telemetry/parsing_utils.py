@@ -14,34 +14,10 @@ from modules.telemetry.v1.block import (
 import modules.telemetry.v1.data_block as v1db
 from modules.misc.config import Config
 
-MISSION_EXTENSION: str = "mission"
-FILE_CREATION_ATTEMPT_LIMIT: int = 50
 MIN_SUPPORTED_VERSION: int = 1
 MAX_SUPPORTED_VERSION: int = 1
 
 logger = logging.getLogger(__name__)
-
-
-# Helper functions
-def mission_path(mission_name: str, missions_dir: Path, file_suffix: int = 0) -> Path:
-    """Returns the path to the mission file with the matching mission name."""
-
-    return missions_dir.joinpath(f"{mission_name}{'' if file_suffix == 0 else f'_{file_suffix}'}.{MISSION_EXTENSION}")
-
-
-def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Path:
-    """Obtains filepath for proposed name, with a maximum of giving a suffix 50 times before failing."""
-    file_suffix = 1
-    missions_filepath = mission_path(mission_name, missions_dir)
-
-    while missions_filepath.is_file() and file_suffix < FILE_CREATION_ATTEMPT_LIMIT:
-        missions_filepath = mission_path(mission_name, missions_dir, file_suffix)
-        file_suffix += 1
-
-    if file_suffix >= FILE_CREATION_ATTEMPT_LIMIT:
-        raise ValueError(f"Too many mission files already exist with name {mission_name}.")
-
-    return missions_filepath
 
 
 # Dataclasses that allow us to structure the telemetry data
@@ -63,54 +39,7 @@ class ParsedTransmission:
     blocks: List[ParsedBlock]
 
 
-def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_contents: str) -> Optional[ParsedBlock]:
-    """
-    Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
-    """
-
-    # Working with hex strings until this point.
-    # Hex/Bytes Demarcation point
-    logger.debug(
-        f"Parsing v{pkt_version} type {block_header.message_type} subtype {block_header.message_subtype} contents: \
-            {hex_block_contents}"
-    )
-    block_bytes: bytes = bytes.fromhex(hex_block_contents)
-
-    # Convert message subtype string to enum
-    try:
-        block_subtype = v1db.DataBlockSubtype(block_header.message_subtype)
-    except ValueError:
-        logger.error(f"Invalid data block subtype {block_header.message_subtype}!")
-        return
-
-    # Use the appropriate parser for the block subtype enum
-    try:
-        # TODO Make an interface to support multiple v1/v2/v3 objects
-        block_contents = v1db.DataBlock.parse(block_subtype, block_bytes)
-    except NotImplementedError:
-        logger.warning(
-            f"Block parsing for type {block_header.message_type}, with subtype {block_header.message_subtype} not \
-            implemented!"
-        )
-        return
-    except v1db.DataBlockException as e:
-        logger.error(e)
-        logger.error(f"Block header: {block_header}")
-        logger.error(f"Block contents: {hex_block_contents}")
-        return
-
-    block_name = block_subtype.name.lower()
-
-    logger.debug(str(block_contents))
-
-    # TODO fix at some point
-    # if block == DataBlockSubtype.STATUS:
-    #     self.status.rocket = jsp.RocketData.from_data_block(block)
-    #     return
-
-    return ParsedBlock(block_name, block_header, dict(block_contents))  # type: ignore
-
-
+# Parsing functions
 def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTransmission]:
     """
     Parses RN2483 Packets and extracts our telemetry payload blocks, returns parsed transmission object if packet
@@ -181,3 +110,51 @@ def from_approved_callsign(pkt_hdr: PacketHeader, approved_callsigns: dict[str, 
         return False
 
     return True
+
+
+def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_contents: str) -> Optional[ParsedBlock]:
+    """
+    Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
+    """
+
+    # Working with hex strings until this point.
+    # Hex/Bytes Demarcation point
+    logger.debug(
+        f"Parsing v{pkt_version} type {block_header.message_type} subtype {block_header.message_subtype} contents: \
+            {hex_block_contents}"
+    )
+    block_bytes: bytes = bytes.fromhex(hex_block_contents)
+
+    # Convert message subtype string to enum
+    try:
+        block_subtype = v1db.DataBlockSubtype(block_header.message_subtype)
+    except ValueError:
+        logger.error(f"Invalid data block subtype {block_header.message_subtype}!")
+        return
+
+    # Use the appropriate parser for the block subtype enum
+    try:
+        # TODO Make an interface to support multiple v1/v2/v3 objects
+        block_contents = v1db.DataBlock.parse(block_subtype, block_bytes)
+    except NotImplementedError:
+        logger.warning(
+            f"Block parsing for type {block_header.message_type}, with subtype {block_header.message_subtype} not \
+            implemented!"
+        )
+        return
+    except v1db.DataBlockException as e:
+        logger.error(e)
+        logger.error(f"Block header: {block_header}")
+        logger.error(f"Block contents: {hex_block_contents}")
+        return
+
+    block_name = block_subtype.name.lower()
+
+    logger.debug(str(block_contents))
+
+    # TODO fix at some point
+    # if block == DataBlockSubtype.STATUS:
+    #     self.status.rocket = jsp.RocketData.from_data_block(block)
+    #     return
+
+    return ParsedBlock(block_name, block_header, dict(block_contents))  # type: ignore
