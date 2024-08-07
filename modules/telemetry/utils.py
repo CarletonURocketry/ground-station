@@ -44,6 +44,7 @@ def get_filepath_for_proposed_name(mission_name: str, missions_dir: Path) -> Pat
     return missions_filepath
 
 
+# Dataclasses that allow us to structure the telemetry data
 @dataclass
 class ParsedBlock:
     """Parsed block data from the telemetry process."""
@@ -75,12 +76,14 @@ def parse_radio_block(pkt_version: int, block_header: BlockHeader, hex_block_con
     )
     block_bytes: bytes = bytes.fromhex(hex_block_contents)
 
+    # Convert message subtype string to enum
     try:
         block_subtype = v1db.DataBlockSubtype(block_header.message_subtype)
     except ValueError:
         logger.error(f"Invalid data block subtype {block_header.message_subtype}!")
         return
 
+    # Use the appropriate parser for the block subtype enum
     try:
         # TODO Make an interface to support multiple v1/v2/v3 objects
         block_contents = v1db.DataBlock.parse(block_subtype, block_bytes)
