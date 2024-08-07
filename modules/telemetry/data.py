@@ -9,7 +9,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TypeAlias
-from modules.telemetry.utils import ParsedBlock
+from modules.telemetry.parsing_utils import ParsedBlock
 
 # Aliases
 OutputFormat: TypeAlias = dict[str, dict[str, dict[str, dict[str, str]]]]
