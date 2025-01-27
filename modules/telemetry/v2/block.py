@@ -63,7 +63,7 @@ def parse_packet_header(header_bytes: bytes) -> PacketHeader:
     callsign = ''
     for c in callsign_bytes:
        callsign += chr(c) 
-    timestamp, num_blocks, packet_num = struct.unpack("<H", header_bytes[9:])
+    timestamp, num_blocks, packet_num = struct.unpack("<HBB", header_bytes[9:])
     return PacketHeader(callsign, timestamp, num_blocks, packet_num)
 
 #Parse block header
