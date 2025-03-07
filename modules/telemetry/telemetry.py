@@ -295,17 +295,21 @@ class Telemetry:
     def process_transmission(self, data: str) -> None:
         """Processes the incoming radio transmission data."""
 
-        # Parse the transmission, if result is not null, update telemetry data
-        parsed_transmission: ParsedTransmission | None = parse_rn2483_transmission(data, self.config)
-        if parsed_transmission and parsed_transmission.blocks:
-            # Updates the telemetry buffer with the latest block data and latest mission time
-            self.telemetry_data.update_telemetry(parsed_transmission.packet_header.version, parsed_transmission.blocks)
+        try:
+            print(data)
+            # Parse the transmission, if result is not null, update telemetry data
+            parsed_transmission: ParsedTransmission | None = parse_rn2483_transmission(data, self.config)
+            if parsed_transmission and parsed_transmission.blocks:
+                # Updates the telemetry buffer with the latest block data and latest mission time
+                self.telemetry_data.update_telemetry(parsed_transmission.packet_header.version, parsed_transmission.blocks)
 
-            # TODO UPDATE FOR V1
-            # Write data to file when recording
-            # if self.status.mission.recording:
-            #     logger.debug(f"Recording: {self.status.mission.recording}")
-            #     self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
-            #     if len(self.mission_recording_buffer) >= 512:
-            #         buffer_length = len(self.mission_recording_buffer)
-            #         self.recording_write_bytes(buffer_length - (buffer_length % 512))
+                # TODO UPDATE FOR V1
+                # Write data to file when recording
+                # if self.status.mission.recording:
+                #     logger.debug(f"Recording: {self.status.mission.recording}")
+                #     self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
+                #     if len(self.mission_recording_buffer) >= 512:
+                #         buffer_length = len(self.mission_recording_buffer)
+                #         self.recording_write_bytes(buffer_length - (buffer_length % 512))
+        except Exception as e:
+            print(e)

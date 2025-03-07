@@ -26,6 +26,7 @@ def rn2483_radio_process(
     serial_status.put(f"rn2483_port {serial_port}")
 
     # Set up radio
+    logger.info("Setting up")
     while True:
         try:
             radio.setup(settings)
@@ -38,7 +39,9 @@ def rn2483_radio_process(
             time.sleep(3)
 
     # Get transmissions
+    logger.info("receiving")
     while True:
+        logger.info("Waiting")
         while not rn2483_radio_input.empty():
             command_string = rn2483_radio_input.get()
             if command_string == "radio get snr":
@@ -54,3 +57,5 @@ def rn2483_radio_process(
         if message is not None:
             logger.info(f"Received: {message}")
             rn2483_radio_payloads.put(message)
+        else:
+            logger.info("Got nothing")
