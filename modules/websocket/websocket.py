@@ -97,9 +97,9 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
         TornadoWSServer.clients.remove(self)
         logger.info("Client disconnected")
 
-    @staticmethod
-    def on_message(message: str) -> None:
+    def on_message(self, message: str) -> None:
         global ws_commands_queue
+        logger.info(self)
         ws_commands_queue.put(message)
 
     def check_origin(self, _) -> bool:

@@ -13,7 +13,7 @@ RUN pip install virtualenv
 WORKDIR /app/ground-station
 
 # Copy files
-COPY . .
+COPY requirements.txt .
 
 # Set up VENV and "source"
 ENV VIRTUAL_ENV=/app/ground-station
@@ -22,6 +22,8 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Install any needed packages specified in requirements.txt
 RUN pip install -r requirements.txt
+
+COPY . .
 
 # Expose port 33845
 EXPOSE 33845/udp
