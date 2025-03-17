@@ -125,7 +125,7 @@ class Config:
     """Contains the configuration for the ground station process."""
 
     organization: str = "CUInSpace"
-    rocket_name: str = "Red Ballistic"
+    rocket_name: str = "Old El Blasto"
     telemetry_buffer_size: int = 20
     radio_parameters: RadioParameters = field(default_factory=RadioParameters)
     approved_callsigns: dict[str, str] = field(default_factory=dict)
