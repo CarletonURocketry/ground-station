@@ -109,8 +109,7 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
             if len(msg) != 2: return
             if msg[0] == "auth":
                 h = hashlib.sha256()
-                h.update("{0}".format(msg[1]).encode)
-                logger.info(h.hexdigest())
+                h.update(msg[1].encode())
                 logger.info(h.hexdigest() == TornadoWSServer.pw)
                 if h.hexdigest() == TornadoWSServer.pw:
                     TornadoWSServer.sudo_user = self
