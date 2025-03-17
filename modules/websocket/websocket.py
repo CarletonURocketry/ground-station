@@ -101,6 +101,20 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
     def on_message(self, message: str) -> None:
         global ws_commands_queue
         logger.info(f"Received message: {message}")
+        logger.info(self)
+        if self == TornadoWSServer.sudo_user:
+            ws_commands_queue.put(message)
+        else:
+            msg = message.split(" ")
+            if len(msg) != 2: return
+            if msg[0] == "auth":
+                h = hashlib.sha256()
+                h.update("{0}".format(msg[1]).encode)
+                logger.info(h.hexdigest())
+                logger.info(h.hexdigest() == TornadoWSServer.pw)
+                if h.hexdigest() == TornadoWSServer.pw:
+                    TornadoWSServer.sudo_user = self
+
 
         # When we allow many users to access the front end, only a single user should have access to commands
         # To facilitate this, very simple authentication is implemented.
