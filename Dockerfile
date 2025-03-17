@@ -1,7 +1,7 @@
 # Python-slim base image
 FROM python:3.13-slim
 
-LABEL AUTHOR="Jacob Terkuc"
+LABEL MAINTAINER="Jacob Terkuc"
 LABEL MAINTAINER="Elias Hawa"
 
 # Update and upgrade packages
