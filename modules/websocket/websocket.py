@@ -11,6 +11,7 @@ import json
 from multiprocessing import Queue, Process
 from abc import ABC
 from typing import Optional, Any
+import hashlib
 import logging
 import os.path
 import tornado.gen
@@ -86,6 +87,8 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     clients: set[TornadoWSServer] = set()
     last_msg_send: str = ""
+    pw = "d916d328c73327336b8ccb25a1309a9766df1131f3a5064473933d6aae617442"
+    sudo_user = None
     global ws_commands_queue
 
     def open(self) -> None:
@@ -100,7 +103,19 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
     def on_message(self, message: str) -> None:
         global ws_commands_queue
         logger.info(self)
-        ws_commands_queue.put(message)
+        if self == TornadoWSServer.sudo_user:
+            ws_commands_queue.put(message)
+        else:
+            msg = message.split(" ")
+            if len(msg) != 2: return
+            if msg[0] == "auth":
+                h = hashlib.sha256()
+                h.update("{0}".format(msg[1]).encode)
+                logger.info(h.hexdigest())
+                logger.info(h.hexdigest() == TornadoWSServer.pw)
+                if h.hexdigest() == TornadoWSServer.pw:
+                    TornadoWSServer.sudo_user = self
+
 
     def check_origin(self, _) -> bool:
         """Authenticates clients from any host origin (_ parameter)."""
