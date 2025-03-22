@@ -3,14 +3,16 @@ from typing import List, Optional
 import logging
 
 
-from modules.telemetry.v1.block import (
-    PacketHeader,
-    BlockHeader,
-    DeviceAddress,
-    UnsupportedEncodingVersionError,
-    InvalidHeaderFieldValueError,
-)
-import modules.telemetry.v1.data_block as v1db
+# from modules.telemetry.v1.block import (
+#     PacketHeader,
+#     BlockHeader,
+#     DeviceAddress,
+#     UnsupportedEncodingVersionError,
+#     InvalidHeaderFieldValueError,
+# )
+# import modules.telemetry.v1.data_block as v1db
+
+from modules.telemetry.v2.block import *
 from modules.misc.config import Config
 
 MIN_SUPPORTED_VERSION: int = 1
@@ -54,48 +56,51 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
 
     # Catch unsupported encoding versions by skipping packet
     try:
-        pkt_hdr = PacketHeader.from_hex(data[:32])
-    except UnsupportedEncodingVersionError as e:
+        pkt_hdr: PacketHeader = parse_packet_header(data[:PACKET_HEADER_LENGTH])
+    except InvalidHeaderFieldValueError as e:
         logger.error(f"{e}, skipping packet")
         return
+    
+    logger.info(pkt_hdr)
 
     # We can keep unauthorized callsigns but we'll log them as warnings
     from_approved_callsign(pkt_hdr, config.approved_callsigns)
 
-    if len(pkt_hdr) <= 32:  # If this packet nothing more than just the header
+    if len(pkt_hdr) <= PACKET_HEADER_LENGTH:  # If this packet nothing more than just the header
         logger.debug(f"{pkt_hdr}")
 
-    blocks = data[32:]  # Remove the packet header
+    blocks = data[PACKET_HEADER_LENGTH:]  # Remove the packet header
 
     # Parse through all blocks
     while blocks != "":
         # Parse block header
         logger.debug(f"Blocks: {blocks}")
-        logger.debug(f"Block header: {blocks[:8]}")
+        logger.debug(f"Block header: {blocks[:BLOCK_HEADER_LENGTH]}")
 
         # Catch invalid block headers field values by skipping packet
         try:
-            block_header = BlockHeader.from_hex(blocks[:8])
+            block_header = parse_block_header(blocks[:BLOCK_HEADER_LENGTH])
         except InvalidHeaderFieldValueError as e:
             logger.error(f"{e}, skipping packet")
             return
+        logger.info(block_header)
 
         # Select block contents
-        block_len = len(block_header) * 2  # Convert length in bytes to length in hex symbols
-        block_contents = blocks[8:block_len]
-        logger.debug(f"Block info: {block_header}")
+    #     block_len = len(block_header) * 2  # Convert length in bytes to length in hex symbols
+    #     block_contents = blocks[8:block_len]
+    #     logger.debug(f"Block info: {block_header}")
 
-        # Check if message is destined for ground station for processing
-        if block_header.destination in [DeviceAddress.GROUND_STATION, DeviceAddress.MULTICAST]:
-            cur_block = parse_radio_block(pkt_hdr.version, block_header, block_contents)
-            if cur_block:
-                parsed_blocks.append(cur_block)  # Append parsed block to list
-        else:
-            logger.warning("Invalid destination address")
+    #     # Check if message is destined for ground station for processing
+    #     if block_header.destination in [DeviceAddress.GROUND_STATION, DeviceAddress.MULTICAST]:
+    #         cur_block = parse_radio_block(pkt_hdr.version, block_header, block_contents)
+    #         if cur_block:
+    #             parsed_blocks.append(cur_block)  # Append parsed block to list
+    #     else:
+    #         logger.warning("Invalid destination address")
 
-        # Remove the data we processed from the whole set, and move onto the next data block
-        blocks = blocks[block_len:]
-    return ParsedTransmission(pkt_hdr, parsed_blocks)
+    #     # Remove the data we processed from the whole set, and move onto the next data block
+    #     blocks = blocks[block_len:]
+    # return ParsedTransmission(pkt_hdr, parsed_blocks)
 
 
 def from_approved_callsign(pkt_hdr: PacketHeader, approved_callsigns: dict[str, str]) -> bool:

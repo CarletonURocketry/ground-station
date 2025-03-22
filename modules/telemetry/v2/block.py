@@ -9,6 +9,8 @@ from modules.telemetry.v1.data_block import DataBlockSubtype
 
 MIN_SUPPORTED_VERSION: int = 1
 MAX_SUPPORTED_VERSION: int = 1
+PACKET_HEADER_LENGTH: int = 26
+BLOCK_HEADER_LENGTH: int = 2
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -59,12 +61,14 @@ class BlockHeader:
 
 #Parse packet header
 def parse_packet_header(header_bytes: bytes) -> PacketHeader:
-    callsign_bytes = header_bytes[:9]
-    callsign = ''
-    for c in callsign_bytes:
-       callsign += chr(c) 
-    timestamp, num_blocks, packet_num = struct.unpack("<HBB", header_bytes[9:])
-    return PacketHeader(callsign, timestamp, num_blocks, packet_num)
+    try: 
+        logger.info(header_bytes)
+        callsign_bytes = header_bytes[:18]
+        callsign = bytes.fromhex(callsign_bytes) 
+        timestamp, num_blocks, packet_num = struct.unpack("<HBB", bytes(header_bytes[18:]))
+        return PacketHeader(callsign, timestamp, num_blocks, packet_num)
+    except ValueError as e:
+        raise InvalidHeaderFieldValueError(e)
 
 #Parse block header
 def parse_block_header(header_bytes: bytes) -> BlockHeader:
