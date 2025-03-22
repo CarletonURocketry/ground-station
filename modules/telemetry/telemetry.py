@@ -75,12 +75,11 @@ class Telemetry:
         self.missions_dir.mkdir(parents=True, exist_ok=True)
         self.mission_path: Path | None = None
 
-        # Mission Recording (not in use)
+        # Mission Recording
         self.mission_recording_file: BufferedWriter | None = None
-        self.mission_recording_buffer: bytearray = bytearray(b"")
 
         # Replay System
-        self.replay = None
+        self.replay: TelemetryReplay | None = None
         self.replay_input: Queue[str] = mp.Queue()  # type:ignore
         self.replay_output: Queue[str] = mp.Queue()  # type:ignore
 
@@ -285,10 +284,15 @@ class Telemetry:
     def start_recording(self, mission_name: str | None = None) -> None:
         """Starts recording the current mission. If no mission name is given, the recording epoch is used."""
         # TODO
+        self.status.mission.recording = True
+        self.mission_path = self.missions_dir.joinpath(f"{mission_name or 'default'}.{MISSION_EXTENSION}")
+        self.mission_recording_file = BufferedWriter(open(self.mission_path))
 
     def stop_recording(self) -> None:
         """Stops the current recording."""
 
+        self.status.mission.recording = False
+        self.mission_recording_file.close()
         logger.info("RECORDING STOP")
         # TODO
 
@@ -296,13 +300,14 @@ class Telemetry:
         """Processes the incoming radio transmission data."""
 
         try:
-            print(data)
             # Parse the transmission, if result is not null, update telemetry data
             parsed_transmission: ParsedTransmission | None = parse_rn2483_transmission(data, self.config)
             if parsed_transmission and parsed_transmission.blocks:
                 # Updates the telemetry buffer with the latest block data and latest mission time
                 self.telemetry_data.update_telemetry(parsed_transmission.packet_header.version, parsed_transmission.blocks)
 
+            if self.status.mission.recording:
+                logger.info(f"Recording: {data}")
                 # TODO UPDATE FOR V1
                 # Write data to file when recording
                 # if self.status.mission.recording:
