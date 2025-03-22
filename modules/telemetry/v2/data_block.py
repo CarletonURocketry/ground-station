@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import struct
 
 from modules.misc.converter import metres_to_feet, milli_degrees_to_celsius, pascals_to_psi
-import * from block
+from block import *
 
 @dataclass
 class Block(ABC):
