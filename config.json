@@ -12,11 +12,12 @@
     "preamble_len": 6,
     "cyclic_redundancy": true,
     "iqi": false,
-    "sync_word": "0x43"
+    "sync_word": "0x2b"
   },
   "approved_callsigns": {
     "VA3INI": "Matteo Golin",
     "VA3ZTA": "Darwin Jull",
-    "VE3LWN": "Thomas Selwyn"
+    "VE3LWN": "Thomas Selwyn",
+    "VA3EHJ": "Elias Hawa"
   }
 }
