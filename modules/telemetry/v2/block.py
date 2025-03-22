@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class BlockType(IntEnum):
-    """The different radio block types for version 1 of the radio packet format."""
+    """The different radio block types for version 2 of the radio packet format."""
 
     ALTITUDE_ABOVE_SEA_LEVEL = 0x0
     ALTITUDE_ABOVE_LAUNCH_LEVEL = 0x01
