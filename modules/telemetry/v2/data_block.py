@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import struct
 
 from modules.misc.converter import metres_to_feet, milli_degrees_to_celsius, pascals_to_psi
-import * from block
+from block import *
 
 @dataclass
 class Block(ABC):
@@ -78,7 +78,7 @@ def parse_packet_message(packet_header: PacketHeader, block_header: BlockHeader,
             offset_timestamp, pressure = struct.unpack("<HI", message)
             return Pressure(get_timestamp(packet_header, offset_timestamp), pressure)
 
-        case BlockType.LINEAR_ACCLERATION:
+        case BlockType.LINEAR_ACCELERATION:
             offset_timestamp, x_axis, y_axis, z_axis = struct.unpack("<HHHH", message)
             return LinearAcceleration(get_timestamp(packet_header, offset_timestamp), x_axis, y_axis, z_axis)
 
@@ -91,8 +91,8 @@ def parse_packet_message(packet_header: PacketHeader, block_header: BlockHeader,
             return Humidity(get_timestamp(packet_header, offset_timestamp), humidity)
 
         case BlockType.VOLTAGE:
-            offset_timestamp, voltage = struct.unpack("<HiB", message)
-            return Voltage(get_timestamp(packet_header, offset_timestamp), voltage)
+            offset_timestamp, voltage, identifier = struct.unpack("<HiB", message)
+            return Voltage(get_timestamp(packet_header, offset_timestamp), voltage, identifier)
 
         case BlockType.COORDINATES:
             offset_timestamp, latitude, longitude = struct.unpack("<Hii", message)
