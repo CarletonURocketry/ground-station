@@ -139,6 +139,8 @@ def parse_ws_command(ws_cmd: str, serial_commands: Queue[list[str]], telemetry_c
             serial_commands.put(parsed_command[1:])
         case "telemetry":
             telemetry_commands.put(parsed_command[1:])
+        case "deauth":
+            pass
         case "shutdown":
             raise ShutdownException
         case _:
