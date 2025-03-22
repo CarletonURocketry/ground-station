@@ -62,12 +62,11 @@ class BlockHeader:
 #Parse packet header
 def parse_packet_header(header_bytes: bytes) -> PacketHeader:
     try: 
+        logger.info(header_bytes)
         callsign_bytes = header_bytes[:18]
-        callsign = ''
-        for c in callsign_bytes:
-            callsign += chr(c) 
-        timestamp, num_blocks, packet_num = struct.unpack("<HBB", header_bytes[18:])
-        return PacketHeader(callsign.decode("hex"), timestamp, num_blocks, packet_num)
+        callsign = bytes.fromhex(callsign_bytes) 
+        timestamp, num_blocks, packet_num = struct.unpack("<HBB", bytes(header_bytes[18:]))
+        return PacketHeader(callsign, timestamp, num_blocks, packet_num)
     except ValueError as e:
         raise InvalidHeaderFieldValueError(e)
 
