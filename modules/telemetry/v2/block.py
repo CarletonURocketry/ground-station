@@ -65,7 +65,7 @@ def parse_packet_header(header_bytes: bytes) -> PacketHeader:
         logger.info(header_bytes)
         callsign_bytes = header_bytes[:18]
         callsign = bytes.fromhex(callsign_bytes) 
-        timestamp, num_blocks, packet_num = struct.unpack("<HBB", bytes(header_bytes[18:]))
+        timestamp, num_blocks, packet_num = struct.unpack("<HBB", bytes(header_bytes[18:].encode("utf-8")))
         return PacketHeader(callsign, timestamp, num_blocks, packet_num)
     except ValueError as e:
         raise InvalidHeaderFieldValueError(e)
