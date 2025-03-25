@@ -1,34 +1,18 @@
 from __future__ import annotations
 from abc import ABC
-from dataclasses import dataclass
+from dataclasses import dataclass, field, fields
 import struct
 
 from modules.telemetry.packet_spec.headers import *
 
 
-class Block(ABC):
+@dataclass
+class Block:
     # A format for the struct class to unpack the block from bytes
-    _struct_format: str
-    # Labels for the unpacked values returned by struct.unpack, in order
-    _unpacked_labels: tuple[str, ...]
+    _struct_format: str = field(default="", init=False, repr=False)
 
     @classmethod
-    def _decode(cls, encoded: bytes) -> dict[str, int | str]:
-        """Decode this block from a byte string
-
-        Args:
-            encoded (bytes): The bytes to use to decode this block
-
-        Returns:
-            dict[str, int | str]: A dictionary mapping values from _unpacked_labels to the returned struct data
-        """
-        unpacked: dict[str, int | str] = dict()
-        for label, val in zip(cls._unpacked_labels, struct.unpack(cls._struct_format, encoded)):
-            unpacked[label] = val
-        return unpacked
-
-    @classmethod
-    def __len__(cls) -> int:
+    def size(cls) -> int:
         """Use the struct format string to get the length of this block
 
         Returns:
@@ -37,92 +21,99 @@ class Block(ABC):
         return struct.calcsize(cls._struct_format)
 
     @classmethod
-    def convert_timestamp(cls, abs_time: int, offset: int) -> int:
-        """Convert an offset timestamp to an absolute timestamp
-
-        Args:
-            abs_time (int): The absolute timestamp to use as reference
-            offset (int): The offset from this timestamp to convert
+    def decode(cls, encoded: bytes) -> tuple[int]:
+        """Decode the block from bytes using the struct format string
 
         Returns:
-            int: The absolute timestamp of this block
+            tuple[int]: The results of the unpacking
         """
-        return abs_time + offset
+        return struct.unpack(cls._struct_format, encoded)
 
-    def __init__(self, encoded: bytes, abs_time: int = 0):
-        """Initialize this block by decoding it from a byte string
-
-        Args:
-            encoded (bytes): The encoded block
-            abs_time (int, optional): If this block has a measurement_time field, use this value as the absolute mission time that this should be offset from. Defaults to 0.
-        """
-        self._unpacked = self._decode(encoded)
-        if "measurement_time" in self._unpacked:
-            self._unpacked["measurement_time"] = self.convert_timestamp(
-                abs_time, int(self._unpacked["measurement_time"])
-            )
-
-    def get_data(self) -> dict[str, int | str]:
-        """Get the unpacked data from this block
+    def asdict(self) -> dict[str, int]:
+        """Convert the block to a dictionary of its fields
 
         Returns:
-            dict[str, int | str]: The unpacked data from this block
+            dict[str, int]: The block as a dictionary
         """
-        return self._unpacked
+        return {field.name: getattr(self, field.name) for field in fields(self) if field.repr}
+
+    def __init__(self, *args):  # type: ignore
+        """Stand-in for dataclass constructors with any number of arguments"""
+        pass
 
 
 @dataclass
-class AltitudeAboveLaunchLevel(Block):
-    _struct_format: str = "<Hi"
-    _unpacked_labels: tuple[str, ...] = ("measurement_time", "altitude")
+class TimedBlock(Block):
+    measurement_time: int
 
 
 @dataclass
-class AltitudeAboveSeaLevel(Block):
-    _struct_format: str = "<Hi"
-    _unpacked_labels: tuple[str, ...] = ("measurement_time", "altitude")
+class AltitudeAboveLaunchLevel(TimedBlock):
+    _struct_format: str = field(default="<Hi", init=False, repr=False)
+    measurement_time: int
+    altitude: int
 
 
 @dataclass
-class LinearAcceleration(Block):
-    _struct_format: str = "<HHHH"
-    _unpacked_labels: tuple[str, ...] = ("measurement_time", "x_axis", "y_axis", "z_axis")
+class AltitudeAboveSeaLevel(TimedBlock):
+    _struct_format: str = field(default="<Hi", init=False, repr=False)
+    measurement_time: int
+    altitude: int
 
 
 @dataclass
-class AngularVelocity(Block):
-    _struct_format: str = "<HHHH"
-    _unpacked_labels: tuple[str, ...] = ("measurement_time", "x_axis", "y_axis", "z_axis")
+class LinearAcceleration(TimedBlock):
+    _struct_format: str = field(default="<HHHH", init=False, repr=False)
+    measurement_time: int
+    x_axis: int
+    y_axis: int
+    z_axis: int
 
 
 @dataclass
-class Coordinates(Block):
-    _struct_format: str = "<Hii"
-    _unpacked_labels: tuple[str, ...] = ("measurement_time", "latitude", "longitude")
+class AngularVelocity(TimedBlock):
+    _struct_format: str = field(default="<HHHH", init=False, repr=False)
+    measurement_time: int
+    x_axis: int
+    y_axis: int
+    z_axis: int
 
 
 @dataclass
-class Humidity(Block):
-    _struct_format: str = "<HI"
-    _unpacked_labels: tuple[str, ...] = ("measurement_time", "humidity")
+class Coordinates(TimedBlock):
+    _struct_format: str = field(default="<Hii", init=False, repr=False)
+    measurement_time: int
+    latitude: int
+    longitude: int
 
 
 @dataclass
-class Pressure(Block):
-    _struct_format: str = "<HI"
-    _unpacked_labels: tuple[str, ...] = ("measurement_time", "pressure")
+class Humidity(TimedBlock):
+    _struct_format: str = field(default="<HI", init=False, repr=False)
+    measurement_time: int
+    humidity: int
 
 
 @dataclass
-class Temperature(Block):
-    _struct_format: str = "<Hi"
-    _unpacked_labels: tuple[str, ...] = ("measurement_time", "temperature")
+class Pressure(TimedBlock):
+    _struct_format: str = field(default="<HI", init=False, repr=False)
+    measurement_time: int
+    pressure: int
 
 
 @dataclass
-class Voltage(Block):
-    _struct_format: str = "<HiB"
-    _unpacked_labels: tuple[str, ...] = ("measurement_time", "voltage", "identifier")
+class Temperature(TimedBlock):
+    _struct_format: str = field(default="<Hi", init=False, repr=False)
+    measurement_time: int
+    temperature: int
+
+
+@dataclass
+class Voltage(TimedBlock):
+    _struct_format: str = field(default="<HiB", init=False, repr=False)
+    measurement_time: int
+    voltage: int
+    identifier: int
 
 
 class InvalidBlockContents(Exception):
@@ -131,6 +122,17 @@ class InvalidBlockContents(Exception):
     def __init__(self, block_type: str, message: str = ""):
         self.block_type = block_type
         super().__init__(f"Invalid block for {block_type}: {message}")
+
+
+def convert_timestamp(abs_time: int, block: Block):
+    """Converts the absolute timestamp to the relative timestamp for the block
+
+    Args:
+        abs_time (int): The absolute timestamp
+        block (Block): The block to convert the timestamp for, a subclass of TimedBlock
+    """
+    if isinstance(block, TimedBlock):
+        block.measurement_time = abs_time + block.measurement_time
 
 
 def get_block_class(type: BlockType) -> type[Block]:
@@ -185,6 +187,7 @@ def parse_block_contents(packet_header: PacketHeader, block_header: BlockHeader,
     """
     try:
         block_class = get_block_class(block_header.type)
-        return block_class(encoded, packet_header.timestamp)
+        # Leave the constructor up to dataclass
+        block_class(*block_class.decode(encoded))
     except struct.error as e:
         raise InvalidBlockContents(block_header.type.name, f"bad block contents: {e}")
