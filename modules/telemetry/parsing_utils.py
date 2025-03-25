@@ -1,10 +1,10 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from typing import List, Optional
 import logging
 
 
 from modules.telemetry.packet_spec.headers import *
-from modules.telemetry.packet_spec.blocks import parse_block_contents
+from modules.telemetry.packet_spec.blocks import parse_block_contents, get_block_class
 from modules.misc.config import Config
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class ParsedBlock:
 
     block_name: str
     block_header: BlockHeader
-    block_contents: dict[str, int | dict[str, int]]
+    block_contents: dict[str, int]
 
 
 @dataclass
@@ -34,14 +34,11 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
     Parses RN2483 Packets and extracts our telemetry payload blocks, returns parsed transmission object if packet
     is valid.
     """
-    # List of parsed blocks
-    parsed_blocks: list[ParsedBlock] = []
 
     # Extract the packet header
     data = data.strip()  # Sometimes some extra whitespace
     packet_bytes = bytes.fromhex(data)
     logger.debug(f"Full data string: {data}")
-    # TODO Make a generic abstract packet header class to encompass V1 packet header, etc
 
     # Catch unsupported encoding versions by skipping packet
     try:
@@ -55,27 +52,7 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
     from_approved_callsign(packet_header, config.approved_callsigns)
     blocks = packet_bytes[PACKET_HEADER_LENGTH:]  # Remove the packet header
 
-    # Parse through all blocks
-    while len(blocks) > 0:
-        # Parse block header
-        logger.debug(f"Blocks: {blocks}")
-        logger.debug(f"Block header: {blocks[:BLOCK_HEADER_LENGTH]}")
-
-        # Catch invalid block headers field values by skipping packet
-        try:
-            block_header = parse_block_header(blocks[:BLOCK_HEADER_LENGTH])
-        except InvalidHeaderFieldValueError as e:
-            logger.error(f"{e}, skipping packet")
-            return
-        logger.info(block_header)
-
-        block_len = len(block_header)
-        block_contents = blocks[BLOCK_HEADER_LENGTH : BLOCK_HEADER_LENGTH + block_len]
-
-        # Remove the data we processed from the whole set, and move onto the next data block
-        blocks = blocks[BLOCK_HEADER_LENGTH + block_len :]
-
-    return ParsedTransmission(packet_header, parsed_blocks)
+    return ParsedTransmission(packet_header, parse_blocks(packet_header, blocks))
 
 
 def from_approved_callsign(pkt_hdr: PacketHeader, approved_callsigns: dict[str, str]) -> bool:
@@ -91,13 +68,33 @@ def from_approved_callsign(pkt_hdr: PacketHeader, approved_callsigns: dict[str, 
     return True
 
 
-def parse_radio_block(
-    packet_header: PacketHeader, block_header: BlockHeader, block_contents: bytes
-) -> Optional[ParsedBlock]:
+def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[ParsedBlock]:
     """
     Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
     """
 
-    parsed_contents = parse_block_contents(packet_header, block_header, block_contents)
-    # TODO - check name here
-    return ParsedBlock(block_header.type.name, block_header, asdict(parsed_contents))
+    # List of parsed blocks
+    parsed_blocks: list[ParsedBlock] = []
+
+    # Parse through all encoded_blocks
+    while len(encoded_blocks) > 0:
+        # Parse block header
+        logger.debug(f"encoded_blocks: {encoded_blocks}")
+        logger.debug(f"Block header: {encoded_blocks[:BLOCK_HEADER_LENGTH]}")
+
+        # Catch invalid block headers field values by skipping packet
+        try:
+            block_header = parse_block_header(encoded_blocks[:BLOCK_HEADER_LENGTH])
+        except InvalidHeaderFieldValueError as e:
+            logger.error(f"{e}, skipping rest of packet")
+            return parsed_blocks
+
+        logger.info(block_header)
+        block_len = get_block_class(block_header.type).size()
+        block_contents = encoded_blocks[BLOCK_HEADER_LENGTH : BLOCK_HEADER_LENGTH + block_len]
+        parsed_block = parse_block_contents(packet_header, block_header, block_contents)
+        parsed_blocks.append(ParsedBlock(block_header.type.name, block_header, parsed_block.asdict()))
+        # Remove the data we processed from the whole set, and move onto the next data block
+        encoded_blocks = encoded_blocks[BLOCK_HEADER_LENGTH + block_len :]
+
+    return parsed_blocks
