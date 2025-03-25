@@ -6,60 +6,123 @@ import struct
 from modules.telemetry.packet_spec.headers import *
 
 
-@dataclass
 class Block(ABC):
-    measurement_time: int
+    # A format for the struct class to unpack the block from bytes
+    _struct_format: str
+    # Labels for the unpacked values returned by struct.unpack, in order
+    _unpacked_labels: tuple[str, ...]
+
+    @classmethod
+    def _decode(cls, encoded: bytes) -> dict[str, int | str]:
+        """Decode this block from a byte string
+
+        Args:
+            encoded (bytes): The bytes to use to decode this block
+
+        Returns:
+            dict[str, int | str]: A dictionary mapping values from _unpacked_labels to the returned struct data
+        """
+        unpacked: dict[str, int | str] = dict()
+        for label, val in zip(cls._unpacked_labels, struct.unpack(cls._struct_format, encoded)):
+            unpacked[label] = val
+        return unpacked
+
+    @classmethod
+    def __len__(cls) -> int:
+        """Use the struct format string to get the length of this block
+
+        Returns:
+            int: The length of this block in bytes
+        """
+        return struct.calcsize(cls._struct_format)
+
+    @classmethod
+    def convert_timestamp(cls, abs_time: int, offset: int) -> int:
+        """Convert an offset timestamp to an absolute timestamp
+
+        Args:
+            abs_time (int): The absolute timestamp to use as reference
+            offset (int): The offset from this timestamp to convert
+
+        Returns:
+            int: The absolute timestamp of this block
+        """
+        return abs_time + offset
+
+    def __init__(self, encoded: bytes, abs_time: int = 0):
+        """Initialize this block by decoding it from a byte string
+
+        Args:
+            encoded (bytes): The encoded block
+            abs_time (int, optional): If this block has a measurement_time field, use this value as the absolute mission time that this should be offset from. Defaults to 0.
+        """
+        self._unpacked = self._decode(encoded)
+        if "measurement_time" in self._unpacked:
+            self._unpacked["measurement_time"] = self.convert_timestamp(
+                abs_time, int(self._unpacked["measurement_time"])
+            )
+
+    def get_data(self) -> dict[str, int | str]:
+        """Get the unpacked data from this block
+
+        Returns:
+            dict[str, int | str]: The unpacked data from this block
+        """
+        return self._unpacked
 
 
 @dataclass
 class AltitudeAboveLaunchLevel(Block):
-    altitude: int
+    _struct_format: str = "<Hi"
+    _unpacked_labels: tuple[str, ...] = ("measurement_time", "altitude")
 
 
 @dataclass
 class AltitudeAboveSeaLevel(Block):
-    altitude: int
+    _struct_format: str = "<Hi"
+    _unpacked_labels: tuple[str, ...] = ("measurement_time", "altitude")
 
 
 @dataclass
 class LinearAcceleration(Block):
-    x_axis: int
-    y_axis: int
-    z_axis: int
+    _struct_format: str = "<HHHH"
+    _unpacked_labels: tuple[str, ...] = ("measurement_time", "x_axis", "y_axis", "z_axis")
 
 
 @dataclass
 class AngularVelocity(Block):
-    x_axis: int
-    y_axis: int
-    z_axis: int
+    _struct_format: str = "<HHHH"
+    _unpacked_labels: tuple[str, ...] = ("measurement_time", "x_axis", "y_axis", "z_axis")
 
 
 @dataclass
 class Coordinates(Block):
-    latitude: int
-    longitude: int
+    _struct_format: str = "<Hii"
+    _unpacked_labels: tuple[str, ...] = ("measurement_time", "latitude", "longitude")
 
 
 @dataclass
 class Humidity(Block):
-    humidity: int
+    _struct_format: str = "<HI"
+    _unpacked_labels: tuple[str, ...] = ("measurement_time", "humidity")
 
 
 @dataclass
 class Pressure(Block):
-    pressure: int
+    _struct_format: str = "<HI"
+    _unpacked_labels: tuple[str, ...] = ("measurement_time", "pressure")
 
 
 @dataclass
 class Temperature(Block):
-    temperature: int
+    _struct_format: str = "<Hi"
+    _unpacked_labels: tuple[str, ...] = ("measurement_time", "temperature")
 
 
 @dataclass
 class Voltage(Block):
-    voltage: int
-    id: int
+    _struct_format: str = "<HiB"
+    _unpacked_labels: tuple[str, ...] = ("measurement_time", "voltage", "identifier")
 
 
 class InvalidBlockContents(Exception):
@@ -70,9 +133,39 @@ class InvalidBlockContents(Exception):
         super().__init__(f"Invalid block for {block_type}: {message}")
 
 
-def get_timestamp(packet_header: PacketHeader, offset_timestamp: int) -> int:
-    """Turns the relative timestamp in a block into an absolute timestamp relative to mission start"""
-    return (packet_header.timestamp * 30 * 1000) + offset_timestamp
+def get_block_class(type: BlockType) -> type[Block]:
+    """Get the block class associated with this type
+
+    Args:
+        type (BlockType): The type to get the block class for
+
+    Raises:
+        ValueError: If the block type is not supported
+
+    Returns:
+        type[Block]: The class of the block associated with this type
+    """
+    match type:
+        case BlockType.ALTITUDE_ABOVE_LAUNCH_LEVEL:
+            return AltitudeAboveLaunchLevel
+        case BlockType.ALTITUDE_ABOVE_SEA_LEVEL:
+            return AltitudeAboveSeaLevel
+        case BlockType.LINEAR_ACCELERATION:
+            return LinearAcceleration
+        case BlockType.ANGULAR_VELOCITY:
+            return AngularVelocity
+        case BlockType.COORDINATES:
+            return Coordinates
+        case BlockType.HUMIDITY:
+            return Humidity
+        case BlockType.PRESSURE:
+            return Pressure
+        case BlockType.TEMPERATURE:
+            return Temperature
+        case BlockType.VOLTAGE:
+            return Voltage
+        case _:
+            raise ValueError(f"Unsupported block type: {type}")
 
 
 # Parsing the packet message
@@ -91,41 +184,7 @@ def parse_block_contents(packet_header: PacketHeader, block_header: BlockHeader,
         Block: The parsed block, either a Block or one of its subtypes
     """
     try:
-        match block_header.type:
-            case BlockType.ALTITUDE_ABOVE_SEA_LEVEL:
-                offset_timestamp, altitude = struct.unpack("<Hi", encoded)
-                return AltitudeAboveSeaLevel(get_timestamp(packet_header, offset_timestamp), altitude)
-
-            case BlockType.ALTITUDE_ABOVE_LAUNCH_LEVEL:
-                offset_timestamp, altitude = struct.unpack("<Hi", encoded)
-                return AltitudeAboveLaunchLevel(get_timestamp(packet_header, offset_timestamp), altitude)
-
-            case BlockType.TEMPERATURE:
-                offset_timestamp, temperature = struct.unpack("<Hi", encoded)
-                return Temperature(get_timestamp(packet_header, offset_timestamp), temperature)
-
-            case BlockType.PRESSURE:
-                offset_timestamp, pressure = struct.unpack("<HI", encoded)
-                return Pressure(get_timestamp(packet_header, offset_timestamp), pressure)
-
-            case BlockType.LINEAR_ACCELERATION:
-                offset_timestamp, x_axis, y_axis, z_axis = struct.unpack("<HHHH", encoded)
-                return LinearAcceleration(get_timestamp(packet_header, offset_timestamp), x_axis, y_axis, z_axis)
-
-            case BlockType.ANGULAR_VELOCITY:
-                offset_timestamp, x_axis, y_axis, z_axis = struct.unpack("<HHHH", encoded)
-                return AngularVelocity(get_timestamp(packet_header, offset_timestamp), x_axis, y_axis, z_axis)
-
-            case BlockType.HUMIDITY:
-                offset_timestamp, humidity = struct.unpack("<HI", encoded)
-                return Humidity(get_timestamp(packet_header, offset_timestamp), humidity)
-
-            case BlockType.VOLTAGE:
-                offset_timestamp, voltage, identifier = struct.unpack("<HiB", encoded)
-                return Voltage(get_timestamp(packet_header, offset_timestamp), voltage, identifier)
-
-            case BlockType.COORDINATES:
-                offset_timestamp, latitude, longitude = struct.unpack("<Hii", encoded)
-                return Coordinates(get_timestamp(packet_header, offset_timestamp), latitude, longitude)
+        block_class = get_block_class(block_header.type)
+        return block_class(encoded, packet_header.timestamp)
     except struct.error as e:
         raise InvalidBlockContents(block_header.type.name, f"bad block contents: {e}")
