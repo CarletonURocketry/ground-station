@@ -30,21 +30,6 @@ class Block:
         """
         return struct.unpack(cls._struct_format, encoded)
 
-    @classmethod
-    def _add_to_dict(cls, into: dict[str, Any], path: list[str], val: Any) -> None:
-        """Puts a value in a dictionary, creating new dictionaries as needed and adding the value to a list at the end
-
-        Args:
-            into (dict[str, Any]): A nested dictionary with or without the necessary keys
-            pos (str): The position to insert the value, where into[pos1][pos2].append(val) translates to "pos1.pos2"
-            val (Any): The value to insert into the final position's list
-        """
-        last = path.pop()
-        for index in path:
-            into = into.setdefault(index, {})
-
-        into.setdefault(last, []).append(val)
-
     def output_formatted(self, into: dict[str, Any]) -> None:
         """Adds a block to a dictionary, formatted to how it should be sent to the websocket
 
@@ -58,12 +43,27 @@ class Block:
         pass
 
 
+def add_to_dict(into: dict[str, Any], path: list[str], val: Any) -> None:
+    """Puts a value in a dictionary, creating new dictionaries as needed and adding the value to a list at the end
+
+    Args:
+        into (dict[str, Any]): A nested dictionary with or without the necessary keys
+        pos (str): The position to insert the value, where into[pos1][pos2].append(val) translates to "pos1.pos2"
+        val (Any): The value to insert into the final position's list
+    """
+    last = path.pop()
+    for index in path:
+        into = into.setdefault(index, {})
+
+    into.setdefault(last, []).append(val)
+
+
 @dataclass
 class TimedBlock(Block):
     measurement_time: int
 
     def output_formatted(self, into: dict[str, Any]):
-        self._add_to_dict(into, ["measurement_time"], self.measurement_time)
+        add_to_dict(into, ["measurement_time"], self.measurement_time)
 
 
 @dataclass
@@ -74,7 +74,7 @@ class AltitudeAboveLaunchLevel(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         super().output_formatted(into)
-        self._add_to_dict(into, ["altitude", "meters"], self.altitude)
+        add_to_dict(into, ["altitude", "meters"], self.altitude)
 
 
 @dataclass
@@ -85,7 +85,7 @@ class AltitudeAboveSeaLevel(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         super().output_formatted(into)
-        self._add_to_dict(into, ["altitude", "meters"], self.altitude)
+        add_to_dict(into, ["altitude", "meters"], self.altitude)
 
 
 @dataclass
@@ -98,9 +98,9 @@ class LinearAcceleration(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         super().output_formatted(into)
-        self._add_to_dict(into, ["acceleration", "x"], self.x_axis)
-        self._add_to_dict(into, ["acceleration", "y"], self.y_axis)
-        self._add_to_dict(into, ["acceleration", "z"], self.z_axis)
+        add_to_dict(into, ["acceleration", "x"], self.x_axis)
+        add_to_dict(into, ["acceleration", "y"], self.y_axis)
+        add_to_dict(into, ["acceleration", "z"], self.z_axis)
 
 
 @dataclass
@@ -113,9 +113,9 @@ class AngularVelocity(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         super().output_formatted(into)
-        self._add_to_dict(into, ["angular_velocity", "x"], self.x_axis)
-        self._add_to_dict(into, ["angular_velocity", "y"], self.y_axis)
-        self._add_to_dict(into, ["angular_velocity", "z"], self.z_axis)
+        add_to_dict(into, ["angular_velocity", "x"], self.x_axis)
+        add_to_dict(into, ["angular_velocity", "y"], self.y_axis)
+        add_to_dict(into, ["angular_velocity", "z"], self.z_axis)
 
 
 @dataclass
@@ -127,8 +127,8 @@ class Coordinates(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         super().output_formatted(into)
-        self._add_to_dict(into, ["gnss", "latitude"], self.latitude)
-        self._add_to_dict(into, ["gnss", "longitude"], self.longitude)
+        add_to_dict(into, ["gnss", "latitude"], self.latitude)
+        add_to_dict(into, ["gnss", "longitude"], self.longitude)
 
 
 @dataclass
@@ -139,7 +139,7 @@ class Humidity(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         super().output_formatted(into)
-        self._add_to_dict(into, ["humidity", "percentage"], self.humidity)
+        add_to_dict(into, ["humidity", "percentage"], self.humidity)
 
 
 @dataclass
@@ -150,7 +150,7 @@ class Pressure(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         super().output_formatted(into)
-        self._add_to_dict(into, ["pressure", "pascal"], self.pressure)
+        add_to_dict(into, ["pressure", "pascal"], self.pressure)
 
 
 @dataclass
@@ -161,7 +161,7 @@ class Temperature(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         super().output_formatted(into)
-        self._add_to_dict(into, ["temperature", "celsius"], self.temperature)
+        add_to_dict(into, ["temperature", "celsius"], self.temperature)
 
 
 @dataclass
@@ -173,7 +173,7 @@ class Voltage(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         super().output_formatted(into)
-        self._add_to_dict(into, ["voltage", str(self.identifier)], self.voltage)
+        add_to_dict(into, ["voltage", str(self.identifier)], self.voltage)
 
 
 class InvalidBlockContents(Exception):
