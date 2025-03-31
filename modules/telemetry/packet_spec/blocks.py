@@ -43,19 +43,25 @@ class Block:
         pass
 
 
-def add_to_dict(into: dict[str, Any], path: list[str], val: Any) -> None:
+def add_to_dict(into: dict[str, Any], path: list[str], val: Any, strict: bool = False) -> None:
     """Puts a value in a dictionary, creating new dictionaries as needed and adding the value to a list at the end
 
     Args:
         into (dict[str, Any]): A nested dictionary with or without the necessary keys
         pos (str): The position to insert the value, where into[pos1][pos2].append(val) translates to "pos1.pos2"
         val (Any): The value to insert into the final position's list
+        strict (bool): Create an error if the requested path or list don't exist yet
     """
     last = path.pop()
     for index in path:
-        into = into.setdefault(index, {})
-
-    into.setdefault(last, []).append(val)
+        if strict:
+            into = into[index]
+        else:
+            into = into.setdefault(index, {})
+    if strict:
+        into[last].append(val)
+    else:
+        into.setdefault(last, []).append(val)
 
 
 @dataclass
