@@ -76,7 +76,12 @@ def default_telemetry_dict() -> dict[str, Any]:
     return {
         "telemetry": {
             "last_mission_time": -1,
-            "altitude": {
+            "altitude_sea_level": {
+                "mission_time": [],
+                "metres": [],
+                "feet": []
+            },
+            "altitude_launch_level": {
                 "mission_time": [],
                 "metres": [],
                 "feet": []

@@ -69,8 +69,7 @@ class TimedBlock(Block):
     measurement_time: int
 
     def output_formatted(self, into: dict[str, Any]):
-        add_to_dict(into, ["measurement_time"], self.measurement_time)
-
+        pass
 
 @dataclass
 class AltitudeAboveLaunchLevel(TimedBlock):
@@ -79,8 +78,8 @@ class AltitudeAboveLaunchLevel(TimedBlock):
     altitude: int
 
     def output_formatted(self, into: dict[str, Any]):
-        super().output_formatted(into)
-        add_to_dict(into, ["altitude", "meters"], self.altitude)
+        add_to_dict(into, ["altitude_launch_level", "mission_time"], self.measurement_time)
+        add_to_dict(into, ["altitude_launch_level", "meters"], self.altitude)
 
 
 @dataclass
@@ -90,8 +89,8 @@ class AltitudeAboveSeaLevel(TimedBlock):
     altitude: int
 
     def output_formatted(self, into: dict[str, Any]):
-        super().output_formatted(into)
-        add_to_dict(into, ["altitude", "meters"], self.altitude)
+        add_to_dict(into, ["altitude_sea_level", "mission_time"], self.measurement_time)
+        add_to_dict(into, ["altitude_sea_level", "meters"], self.altitude)
 
 
 @dataclass
@@ -103,7 +102,7 @@ class LinearAcceleration(TimedBlock):
     z_axis: int
 
     def output_formatted(self, into: dict[str, Any]):
-        super().output_formatted(into)
+        add_to_dict(into, ["acceleration", "mission_time"], self.measurement_time)
         add_to_dict(into, ["acceleration", "x"], self.x_axis)
         add_to_dict(into, ["acceleration", "y"], self.y_axis)
         add_to_dict(into, ["acceleration", "z"], self.z_axis)
@@ -118,7 +117,7 @@ class AngularVelocity(TimedBlock):
     z_axis: int
 
     def output_formatted(self, into: dict[str, Any]):
-        super().output_formatted(into)
+        add_to_dict(into, ["angular_velocity", "mission_time"], self.measurement_time)
         add_to_dict(into, ["angular_velocity", "x"], self.x_axis)
         add_to_dict(into, ["angular_velocity", "y"], self.y_axis)
         add_to_dict(into, ["angular_velocity", "z"], self.z_axis)
@@ -132,7 +131,7 @@ class Coordinates(TimedBlock):
     longitude: int
 
     def output_formatted(self, into: dict[str, Any]):
-        super().output_formatted(into)
+        add_to_dict(into, ["gnss", "mission_time"], self.measurement_time)
         add_to_dict(into, ["gnss", "latitude"], self.latitude)
         add_to_dict(into, ["gnss", "longitude"], self.longitude)
 
@@ -144,7 +143,7 @@ class Humidity(TimedBlock):
     humidity: int
 
     def output_formatted(self, into: dict[str, Any]):
-        super().output_formatted(into)
+        add_to_dict(into, ["humidity", "mission_time"], self.measurement_time)
         add_to_dict(into, ["humidity", "percentage"], self.humidity)
 
 
@@ -155,7 +154,7 @@ class Pressure(TimedBlock):
     pressure: int
 
     def output_formatted(self, into: dict[str, Any]):
-        super().output_formatted(into)
+        add_to_dict(into, ["pressure", "mission_time"], self.measurement_time)
         add_to_dict(into, ["pressure", "pascal"], self.pressure)
 
 
@@ -166,7 +165,7 @@ class Temperature(TimedBlock):
     temperature: int
 
     def output_formatted(self, into: dict[str, Any]):
-        super().output_formatted(into)
+        add_to_dict(into, ["temperature", "mission_time"], self.measurement_time)
         add_to_dict(into, ["temperature", "celsius"], self.temperature)
 
 
@@ -178,7 +177,8 @@ class Voltage(TimedBlock):
     identifier: int
 
     def output_formatted(self, into: dict[str, Any]):
-        super().output_formatted(into)
+        # super().output_formatted(into)
+        add_to_dict(into, ["voltage", "mission_time"], self.measurement_time)
         add_to_dict(into, ["voltage", str(self.identifier)], self.voltage)
 
 
@@ -253,6 +253,6 @@ def parse_block_contents(packet_header: PacketHeader, block_header: BlockHeader,
     try:
         block_class = get_block_class(block_header.type)
         # Leave the constructor up to dataclass
-        block_class(*block_class.decode(encoded))
+        return block_class(*block_class.decode(encoded))
     except struct.error as e:
         raise InvalidBlockContents(block_header.type.name, f"bad block contents: {e}")
