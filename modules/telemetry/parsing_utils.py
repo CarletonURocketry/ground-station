@@ -4,7 +4,7 @@ import logging
 
 
 from modules.telemetry.packet_spec.headers import *
-from modules.telemetry.packet_spec.blocks import Block, parse_block_contents, get_block_class
+from modules.telemetry.packet_spec.blocks import Block, parse_block_contents, get_block_class, InvalidBlockContents
 from modules.misc.config import Config
 
 logger = logging.getLogger(__name__)
@@ -82,11 +82,19 @@ def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Blo
             logger.error(f"{e}, skipping rest of packet")
             return parsed_blocks
 
-        logger.info(block_header)
+        logger.debug(block_header)
+
         block_len = get_block_class(block_header.type).size()
         block_contents = encoded_blocks[BLOCK_HEADER_LENGTH : BLOCK_HEADER_LENGTH + block_len]
-        parsed_blocks.append(parse_block_contents(packet_header, block_header, block_contents))
+
+        try:
+            data_block = parse_block_contents(packet_header, block_header, block_contents)
+        except InvalidBlockContents as e:
+            logger.error(f"{e}")
+
+        logger.debug(data_block)
+        parsed_blocks.append(data_block)
         # Remove the data we processed from the whole set, and move onto the next data block
-        encoded_blocks = encoded_blocks[BLOCK_HEADER_LENGTH + block_len :]
+        encoded_blocks = encoded_blocks[BLOCK_HEADER_LENGTH + block_len:]
 
     return parsed_blocks
