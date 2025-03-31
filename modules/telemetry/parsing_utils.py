@@ -4,20 +4,10 @@ import logging
 
 
 from modules.telemetry.packet_spec.headers import *
-from modules.telemetry.packet_spec.blocks import parse_block_contents, get_block_class
+from modules.telemetry.packet_spec.blocks import Block, parse_block_contents, get_block_class
 from modules.misc.config import Config
 
 logger = logging.getLogger(__name__)
-
-
-# Dataclasses that allow us to structure the telemetry data
-@dataclass
-class ParsedBlock:
-    """Parsed block data from the telemetry process."""
-
-    block_name: str
-    block_header: BlockHeader
-    block_contents: dict[str, int]
 
 
 @dataclass
@@ -25,7 +15,7 @@ class ParsedTransmission:
     """Parsed transmission data from the telemetry process."""
 
     packet_header: PacketHeader
-    blocks: List[ParsedBlock]
+    blocks: List[Block]
 
 
 # Parsing functions
@@ -68,13 +58,13 @@ def from_approved_callsign(pkt_hdr: PacketHeader, approved_callsigns: dict[str, 
     return True
 
 
-def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[ParsedBlock]:
+def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Block]:
     """
     Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
     """
 
     # List of parsed blocks
-    parsed_blocks: list[ParsedBlock] = []
+    parsed_blocks: list[Block] = []
 
     # Parse through all encoded_blocks
     while len(encoded_blocks) > 0:
@@ -92,8 +82,7 @@ def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Par
         logger.info(block_header)
         block_len = get_block_class(block_header.type).size()
         block_contents = encoded_blocks[BLOCK_HEADER_LENGTH : BLOCK_HEADER_LENGTH + block_len]
-        parsed_block = parse_block_contents(packet_header, block_header, block_contents)
-        parsed_blocks.append(ParsedBlock(block_header.type.name, block_header, parsed_block.asdict()))
+        parsed_blocks.append(parse_block_contents(packet_header, block_header, block_contents))
         # Remove the data we processed from the whole set, and move onto the next data block
         encoded_blocks = encoded_blocks[BLOCK_HEADER_LENGTH + block_len :]
 

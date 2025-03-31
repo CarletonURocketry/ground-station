@@ -92,7 +92,7 @@ def parse_block_header(header_bytes: bytes) -> BlockHeader:
         BlockHeader: A header containing information about the block it accompanies
     """
     try:
-        type = struct.unpack("<B", header_bytes)
-    except struct.error as e:
+        (type,) = struct.unpack("<B", header_bytes)
+        return BlockHeader(BlockType(type))
+    except (struct.error, ValueError) as e:
         raise InvalidHeaderFieldValueError(BlockHeader.__name__, header_bytes.hex(), f"bad block header: {e}")
-    return BlockHeader(BlockType(type))

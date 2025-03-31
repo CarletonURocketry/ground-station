@@ -4,9 +4,9 @@ __author__ = "Thomas Selwyn", "Matteo Golin", "Angus Jull"
 # Imports
 import logging
 from typing import Any
-from packet_spec.blocks import Block, TimedBlock
 from collections import defaultdict
 
+from modules.telemetry.packet_spec.blocks import Block, TimedBlock
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +26,15 @@ class TelemetryBuffer:
         self.last_mission_time: int = -1
         self.output_blocks: defaultdict[str, list[Block]] = defaultdict(list)
 
-    def add_to_buffer(self, blocks: list[Block]) -> None:
+    def add(self, blocks: list[Block]) -> None:
         """Updates telemetry object from given parsed blocks
         Args:
             packet_version (int): The packet encoding version
             blocks (list[ParsedBlock]): A list of parsed block objects"""
-
         for block in blocks:
+            if block is None:
+                logger.warning("Received None block, skipping")
+                continue
             if isinstance(block, TimedBlock):
                 if block.measurement_time > self.last_mission_time:
                     self.last_mission_time = block.measurement_time
@@ -52,7 +54,7 @@ class TelemetryBuffer:
         self.last_mission_time = -1
         self.output_blocks = defaultdict(list)
 
-    def get_buffered_telemetry(self) -> dict[str, Any]:
+    def get(self) -> dict[str, Any]:
         """Returns the buffered telemetry data in the expected format"""
         output = default_telemetry_dict()
         for block_buffer in self.output_blocks.values():
