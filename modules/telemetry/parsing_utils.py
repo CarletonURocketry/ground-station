@@ -37,7 +37,7 @@ def parse_rn2483_transmission(data: str, config: Config) -> Optional[ParsedTrans
         logger.error(f"{e}, skipping packet")
         return
 
-    logger.info(packet_header)
+    logger.debug(packet_header)
     # We can keep unauthorized callsigns but we'll log them as warnings
     from_approved_callsign(packet_header, config.approved_callsigns)
     blocks = packet_bytes[PACKET_HEADER_LENGTH:]  # Remove the packet header
@@ -51,11 +51,14 @@ def from_approved_callsign(pkt_hdr: PacketHeader, approved_callsigns: dict[str, 
     # Ensure packet is from an approved call sign
     if pkt_hdr.callsign in approved_callsigns:
         logger.debug(f"Incoming packet from {pkt_hdr.callsign} ({approved_callsigns.get(pkt_hdr.callsign)})")
-    else:
-        logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
-        return False
+        return True
+    for callsign in approved_callsigns:
+        if pkt_hdr.callsign.startswith(callsign):
+            logger.debug(f"Incoming packet from {pkt_hdr.callsign} ({approved_callsigns.get(pkt_hdr.callsign)})")
+            return True
 
-    return True
+    logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
+    return False
 
 
 def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Block]:
