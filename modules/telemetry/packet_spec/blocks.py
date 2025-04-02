@@ -4,6 +4,7 @@ from collections import defaultdict
 import struct
 
 from modules.telemetry.packet_spec.headers import *
+from modules.misc.unit_conversions import *
 from typing import Any
 
 
@@ -22,13 +23,20 @@ class Block:
         return struct.calcsize(cls._struct_format)
 
     @classmethod
-    def decode(cls, encoded: bytes) -> tuple[int]:
+    def decode(cls, packet_timestamp: int, encoded: bytes) -> tuple[int]:
         """Decode the block from bytes using the struct format string
+        Args:
+            packet_timestamp int: Number of half minutes since power on
+            encoded bytes: Bytes containing block contents  
 
         Returns:
             tuple[int]: The results of the unpacking
         """
-        return struct.unpack(cls._struct_format, encoded)
+
+        # Measurement time in milliseconds is always first data block attribute, extract it then add packet header timestamp
+        attributes = list(struct.unpack(cls._struct_format, encoded))
+        attributes[0] = milliseconds_to_seconds(attributes[0]) + (0.5 * packet_timestamp)
+        return tuple(attributes)
 
     def output_formatted(self, into: dict[str, Any]) -> None:
         """Adds a block to a dictionary, formatted to how it should be sent to the websocket
@@ -74,12 +82,12 @@ class TimedBlock(Block):
 @dataclass
 class AltitudeAboveLaunchLevel(TimedBlock):
     _struct_format: str = field(default="<Hi", init=False, repr=False)
-    measurement_time: int
+    measurement_time: int 
     altitude: int
 
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["altitude_launch_level", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["altitude_launch_level", "meters"], self.altitude)
+        add_to_dict(into, ["altitude_launch_level", "meters"], millimeters_to_meters(self.altitude))
 
 
 @dataclass
@@ -90,7 +98,7 @@ class AltitudeAboveSeaLevel(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["altitude_sea_level", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["altitude_sea_level", "meters"], self.altitude)
+        add_to_dict(into, ["altitude_sea_level", "meters"], millimeters_to_meters(self.altitude))
 
 
 @dataclass
@@ -103,9 +111,9 @@ class LinearAcceleration(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["acceleration", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["acceleration", "x"], self.x_axis)
-        add_to_dict(into, ["acceleration", "y"], self.y_axis)
-        add_to_dict(into, ["acceleration", "z"], self.z_axis)
+        add_to_dict(into, ["acceleration", "x"], centimeters_to_meters(self.x_axis))
+        add_to_dict(into, ["acceleration", "y"], centimeters_to_meters(self.y_axis))
+        add_to_dict(into, ["acceleration", "z"], centimeters_to_meters(self.z_axis))
 
 
 @dataclass
@@ -118,9 +126,9 @@ class AngularVelocity(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["angular_velocity", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["angular_velocity", "x"], self.x_axis)
-        add_to_dict(into, ["angular_velocity", "y"], self.y_axis)
-        add_to_dict(into, ["angular_velocity", "z"], self.z_axis)
+        add_to_dict(into, ["angular_velocity", "x"], tenthdegrees_to_degrees(self.x_axis))
+        add_to_dict(into, ["angular_velocity", "y"], tenthdegrees_to_degrees(self.y_axis))
+        add_to_dict(into, ["angular_velocity", "z"], tenthdegrees_to_degrees(self.z_axis))
 
 
 @dataclass
@@ -132,8 +140,8 @@ class Coordinates(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["gnss", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["gnss", "latitude"], self.latitude)
-        add_to_dict(into, ["gnss", "longitude"], self.longitude)
+        add_to_dict(into, ["gnss", "latitude"], microdegrees_to_degrees(self.latitude))
+        add_to_dict(into, ["gnss", "longitude"], microdegrees_to_degrees(self.longitude))
 
 
 @dataclass
@@ -155,7 +163,7 @@ class Pressure(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["pressure", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["pressure", "pascal"], self.pressure)
+        add_to_dict(into, ["pressure", "pascal"], pascals_to_psi(self.pressure))
 
 
 @dataclass
@@ -166,7 +174,7 @@ class Temperature(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["temperature", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["temperature", "celsius"], self.temperature)
+        add_to_dict(into, ["temperature", "celsius"], milli_degrees_to_celsius(self.temperature))
 
 
 @dataclass
@@ -253,6 +261,6 @@ def parse_block_contents(packet_header: PacketHeader, block_header: BlockHeader,
     try:
         block_class = get_block_class(block_header.type)
         # Leave the constructor up to dataclass
-        return block_class(*block_class.decode(encoded))
+        return block_class(*block_class.decode(packet_header.timestamp, encoded))
     except struct.error as e:
         raise InvalidBlockContents(block_header.type.name, f"bad block contents: {e}")
