@@ -74,7 +74,6 @@ def default_telemetry_dict() -> dict[str, Any]:
         dict[str, Any]: An empty telemetry packet
     """
     return {
-        "telemetry": {
             "last_mission_time": -1,
             "altitude_sea_level": {
                 "mission_time": [],
@@ -115,7 +114,6 @@ def default_telemetry_dict() -> dict[str, Any]:
                 "glonass": [[], []]
             },
         }
-    }
 
 
 # fmt: on
