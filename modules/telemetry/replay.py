@@ -70,7 +70,7 @@ class LogfileIterator:
         with open(self.replay_path, "rb") as file:
             callsign = file.read(9)
             if len(callsign) < 9:
-                return 
+                return
             next_packet = bytearray()
 
             while True:
@@ -80,13 +80,13 @@ class LogfileIterator:
                     next_packet.extend(data)
                     yield next_packet.hex()
                     break
-                
+
                 # Start a new packet
                 if data == callsign:
                     yield next_packet.hex()
                     next_packet = bytearray()
 
-                next_packet.extend(data) 
+                next_packet.extend(data)
 
 
 class LogfileReplay(TelemetryReplay):
@@ -108,4 +108,3 @@ class LogfileReplay(TelemetryReplay):
             if not self.replay_input.empty():
                 self.parse_input_command(self.replay_input.get())
             sleep(0.052)
-            

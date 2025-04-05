@@ -95,6 +95,6 @@ def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Blo
         logger.debug(data_block)
         parsed_blocks.append(data_block)
         # Remove the data we processed from the whole set, and move onto the next data block
-        encoded_blocks = encoded_blocks[BLOCK_HEADER_LENGTH + block_len:]
+        encoded_blocks = encoded_blocks[BLOCK_HEADER_LENGTH + block_len :]
 
     return parsed_blocks

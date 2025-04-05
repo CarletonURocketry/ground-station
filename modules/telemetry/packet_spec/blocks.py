@@ -27,7 +27,7 @@ class Block:
         """Decode the block from bytes using the struct format string
         Args:
             packet_timestamp int: Number of half minutes since power on
-            encoded bytes: Bytes containing block contents  
+            encoded bytes: Bytes containing block contents
 
         Returns:
             tuple[int]: The results of the unpacking
@@ -79,10 +79,11 @@ class TimedBlock(Block):
     def output_formatted(self, into: dict[str, Any]):
         pass
 
+
 @dataclass
 class AltitudeAboveLaunchLevel(TimedBlock):
     _struct_format: str = field(default="<Hi", init=False, repr=False)
-    measurement_time: int 
+    measurement_time: int
     altitude: int
 
     def output_formatted(self, into: dict[str, Any]):
