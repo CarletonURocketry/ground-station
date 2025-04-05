@@ -36,7 +36,7 @@ class Block:
         # Measurement time in milliseconds is always first data block attribute, extract it then add packet header timestamp
         attributes = list(struct.unpack(cls._struct_format, encoded))
         attributes[0] = milliseconds_to_seconds(attributes[0]) + (0.5 * packet_timestamp)
-        return tuple(attributes)
+        return (*attributes,)
 
     def output_formatted(self, into: dict[str, Any]) -> None:
         """Adds a block to a dictionary, formatted to how it should be sent to the websocket
@@ -110,10 +110,11 @@ class LinearAcceleration(TimedBlock):
     z_axis: int
 
     def output_formatted(self, into: dict[str, Any]):
-        add_to_dict(into, ["acceleration", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["acceleration", "x"], centimeters_to_meters(self.x_axis))
-        add_to_dict(into, ["acceleration", "y"], centimeters_to_meters(self.y_axis))
-        add_to_dict(into, ["acceleration", "z"], centimeters_to_meters(self.z_axis))
+        add_to_dict(into, ["linear_acceleration", "mission_time"], self.measurement_time)
+        add_to_dict(into, ["linear_acceleration", "x"], centimeters_to_meters(self.x_axis))
+        add_to_dict(into, ["linear_acceleration", "y"], centimeters_to_meters(self.y_axis))
+        add_to_dict(into, ["linear_acceleration", "z"], centimeters_to_meters(self.z_axis))
+        add_to_dict(into, ["linear_acceleration", "magnitude"], magnitude(self.x_axis, self.y_axis, self.z_axis))
 
 
 @dataclass
@@ -129,6 +130,7 @@ class AngularVelocity(TimedBlock):
         add_to_dict(into, ["angular_velocity", "x"], tenthdegrees_to_degrees(self.x_axis))
         add_to_dict(into, ["angular_velocity", "y"], tenthdegrees_to_degrees(self.y_axis))
         add_to_dict(into, ["angular_velocity", "z"], tenthdegrees_to_degrees(self.z_axis))
+        add_to_dict(into, ["angular_velocity", "magnitude"], magnitude(self.x_axis, self.y_axis, self.z_axis))
 
 
 @dataclass
@@ -163,7 +165,7 @@ class Pressure(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["pressure", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["pressure", "pascal"], pascals_to_psi(self.pressure))
+        add_to_dict(into, ["pressure", "pascal"], self.pressure)
 
 
 @dataclass

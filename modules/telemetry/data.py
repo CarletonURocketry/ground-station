@@ -85,6 +85,20 @@ def default_telemetry_dict() -> dict[str, Any]:
                 "metres": [],
                 "feet": []
             },
+            "linear_acceleration": {
+                "mission_time": [],
+                "x": [],
+                "y": [],
+                "z": [],
+                "magnitude": [],
+            },
+            "angular_velocity": {
+                "mission_time": [],
+                "x": [],
+                "y": [],
+                "z": [],
+                "magnitude": [],
+            },
             "temperature": {
                 "mission_time": [], 
                 "celsius": []
@@ -92,12 +106,6 @@ def default_telemetry_dict() -> dict[str, Any]:
             "pressure": {
                 "mission_time": [],
                 "pascals": []
-            },
-            "velocity": {
-                "mission_time": [],
-                "x": [],
-                "y": [],
-                "z": []
             },
             "humidity": {
                 "mission_time": [],
@@ -113,6 +121,9 @@ def default_telemetry_dict() -> dict[str, Any]:
                 "gps": [[], []], 
                 "glonass": [[], []]
             },
+            "voltage": {
+                "mission_time": []
+            }
         }
 
 
