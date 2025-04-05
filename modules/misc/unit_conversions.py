@@ -52,7 +52,7 @@ def millimeters_to_meters(millimeters: int) -> float:
         millimeters (int): The distance in millimeters
 
     Returns:
-    float: The distance in meters
+        float: The distance in meters
     """
 
     return round(millimeters / 1000, 2)
@@ -63,7 +63,7 @@ def centimeters_to_meters(centimeters: int) -> float:
         centimeters (int): The distance in centimeters
 
     Returns:
-    float: The distance in meters
+        float: The distance in meters
     """
 
     return round(centimeters / 100, 2)
@@ -74,7 +74,7 @@ def milliseconds_to_seconds(milliseconds: int) -> float:
         milliseconds (int): The time in milliseconds
 
     Returns:
-    float: The time in seconds
+        float: The time in seconds
     """
 
     return round(milliseconds / 1000, 2)
@@ -85,7 +85,7 @@ def tenthdegrees_to_degrees(tenthdegrees: int) -> float:
         tenthdegrees (int): The angular velocity in tenths of degrees per second
 
     Returns:
-    float: The angular velocity in degrees per second
+        float: The angular velocity in degrees per second
     """
 
     return round(tenthdegrees / 10, 2)
@@ -96,7 +96,20 @@ def microdegrees_to_degrees(microdegrees: int) -> float:
         microdegrees (int): The angle microdegrees
 
     Returns:
-    float: The angle in degrees
+        float: The angle in degrees
     """
 
     return round(microdegrees / pow(10, 7), 2)
+
+def magnitude(x: int, y: int, z: int) -> float:
+    """Returns the magnitude of the 3D vector specified by the input values
+    Args:
+        x (int): x component of the vector
+        y (int): y component of the vector
+        z (int): z component of the vector
+    
+    Returns:
+        float: Magnitude of vector
+    """
+
+    return round((pow(x, 2) + pow(y, 2) + pow(z, 2) ** 0.5), 2)
