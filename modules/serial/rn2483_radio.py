@@ -36,7 +36,7 @@ SETTING_KW: dict[str, str] = {
     "preamble_len": "prlen",
     "cyclic_redundancy": "crc",
     "iqi": "iqi",
-    "sync_word": "sync",
+    # "sync_word": "sync",
 }
 
 

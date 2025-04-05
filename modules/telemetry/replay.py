@@ -60,3 +60,51 @@ class TelemetryReplay:
                 self.last_loop_time = int(time() * 1000)
             case _:
                 raise NotImplementedError(f"Replay command of {cmd_list} invalid.")
+
+
+class LogfileIterator:
+    def __init__(self, replay_path: Path):
+        self.replay_path = replay_path
+
+    def __iter__(self):
+        with open(self.replay_path, "rb") as file:
+            callsign = file.read(9)
+            if len(callsign) < 9:
+                return
+            next_packet = bytearray()
+
+            while True:
+                # Look for the header
+                data = file.read(9)
+                if len(data) < 9:
+                    next_packet.extend(data)
+                    yield next_packet.hex()
+                    break
+
+                # Start a new packet
+                if data == callsign:
+                    yield next_packet.hex()
+                    next_packet = bytearray()
+
+                next_packet.extend(data)
+
+
+class LogfileReplay(TelemetryReplay):
+    def __init__(
+        self,
+        replay_payloads: Queue[str],
+        replay_input: Queue[str],
+        replay_speed: float,
+        replay_path: Path,
+    ):
+        super().__init__(replay_payloads, replay_input, replay_speed, replay_path)
+
+    def run(self):
+        """Run the mission until completion."""
+        for packet in LogfileIterator(self.replay_path):
+            if self.speed > 0:
+                self.replay_payloads.put(packet)
+
+            if not self.replay_input.empty():
+                self.parse_input_command(self.replay_input.get())
+            sleep(0.052)
