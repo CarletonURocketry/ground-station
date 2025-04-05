@@ -69,7 +69,7 @@ def parse_packet_header(header_bytes: bytes) -> PacketHeader:
         PacketHeader: A header containing information about the packet it accompanies
     """
     try:
-        logger.info(header_bytes)
+        logger.debug(f"{header_bytes=}")
         callsign_bytes = header_bytes[:CALLSIGN_LENGTH]
         # valid headers should be in ascii, an error here is a problem
         callsign = callsign_bytes.decode("ascii", errors="replace")
@@ -92,6 +92,7 @@ def parse_block_header(header_bytes: bytes) -> BlockHeader:
         BlockHeader: A header containing information about the block it accompanies
     """
     try:
+        logger.debug(f"{header_bytes=}")
         (type,) = struct.unpack("<B", header_bytes)
         return BlockHeader(BlockType(type))
     except (struct.error, ValueError) as e:
