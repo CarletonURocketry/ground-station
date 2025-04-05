@@ -46,6 +46,7 @@ def pascals_to_psi(pascals: int) -> float:
 
     return round(pascals / 6895, 2)
 
+
 def millimeters_to_meters(millimeters: int) -> float:
     """Returns the passed millimeters value into meters.
     Args:
@@ -56,6 +57,7 @@ def millimeters_to_meters(millimeters: int) -> float:
     """
 
     return round(millimeters / 1000, 2)
+
 
 def centimeters_to_meters(centimeters: int) -> float:
     """Returns the passed centimeters value into meters.
@@ -68,6 +70,7 @@ def centimeters_to_meters(centimeters: int) -> float:
 
     return round(centimeters / 100, 2)
 
+
 def milliseconds_to_seconds(milliseconds: int) -> float:
     """Returns the passed milliseconds value into seconds.
     Args:
@@ -78,6 +81,7 @@ def milliseconds_to_seconds(milliseconds: int) -> float:
     """
 
     return round(milliseconds / 1000, 2)
+
 
 def tenthdegrees_to_degrees(tenthdegrees: int) -> float:
     """Returns the passed tenth degree per second value into degrees per second.
@@ -90,6 +94,7 @@ def tenthdegrees_to_degrees(tenthdegrees: int) -> float:
 
     return round(tenthdegrees / 10, 2)
 
+
 def microdegrees_to_degrees(microdegrees: int) -> float:
     """Returns the passed microdegree value into degrees.
     Args:
@@ -101,13 +106,14 @@ def microdegrees_to_degrees(microdegrees: int) -> float:
 
     return round(microdegrees / pow(10, 7), 2)
 
+
 def magnitude(x: int, y: int, z: int) -> float:
     """Returns the magnitude of the 3D vector specified by the input values
     Args:
         x (int): x component of the vector
         y (int): y component of the vector
         z (int): z component of the vector
-    
+
     Returns:
         float: Magnitude of vector
     """
