@@ -1,6 +1,6 @@
 {
   "organization": "CUInSpace",
-  "rocket_name": "Red Bullistic",
+  "rocket_name": "Old El Blasto",
   "telemetry_buffer_size": 20,
   "radio_params": {
     "modulation": "lora",
