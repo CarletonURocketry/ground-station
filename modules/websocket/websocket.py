@@ -13,8 +13,6 @@ from abc import ABC
 from typing import Optional, Any
 import logging
 import os.path
-import tornado.gen
-import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
@@ -86,7 +84,6 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     clients: set[TornadoWSServer] = set()
     last_msg_send: str = ""
-    global ws_commands_queue
 
     def open(self) -> None:
         TornadoWSServer.clients.add(self)
@@ -99,10 +96,9 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
     @staticmethod
     def on_message(message: str) -> None:
-        global ws_commands_queue
         ws_commands_queue.put(message)
 
-    def check_origin(self, _) -> bool:
+    def check_origin(self, origin: str) -> bool:
         """Authenticates clients from any host origin (_ parameter)."""
         return True
 

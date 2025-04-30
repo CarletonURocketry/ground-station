@@ -40,7 +40,6 @@ class CodingRates(StrEnum):
 
 @dataclass
 class RadioParameters:
-
     """
     Represents a collection of parameters for the RN2483 radio settings.
 
@@ -121,14 +120,13 @@ class RadioParameters:
 
 @dataclass
 class Config:
-
     """Contains the configuration for the ground station process."""
 
     organization: str = "CUInSpace"
     rocket_name: str = "Red Ballistic"
     telemetry_buffer_size: int = 20
     radio_parameters: RadioParameters = field(default_factory=RadioParameters)
-    approved_callsigns: dict[str, str] = field(default_factory=dict)
+    approved_callsigns: dict[str, str] = field(default_factory=dict[str, str])
 
     def __post_init__(self):
         if len(self.approved_callsigns) == 0:
@@ -144,8 +142,8 @@ class Config:
             organization=data.get("organization", cls.organization),
             rocket_name=data.get("rocket_name", cls.rocket_name),
             telemetry_buffer_size=data.get("telemetry_buffer_size", cls.telemetry_buffer_size),
-            radio_parameters=RadioParameters.from_json(data.get("radio_params", dict())),  # type:ignore
-            approved_callsigns=data.get("approved_callsigns", dict()),  # type:ignore
+            radio_parameters=RadioParameters.from_json(data.get("radio_params", dict())),
+            approved_callsigns=data.get("approved_callsigns", dict()),
         )
 
 
