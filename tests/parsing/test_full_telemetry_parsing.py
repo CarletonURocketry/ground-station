@@ -104,7 +104,7 @@
 #     caplog.set_level(logging.DEBUG)
 #     assert from_approved_callsign(valid_packet_header, approved_callsigns)
 #     assert (
-#         f"Incoming packet from {valid_packet_header.callsign} 
+#         f"Incoming packet from {valid_packet_header.callsign}
 #             ({approved_callsigns.get(valid_packet_header.callsign)})"
 #         in caplog.text
 #     )
