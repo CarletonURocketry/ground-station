@@ -85,7 +85,7 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
     clients: set[TornadoWSServer] = set()
     last_msg_send: str = ""
 
-    def open(self, *args: Any) -> None:
+    def open(self, *args: Any, **kwargs: Any) -> None:
         TornadoWSServer.clients.add(self)
         self.send_message(self.last_msg_send)
         logger.info("Client connected")
@@ -94,7 +94,7 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
         TornadoWSServer.clients.remove(self)
         logger.info("Client disconnected")
 
-    def on_message(self, message: str) -> None:
+    def on_message(self, message: str | bytes) -> None:
         ws_commands_queue.put(message)
 
     def check_origin(self, origin: str) -> bool:
