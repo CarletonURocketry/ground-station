@@ -35,7 +35,8 @@ def logfile_to_mission(logfile: Path, mission: Path) -> None:
     with open(mission, "w") as mission_file:
         for index, packet in enumerate(LogfileIterator(logfile)):
             logger.info(
-                f"Callsign: {packet[:18]} Timestamp: {packet[18:22]} Blocks: {packet[22:24]} Packet Number: {packet[24:26]}"
+                f"""Callsign: {packet[:18]} Timestamp: {packet[18:22]} Blocks: {packet[22:24]}
+                    Packet Number: {packet[24:26]}"""
             )
             logger.info(f"packet #{index}: {packet}")
             mission_file.write(packet + "\n")

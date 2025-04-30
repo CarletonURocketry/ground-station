@@ -3,7 +3,7 @@ __author__ = "Matteo Golin"
 
 # Imports
 import pytest
-from modules.misc.unit_conversions import *
+from modules.misc.unit_conversions import celsius_to_fahrenheit, metres_to_feet, pascals_to_psi
 
 
 # Tests

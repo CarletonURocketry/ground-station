@@ -1,6 +1,5 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from collections import defaultdict
 import struct
 
 from modules.telemetry.packet_spec.headers import *
@@ -33,7 +32,8 @@ class Block:
             tuple[int]: The results of the unpacking
         """
 
-        # Measurement time in milliseconds is always first data block attribute, extract it then add packet header timestamp
+        # Measurement time in milliseconds is always first data block attribute, extract it then add
+        # packet header timestamp
         attributes = list(struct.unpack(cls._struct_format, encoded))
         attributes[0] = milliseconds_to_seconds(attributes[0]) + (0.5 * packet_timestamp)
         return (*attributes,)

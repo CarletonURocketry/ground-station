@@ -74,57 +74,57 @@ def default_telemetry_dict() -> dict[str, Any]:
         dict[str, Any]: An empty telemetry packet
     """
     return {
-            "last_mission_time": -1,
-            "altitude_sea_level": {
-                "mission_time": [],
-                "metres": [],
-                "feet": []
-            },
-            "altitude_launch_level": {
-                "mission_time": [],
-                "metres": [],
-                "feet": []
-            },
-            "linear_acceleration": {
-                "mission_time": [],
-                "x": [],
-                "y": [],
-                "z": [],
-                "magnitude": [],
-            },
-            "angular_velocity": {
-                "mission_time": [],
-                "x": [],
-                "y": [],
-                "z": [],
-                "magnitude": [],
-            },
-            "temperature": {
-                "mission_time": [], 
-                "celsius": []
-            },
-            "pressure": {
-                "mission_time": [],
-                "pascals": []
-            },
-            "humidity": {
-                "mission_time": [],
-                "percentage": []
-            },
-            "gnss": {
-                "mission_time": [],
-                 "latitude": [],
-                 "longitude": []
-            },
-            "sats_in_use": {
-                "mission_time": [], 
-                "gps": [[], []], 
-                "glonass": [[], []]
-            },
-            "voltage": {
-                "mission_time": []
-            }
+        "last_mission_time": -1,
+        "altitude_sea_level": {
+            "mission_time": [],
+            "metres": [],
+            "feet": []
+        },
+        "altitude_launch_level": {
+            "mission_time": [],
+            "metres": [],
+            "feet": []
+        },
+        "linear_acceleration": {
+            "mission_time": [],
+            "x": [],
+            "y": [],
+            "z": [],
+            "magnitude": [],
+        },
+        "angular_velocity": {
+            "mission_time": [],
+            "x": [],
+            "y": [],
+            "z": [],
+            "magnitude": [],
+        },
+        "temperature": {
+            "mission_time": [],
+            "celsius": []
+        },
+        "pressure": {
+            "mission_time": [],
+            "pascals": []
+        },
+        "humidity": {
+            "mission_time": [],
+            "percentage": []
+        },
+        "gnss": {
+            "mission_time": [],
+            "latitude": [],
+            "longitude": []
+        },
+        "sats_in_use": {
+            "mission_time": [],
+            "gps": [[], []],
+            "glonass": [[], []]
+        },
+        "voltage": {
+            "mission_time": []
         }
+    }
 
 
 # fmt: on
