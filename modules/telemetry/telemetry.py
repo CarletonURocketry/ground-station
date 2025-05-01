@@ -16,7 +16,7 @@ from time import sleep
 from typing import Any, TypeAlias
 from types import FrameType
 
-from modules.telemetry.data import TelemetryData
+from modules.telemetry.data import TelemetryBuffer
 from modules.telemetry.status import TelemetryStatus, MissionState, ReplayState
 import modules.telemetry.websocket_commands as wsc
 from modules.misc.config import Config
@@ -68,7 +68,7 @@ class Telemetry:
         # Telemetry Status holds the current status of the telemetry backend
         # Telemetry Data holds the last few copies of received data blocks stored under the subtype name as a key.
         self.status: TelemetryStatus = TelemetryStatus()
-        self.telemetry_data: TelemetryData = TelemetryData(self.config.telemetry_buffer_size)
+        self.telemetry_data: TelemetryBuffer = TelemetryBuffer(self.config.telemetry_buffer_size)
 
         # Mission File System
         self.missions_dir = Path.cwd().joinpath("missions")
@@ -136,7 +136,7 @@ class Telemetry:
             "rocket": self.config.rocket_name,
             "version": self.version,
             "status": dict(self.status),
-            "telemetry": dict(self.telemetry_data),
+            "telemetry": self.telemetry_data.get(),
         }
         self.telemetry_json_output.put(websocket_response)
 
@@ -296,10 +296,10 @@ class Telemetry:
         """Processes the incoming radio transmission data."""
 
         # Parse the transmission, if result is not null, update telemetry data
-        parsed_transmission: ParsedTransmission | None = parse_rn2483_transmission(data, self.config)
-        if parsed_transmission and parsed_transmission.blocks:
+        parsed: ParsedTransmission | None = parse_rn2483_transmission(data, self.config)
+        if parsed and parsed.blocks:
             # Updates the telemetry buffer with the latest block data and latest mission time
-            self.telemetry_data.update_telemetry(parsed_transmission.packet_header.version, parsed_transmission.blocks)
+            self.telemetry_data.add(parsed.blocks)
 
             # TODO UPDATE FOR V1
             # Write data to file when recording

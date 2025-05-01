@@ -40,7 +40,6 @@ class CodingRates(StrEnum):
 
 @dataclass
 class RadioParameters:
-
     """
     Represents a collection of parameters for the RN2483 radio settings.
 
@@ -66,7 +65,7 @@ class RadioParameters:
     preamble_len: int = 6
     cyclic_redundancy: bool = True
     iqi: bool = False
-    sync_word: str = "0x43"
+    # sync_word: str = "0x43"
 
     def __post_init__(self):
         if self.frequency not in range(*LF_RANGE) and self.frequency not in range(*HF_RANGE):
@@ -83,9 +82,9 @@ class RadioParameters:
         if self.preamble_len not in range(*PREAMBLE_RANGE):
             raise ValueError(f"Preamble length '{self.preamble_len}' not within allowed range of {PREAMBLE_RANGE}")
 
-        if int(self.sync_word, 16) not in range(*SYNC_RANGE):
-            raise ValueError(f"Sync word '{self.sync_word}' not within allowed range of {SYNC_RANGE}")
-        self.sync_word = self.sync_word[2:]  # Remove 0x
+        # if int(self.sync_word, 16) not in range(*SYNC_RANGE):
+        #     raise ValueError(f"Sync word '{self.sync_word}' not within allowed range of {SYNC_RANGE}")
+        # self.sync_word = self.sync_word[2:]  # Remove 0x
 
     @classmethod
     def from_json(cls, data: JSON) -> Self:
@@ -103,7 +102,7 @@ class RadioParameters:
             preamble_len=data.get("preamble_len", 6),
             cyclic_redundancy=data.get("cyclic_redundancy", True),
             iqi=data.get("iqi", False),
-            sync_word=data.get("sync_word", "0x43"),
+            # sync_word=data.get("sync_word", "0x43"),
         )
 
     def __iter__(self):
@@ -116,19 +115,18 @@ class RadioParameters:
         yield "preamble_len", self.preamble_len
         yield "cyclic_redundancy", self.cyclic_redundancy
         yield "iqi", self.iqi
-        yield "sync_word", self.sync_word
+        # yield "sync_word", self.sync_word
 
 
 @dataclass
 class Config:
-
     """Contains the configuration for the ground station process."""
 
     organization: str = "CUInSpace"
     rocket_name: str = "Red Ballistic"
     telemetry_buffer_size: int = 20
     radio_parameters: RadioParameters = field(default_factory=RadioParameters)
-    approved_callsigns: dict[str, str] = field(default_factory=dict)
+    approved_callsigns: dict[str, str] = field(default_factory=dict[str, str])
 
     def __post_init__(self):
         if len(self.approved_callsigns) == 0:
@@ -144,8 +142,8 @@ class Config:
             organization=data.get("organization", cls.organization),
             rocket_name=data.get("rocket_name", cls.rocket_name),
             telemetry_buffer_size=data.get("telemetry_buffer_size", cls.telemetry_buffer_size),
-            radio_parameters=RadioParameters.from_json(data.get("radio_params", dict())),  # type:ignore
-            approved_callsigns=data.get("approved_callsigns", dict()),  # type:ignore
+            radio_parameters=RadioParameters.from_json(data.get("radio_params", dict())),
+            approved_callsigns=data.get("approved_callsigns", dict()),
         )
 
 

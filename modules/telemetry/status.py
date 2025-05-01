@@ -52,7 +52,7 @@ class MissionEntry:
 class SerialData:
     """The serial data packet for the telemetry process."""
 
-    available_ports: list[str] = field(default_factory=list)
+    available_ports: list[str] = field(default_factory=list[str])
 
     def __iter__(self):
         yield "available_ports", self.available_ports
@@ -97,8 +97,8 @@ class ReplayData:
     state: ReplayState = ReplayState.DNE
     speed: float = 1.0
     last_played_speed: float = 1.0
-    mission_files_list: list[Path] = field(default_factory=list)
-    mission_list: list[MissionEntry] = field(default_factory=list)
+    mission_files_list: list[Path] = field(default_factory=list[Path])
+    mission_list: list[MissionEntry] = field(default_factory=list[MissionEntry])
 
     def __post_init__(self) -> None:
         # Update the mission list on creation
