@@ -192,6 +192,7 @@ class Voltage(TimedBlock):
         add_to_dict(into, ["voltage", "mission_time"], self.measurement_time)
         add_to_dict(into, ["voltage", str(self.identifier)], self.voltage)
 
+
 @dataclass
 class MagneticField(TimedBlock):
     _struct_format: str = field(default="<Hhhh", init=False, repr=False)
@@ -206,6 +207,7 @@ class MagneticField(TimedBlock):
         add_to_dict(into, ["magnetic_field", "y"], self.y_axis)
         add_to_dict(into, ["magnetic_field", "z"], self.z_axis)
         add_to_dict(into, ["magnetic_field", "magnitude"], magnitude(self.x_axis, self.y_axis, self.z_axis))
+
 
 class InvalidBlockContents(Exception):
     """Exception raised when invalid block contents are encountered"""
