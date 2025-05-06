@@ -21,10 +21,11 @@ class BlockType(IntEnum):
     TEMPERATURE = 0x02
     PRESSURE = 0x03
     LINEAR_ACCELERATION = 0x04
-    ANGULAR_VELOCITY = 0x06
-    HUMIDITY = 0x07
-    COORDINATES = 0x08
-    VOLTAGE = 0x09
+    ANGULAR_VELOCITY = 0x05
+    HUMIDITY = 0x06
+    COORDINATES = 0x07
+    VOLTAGE = 0x08
+    MAGNETIC_FIELD = 0x09
 
 
 class InvalidHeaderFieldValueError(Exception):
