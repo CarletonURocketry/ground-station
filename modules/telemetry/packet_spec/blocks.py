@@ -88,7 +88,7 @@ class AltitudeAboveLaunchLevel(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["altitude_launch_level", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["altitude_launch_level", "meters"], millimeters_to_meters(self.altitude))
+        add_to_dict(into, ["altitude_launch_level", "metres"], millimeters_to_meters(self.altitude))
 
 
 @dataclass
@@ -99,7 +99,7 @@ class AltitudeAboveSeaLevel(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["altitude_sea_level", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["altitude_sea_level", "meters"], millimeters_to_meters(self.altitude))
+        add_to_dict(into, ["altitude_sea_level", "metres"], millimeters_to_meters(self.altitude))
 
 
 @dataclass
@@ -166,7 +166,7 @@ class Pressure(TimedBlock):
 
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["pressure", "mission_time"], self.measurement_time)
-        add_to_dict(into, ["pressure", "pascal"], self.pressure)
+        add_to_dict(into, ["pressure", "pascals"], self.pressure)
 
 
 @dataclass
@@ -191,6 +191,22 @@ class Voltage(TimedBlock):
         # super().output_formatted(into)
         add_to_dict(into, ["voltage", "mission_time"], self.measurement_time)
         add_to_dict(into, ["voltage", str(self.identifier)], self.voltage)
+
+
+@dataclass
+class MagneticField(TimedBlock):
+    _struct_format: str = field(default="<Hhhh", init=False, repr=False)
+    measurement_time: int
+    x_axis: int
+    y_axis: int
+    z_axis: int
+
+    def output_formatted(self, into: dict[str, Any]):
+        add_to_dict(into, ["magnetic_field", "mission_time"], self.measurement_time)
+        add_to_dict(into, ["magnetic_field", "x"], self.x_axis)
+        add_to_dict(into, ["magnetic_field", "y"], self.y_axis)
+        add_to_dict(into, ["magnetic_field", "z"], self.z_axis)
+        add_to_dict(into, ["magnetic_field", "magnitude"], magnitude(self.x_axis, self.y_axis, self.z_axis))
 
 
 class InvalidBlockContents(Exception):
@@ -243,6 +259,8 @@ def get_block_class(type: BlockType) -> type[Block]:
             return Temperature
         case BlockType.VOLTAGE:
             return Voltage
+        case BlockType.MAGNETIC_FIELD:
+            return MagneticField
         case _:
             raise ValueError(f"Unsupported block type: {type}")
 

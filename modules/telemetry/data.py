@@ -56,7 +56,7 @@ class TelemetryBuffer:
 
     def get(self) -> dict[str, Any]:
         """Returns the buffered telemetry data in the expected format"""
-        output = default_telemetry_dict()
+        output = default_telemetry_dict(self.last_mission_time)
         for block_buffer in self.output_blocks.values():
             for block in block_buffer:
                 # Don't actually remove blocks when they've been output,
@@ -67,14 +67,14 @@ class TelemetryBuffer:
 
 
 # fmt: off
-def default_telemetry_dict() -> dict[str, Any]:
+def default_telemetry_dict(last_mission_time: int) -> dict[str, Any]:
     """Creates an empty telemetry packet in the format expected by the frontend
 
     Returns:
         dict[str, Any]: An empty telemetry packet
     """
     return {
-        "last_mission_time": -1,
+        "last_mission_time": last_mission_time,
         "altitude_sea_level": {
             "mission_time": [],
             "metres": [],
@@ -123,8 +123,14 @@ def default_telemetry_dict() -> dict[str, Any]:
         },
         "voltage": {
             "mission_time": []
+        },
+        "magnetic_field": {
+            "mission_time": [],
+            "x": [],
+            "y": [],
+            "z": [],
+            "magnitude": [],
         }
     }
-
 
 # fmt: on

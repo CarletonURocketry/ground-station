@@ -1,5 +1,5 @@
 # Python-slim base image
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 LABEL AUTHOR="Jacob Terkuc"
 LABEL MAINTAINER="Elias Hawa"
@@ -23,4 +23,4 @@ COPY . .
 EXPOSE 33845/udp
 
 # Run the app when the container launches
-CMD ["python3", "main.py"]
+CMD ["python", "main.py"]
