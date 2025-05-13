@@ -28,6 +28,7 @@ def rn2483_radio_process(
     # Set up radio
     while True:
         try:
+            logger.debug("Setting up radio")
             radio.setup(settings)
             logger.debug("Radio initialization worked.")
             break
