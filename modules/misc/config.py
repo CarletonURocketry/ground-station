@@ -59,9 +59,9 @@ class RadioParameters:
     modulation: ModulationModes = ModulationModes.LORA
     frequency: int = 433_050_000
     power: int = 15
-    spread_factor: int = 9
-    coding_rate: CodingRates = CodingRates.FOUR_SEVENTHS
-    bandwidth: int = 500
+    spread_factor: int = 7
+    coding_rate: CodingRates = CodingRates.FOUR_FIFTHS
+    bandwidth: int = 125
     preamble_len: int = 6
     cyclic_redundancy: bool = True
     iqi: bool = False
