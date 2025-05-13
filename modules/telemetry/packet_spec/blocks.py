@@ -35,7 +35,7 @@ class Block:
         # Measurement time in milliseconds is always first data block attribute, extract it then add
         # packet header timestamp
         attributes = list(struct.unpack(cls._struct_format, encoded))
-        attributes[0] = milliseconds_to_seconds(attributes[0]) + (0.5 * packet_timestamp)
+        attributes[0] = milliseconds_to_seconds(attributes[0]) + (30 * packet_timestamp)
         return (*attributes,)
 
     def output_formatted(self, into: dict[str, Any]) -> None:
