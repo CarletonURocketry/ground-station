@@ -59,9 +59,9 @@ class RadioParameters:
     modulation: ModulationModes = ModulationModes.LORA
     frequency: int = 433_050_000
     power: int = 15
-    spread_factor: int = 9
-    coding_rate: CodingRates = CodingRates.FOUR_SEVENTHS
-    bandwidth: int = 500
+    spread_factor: int = 7
+    coding_rate: CodingRates = CodingRates.FOUR_FIFTHS
+    bandwidth: int = 125
     preamble_len: int = 6
     cyclic_redundancy: bool = True
     iqi: bool = False
@@ -96,9 +96,9 @@ class RadioParameters:
             modulation=ModulationModes(data.get("modulation", "lora")),
             frequency=data.get("frequency", 433_050_000),
             power=data.get("power", 15),
-            spread_factor=data.get("spread_factor", 9),
-            coding_rate=CodingRates(data.get("coding_rate", "4/7")),
-            bandwidth=data.get("bandwidth", 500),
+            spread_factor=data.get("spread_factor", 7),
+            coding_rate=CodingRates(data.get("coding_rate", "4/5")),
+            bandwidth=data.get("bandwidth", 125),
             preamble_len=data.get("preamble_len", 6),
             cyclic_redundancy=data.get("cyclic_redundancy", True),
             iqi=data.get("iqi", False),

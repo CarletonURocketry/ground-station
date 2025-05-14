@@ -107,15 +107,15 @@ def microdegrees_to_degrees(microdegrees: int) -> float:
     return round(microdegrees / pow(10, 7), 2)
 
 
-def magnitude(x: int, y: int, z: int) -> float:
+def magnitude(x: float, y: float, z: float) -> float:
     """Returns the magnitude of the 3D vector specified by the input values
     Args:
-        x (int): x component of the vector
-        y (int): y component of the vector
-        z (int): z component of the vector
+        x (float): x component of the vector
+        y (float): y component of the vector
+        z (float): z component of the vector
 
     Returns:
         float: Magnitude of vector
     """
 
-    return round((pow(x, 2) + pow(y, 2) + pow(z, 2) ** 0.5), 2)
+    return round(((x**2) + (y**2) + (z**2)) ** 0.5, 2)

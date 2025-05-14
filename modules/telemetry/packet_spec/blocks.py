@@ -35,7 +35,7 @@ class Block:
         # Measurement time in milliseconds is always first data block attribute, extract it then add
         # packet header timestamp
         attributes = list(struct.unpack(cls._struct_format, encoded))
-        attributes[0] = milliseconds_to_seconds(attributes[0]) + (0.5 * packet_timestamp)
+        attributes[0] = milliseconds_to_seconds(attributes[0]) + (30 * packet_timestamp)
         return (*attributes,)
 
     def output_formatted(self, into: dict[str, Any]) -> None:
@@ -82,7 +82,7 @@ class TimedBlock(Block):
 
 @dataclass
 class AltitudeAboveLaunchLevel(TimedBlock):
-    _struct_format: str = field(default="<Hi", init=False, repr=False)
+    _struct_format: str = field(default="<hi", init=False, repr=False)
     measurement_time: int
     altitude: int
 
@@ -93,7 +93,7 @@ class AltitudeAboveLaunchLevel(TimedBlock):
 
 @dataclass
 class AltitudeAboveSeaLevel(TimedBlock):
-    _struct_format: str = field(default="<Hi", init=False, repr=False)
+    _struct_format: str = field(default="<hi", init=False, repr=False)
     measurement_time: int
     altitude: int
 
@@ -104,7 +104,7 @@ class AltitudeAboveSeaLevel(TimedBlock):
 
 @dataclass
 class LinearAcceleration(TimedBlock):
-    _struct_format: str = field(default="<HHHH", init=False, repr=False)
+    _struct_format: str = field(default="<hHHH", init=False, repr=False)
     measurement_time: int
     x_axis: int
     y_axis: int
@@ -115,12 +115,20 @@ class LinearAcceleration(TimedBlock):
         add_to_dict(into, ["linear_acceleration", "x"], centimeters_to_meters(self.x_axis))
         add_to_dict(into, ["linear_acceleration", "y"], centimeters_to_meters(self.y_axis))
         add_to_dict(into, ["linear_acceleration", "z"], centimeters_to_meters(self.z_axis))
-        add_to_dict(into, ["linear_acceleration", "magnitude"], magnitude(self.x_axis, self.y_axis, self.z_axis))
+        add_to_dict(
+            into,
+            ["linear_acceleration", "magnitude"],
+            magnitude(
+                centimeters_to_meters(self.x_axis),
+                centimeters_to_meters(self.y_axis),
+                centimeters_to_meters(self.z_axis),
+            ),
+        )
 
 
 @dataclass
 class AngularVelocity(TimedBlock):
-    _struct_format: str = field(default="<HHHH", init=False, repr=False)
+    _struct_format: str = field(default="<hHHH", init=False, repr=False)
     measurement_time: int
     x_axis: int
     y_axis: int
@@ -131,12 +139,20 @@ class AngularVelocity(TimedBlock):
         add_to_dict(into, ["angular_velocity", "x"], tenthdegrees_to_degrees(self.x_axis))
         add_to_dict(into, ["angular_velocity", "y"], tenthdegrees_to_degrees(self.y_axis))
         add_to_dict(into, ["angular_velocity", "z"], tenthdegrees_to_degrees(self.z_axis))
-        add_to_dict(into, ["angular_velocity", "magnitude"], magnitude(self.x_axis, self.y_axis, self.z_axis))
+        add_to_dict(
+            into,
+            ["angular_velocity", "magnitude"],
+            magnitude(
+                tenthdegrees_to_degrees(self.x_axis),
+                tenthdegrees_to_degrees(self.y_axis),
+                tenthdegrees_to_degrees(self.z_axis),
+            ),
+        )
 
 
 @dataclass
 class Coordinates(TimedBlock):
-    _struct_format: str = field(default="<Hii", init=False, repr=False)
+    _struct_format: str = field(default="<hii", init=False, repr=False)
     measurement_time: int
     latitude: int
     longitude: int
@@ -149,7 +165,7 @@ class Coordinates(TimedBlock):
 
 @dataclass
 class Humidity(TimedBlock):
-    _struct_format: str = field(default="<HI", init=False, repr=False)
+    _struct_format: str = field(default="<hI", init=False, repr=False)
     measurement_time: int
     humidity: int
 
@@ -160,7 +176,7 @@ class Humidity(TimedBlock):
 
 @dataclass
 class Pressure(TimedBlock):
-    _struct_format: str = field(default="<HI", init=False, repr=False)
+    _struct_format: str = field(default="<hI", init=False, repr=False)
     measurement_time: int
     pressure: int
 
@@ -171,7 +187,7 @@ class Pressure(TimedBlock):
 
 @dataclass
 class Temperature(TimedBlock):
-    _struct_format: str = field(default="<Hi", init=False, repr=False)
+    _struct_format: str = field(default="<hi", init=False, repr=False)
     measurement_time: int
     temperature: int
 
@@ -182,7 +198,7 @@ class Temperature(TimedBlock):
 
 @dataclass
 class Voltage(TimedBlock):
-    _struct_format: str = field(default="<HiB", init=False, repr=False)
+    _struct_format: str = field(default="<hiB", init=False, repr=False)
     measurement_time: int
     voltage: int
     identifier: int
@@ -195,7 +211,7 @@ class Voltage(TimedBlock):
 
 @dataclass
 class MagneticField(TimedBlock):
-    _struct_format: str = field(default="<Hhhh", init=False, repr=False)
+    _struct_format: str = field(default="<hhhh", init=False, repr=False)
     measurement_time: int
     x_axis: int
     y_axis: int
