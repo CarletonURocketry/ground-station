@@ -82,7 +82,7 @@ class TimedBlock(Block):
 
 @dataclass
 class AltitudeAboveLaunchLevel(TimedBlock):
-    _struct_format: str = field(default="<Hi", init=False, repr=False)
+    _struct_format: str = field(default="<hi", init=False, repr=False)
     measurement_time: int
     altitude: int
 
@@ -93,7 +93,7 @@ class AltitudeAboveLaunchLevel(TimedBlock):
 
 @dataclass
 class AltitudeAboveSeaLevel(TimedBlock):
-    _struct_format: str = field(default="<Hi", init=False, repr=False)
+    _struct_format: str = field(default="<hi", init=False, repr=False)
     measurement_time: int
     altitude: int
 
@@ -104,7 +104,7 @@ class AltitudeAboveSeaLevel(TimedBlock):
 
 @dataclass
 class LinearAcceleration(TimedBlock):
-    _struct_format: str = field(default="<HHHH", init=False, repr=False)
+    _struct_format: str = field(default="<hHHH", init=False, repr=False)
     measurement_time: int
     x_axis: int
     y_axis: int
@@ -120,7 +120,7 @@ class LinearAcceleration(TimedBlock):
 
 @dataclass
 class AngularVelocity(TimedBlock):
-    _struct_format: str = field(default="<HHHH", init=False, repr=False)
+    _struct_format: str = field(default="<hHHH", init=False, repr=False)
     measurement_time: int
     x_axis: int
     y_axis: int
@@ -136,7 +136,7 @@ class AngularVelocity(TimedBlock):
 
 @dataclass
 class Coordinates(TimedBlock):
-    _struct_format: str = field(default="<Hii", init=False, repr=False)
+    _struct_format: str = field(default="<hii", init=False, repr=False)
     measurement_time: int
     latitude: int
     longitude: int
@@ -149,7 +149,7 @@ class Coordinates(TimedBlock):
 
 @dataclass
 class Humidity(TimedBlock):
-    _struct_format: str = field(default="<HI", init=False, repr=False)
+    _struct_format: str = field(default="<hI", init=False, repr=False)
     measurement_time: int
     humidity: int
 
@@ -160,7 +160,7 @@ class Humidity(TimedBlock):
 
 @dataclass
 class Pressure(TimedBlock):
-    _struct_format: str = field(default="<HI", init=False, repr=False)
+    _struct_format: str = field(default="<hI", init=False, repr=False)
     measurement_time: int
     pressure: int
 
@@ -171,7 +171,7 @@ class Pressure(TimedBlock):
 
 @dataclass
 class Temperature(TimedBlock):
-    _struct_format: str = field(default="<Hi", init=False, repr=False)
+    _struct_format: str = field(default="<hi", init=False, repr=False)
     measurement_time: int
     temperature: int
 
@@ -182,7 +182,7 @@ class Temperature(TimedBlock):
 
 @dataclass
 class Voltage(TimedBlock):
-    _struct_format: str = field(default="<HiB", init=False, repr=False)
+    _struct_format: str = field(default="<hiB", init=False, repr=False)
     measurement_time: int
     voltage: int
     identifier: int
@@ -195,7 +195,7 @@ class Voltage(TimedBlock):
 
 @dataclass
 class MagneticField(TimedBlock):
-    _struct_format: str = field(default="<Hhhh", init=False, repr=False)
+    _struct_format: str = field(default="<hhhh", init=False, repr=False)
     measurement_time: int
     x_axis: int
     y_axis: int
