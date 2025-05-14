@@ -115,7 +115,15 @@ class LinearAcceleration(TimedBlock):
         add_to_dict(into, ["linear_acceleration", "x"], centimeters_to_meters(self.x_axis))
         add_to_dict(into, ["linear_acceleration", "y"], centimeters_to_meters(self.y_axis))
         add_to_dict(into, ["linear_acceleration", "z"], centimeters_to_meters(self.z_axis))
-        add_to_dict(into, ["linear_acceleration", "magnitude"], magnitude(self.x_axis, self.y_axis, self.z_axis))
+        add_to_dict(
+            into,
+            ["linear_acceleration", "magnitude"],
+            magnitude(
+                centimeters_to_meters(self.x_axis),
+                centimeters_to_meters(self.y_axis),
+                centimeters_to_meters(self.z_axis),
+            ),
+        )
 
 
 @dataclass
@@ -131,7 +139,15 @@ class AngularVelocity(TimedBlock):
         add_to_dict(into, ["angular_velocity", "x"], tenthdegrees_to_degrees(self.x_axis))
         add_to_dict(into, ["angular_velocity", "y"], tenthdegrees_to_degrees(self.y_axis))
         add_to_dict(into, ["angular_velocity", "z"], tenthdegrees_to_degrees(self.z_axis))
-        add_to_dict(into, ["angular_velocity", "magnitude"], magnitude(self.x_axis, self.y_axis, self.z_axis))
+        add_to_dict(
+            into,
+            ["angular_velocity", "magnitude"],
+            magnitude(
+                tenthdegrees_to_degrees(self.x_axis),
+                tenthdegrees_to_degrees(self.y_axis),
+                tenthdegrees_to_degrees(self.z_axis),
+            ),
+        )
 
 
 @dataclass

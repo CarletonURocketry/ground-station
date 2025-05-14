@@ -118,4 +118,4 @@ def magnitude(x: int, y: int, z: int) -> float:
         float: Magnitude of vector
     """
 
-    return round((pow(x, 2) + pow(y, 2) + pow(z, 2) ** 0.5), 2)
+    return round(((x**2) + (y**2) + (z**2)) ** 0.5, 2)
