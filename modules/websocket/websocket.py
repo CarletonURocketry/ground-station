@@ -98,6 +98,7 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
         logger.info("Client disconnected")
 
     def on_message(self, message: str | bytes) -> None:
+        message = str(message)
         logger.info(f"Received message: {message}")
 
         # When we allow many users to access the front end, only a single user should have access to commands
