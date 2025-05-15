@@ -4,7 +4,7 @@ Incoming information comes from rn2483_radio_payloads in payload format.
 Outputs information to telemetry_json_output in friendly JSON for UI.
 """
 
-from io import BufferedWriter
+from io import BufferedWriter, TextIOWrapper
 import logging
 from ast import literal_eval
 from queue import Queue
@@ -75,12 +75,11 @@ class Telemetry:
         self.missions_dir.mkdir(parents=True, exist_ok=True)
         self.mission_path: Path | None = None
 
-        # Mission Recording (not in use)
-        self.mission_recording_file: BufferedWriter | None = None
-        self.mission_recording_buffer: bytearray = bytearray(b"")
+        # Mission Recording
+        self.mission_recording_file: TextIOWrapper[BufferedWriter] | None = None
 
         # Replay System
-        self.replay = None
+        self.replay: Process | None = None
         self.replay_input: Queue[str] = mp.Queue()  # type:ignore
         self.replay_output: Queue[str] = mp.Queue()  # type:ignore
 
@@ -285,27 +284,37 @@ class Telemetry:
     def start_recording(self, mission_name: str | None = None) -> None:
         """Starts recording the current mission. If no mission name is given, the recording epoch is used."""
         # TODO
+        self.status.mission.recording = True
+        self.mission_path = self.missions_dir.joinpath(f"{mission_name or 'default'}.{MISSION_EXTENSION}")
+        # This long line creates a BufferedWriter object that can write plaintext
+        self.mission_recording_file = TextIOWrapper(
+            BufferedWriter(open(self.mission_path, "wb+", 0)), line_buffering=False, write_through=True
+        )
+        logger.info(f"Starting to record to {self.mission_path}")
 
     def stop_recording(self) -> None:
         """Stops the current recording."""
 
-        logger.info("RECORDING STOP")
+        self.status.mission.recording = False
+        if self.mission_recording_file:
+            self.mission_recording_file.close()
+        self.mission_recording_file = None
+        logger.info("Recording stopped")
         # TODO
 
     def process_transmission(self, data: str) -> None:
         """Processes the incoming radio transmission data."""
+        # Always write data to file when recording, even if it can't be parsed correctly
+        if self.status.mission.recording and self.mission_recording_file:
+            logger.info(f"Recording: {data}")
+            self.mission_recording_file.write(f"{data}\n")
 
-        # Parse the transmission, if result is not null, update telemetry data
-        parsed: ParsedTransmission | None = parse_rn2483_transmission(data, self.config)
-        if parsed and parsed.blocks:
-            # Updates the telemetry buffer with the latest block data and latest mission time
-            self.telemetry_data.add(parsed.blocks)
-
-            # TODO UPDATE FOR V1
-            # Write data to file when recording
-            # if self.status.mission.recording:
-            #     logger.debug(f"Recording: {self.status.mission.recording}")
-            #     self.mission_recording_buffer += TelemetryDataBlock(block.subtype, data=block).to_bytes()
-            #     if len(self.mission_recording_buffer) >= 512:
-            #         buffer_length = len(self.mission_recording_buffer)
-            #         self.recording_write_bytes(buffer_length - (buffer_length % 512))
+        try:
+            # Parse the transmission, if result is not null, update telemetry data
+            parsed: ParsedTransmission | None = parse_rn2483_transmission(data, self.config)
+            if parsed and parsed.blocks:
+                # Updates the telemetry buffer with the latest block data and latest mission time
+                self.telemetry_data.add(parsed.blocks)
+        except Exception as e:
+            print(e)
+            logger.error(e)

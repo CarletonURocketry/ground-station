@@ -107,7 +107,6 @@ class ReplayData:
     def update_mission_list(self, missions_dir: Path = Path.cwd().joinpath(MISSIONS_DIR)) -> None:
         """Gets the available mission recordings from the mission folder."""
 
-        # TODO change this so that mission_extension and directory are not defined in multiple files
         self.mission_files_list = [file for file in missions_dir.glob(f"*.{MISSION_EXTENSION}") if file.is_file()]
 
         # Check each file to output its misc details
