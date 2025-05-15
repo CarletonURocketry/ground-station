@@ -290,13 +290,14 @@ class Telemetry:
         self.mission_recording_file = TextIOWrapper(
             BufferedWriter(open(self.mission_path, "wb+", 0)), line_buffering=False, write_through=True
         )
+        logger.info(f"Starting to record to {self.mission_path}")
 
     def stop_recording(self) -> None:
         """Stops the current recording."""
 
         self.status.mission.recording = False
         self.mission_recording_file.close()
-        logger.info("RECORDING STOP")
+        logger.info("Recording stopped")
         # TODO
 
     def process_transmission(self, data: str) -> None:
@@ -321,5 +322,7 @@ class Telemetry:
                 #     if len(self.mission_recording_buffer) >= 512:
                 #         buffer_length = len(self.mission_recording_buffer)
                 #         self.recording_write_bytes(buffer_length - (buffer_length % 512))
+                self.mission_recording_file.write(f"{data}\n")
         except Exception as e:
             print(e)
+            logger.error(e)
