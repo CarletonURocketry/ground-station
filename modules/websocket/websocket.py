@@ -87,7 +87,6 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
     last_msg_send: str = ""
     pw = "d916d328c73327336b8ccb25a1309a9766df1131f3a5064473933d6aae617442"
     sudo_user = None
-    global ws_commands_queue
 
     def open(self, *args: Any, **kwargs: Any) -> None:
         TornadoWSServer.clients.add(self)
@@ -99,7 +98,6 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
         logger.info("Client disconnected")
 
     def on_message(self, message: str) -> None:
-        global ws_commands_queue
         logger.info(f"Received message: {message}")
 
         # When we allow many users to access the front end, only a single user should have access to commands

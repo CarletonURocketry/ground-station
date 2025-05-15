@@ -302,7 +302,6 @@ class Telemetry:
 
     def process_transmission(self, data: str) -> None:
         """Processes the incoming radio transmission data."""
-        
         # Always write data to file when recording, even if it can't be parsed correctly
         if self.status.mission.recording:
             logger.info(f"Recording: {data}")
