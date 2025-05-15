@@ -79,7 +79,7 @@ class Telemetry:
         self.mission_recording_file: BufferedWriter | None = None
 
         # Replay System
-        self.replay: TelemetryReplay | None = None
+        self.replay: Process | None = None
         self.replay_input: Queue[str] = mp.Queue()  # type:ignore
         self.replay_output: Queue[str] = mp.Queue()  # type:ignore
 
