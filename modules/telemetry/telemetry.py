@@ -296,14 +296,16 @@ class Telemetry:
         """Stops the current recording."""
 
         self.status.mission.recording = False
-        self.mission_recording_file.close()
+        if self.mission_recording_file:
+            self.mission_recording_file.close()
+        self.mission_recording_file = None
         logger.info("Recording stopped")
         # TODO
 
     def process_transmission(self, data: str) -> None:
         """Processes the incoming radio transmission data."""
         # Always write data to file when recording, even if it can't be parsed correctly
-        if self.status.mission.recording:
+        if self.status.mission.recording and self.mission_recording_file:
             logger.info(f"Recording: {data}")
             self.mission_recording_file.write(f"{data}\n")
 
