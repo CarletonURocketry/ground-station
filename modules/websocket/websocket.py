@@ -115,7 +115,7 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
         # that try to authenticate
         elif TornadoWSServer.sudo_user is None:
             message = message.split(" ")
-            if len(message) != 2 and message[0] == "auth":
+            if len(message) == 2 and message[0] == "auth":
                 h = hashlib.sha256()
                 h.update(message[1].encode())
                 if h.hexdigest() == TornadoWSServer.pw:
