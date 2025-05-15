@@ -4,7 +4,7 @@ Incoming information comes from rn2483_radio_payloads in payload format.
 Outputs information to telemetry_json_output in friendly JSON for UI.
 """
 
-from io import BufferedWriter
+from io import BufferedWriter, TextIOWrapper
 import logging
 from ast import literal_eval
 from queue import Queue
@@ -286,7 +286,10 @@ class Telemetry:
         # TODO
         self.status.mission.recording = True
         self.mission_path = self.missions_dir.joinpath(f"{mission_name or 'default'}.{MISSION_EXTENSION}")
-        self.mission_recording_file = BufferedWriter(open(self.mission_path))
+        # This long line creates a BufferedWriter object that can write plaintext
+        self.mission_recording_file = TextIOWrapper(
+            BufferedWriter(open(self.mission_path, "wb+", 0)), line_buffering=False, write_through=True
+        )
 
     def stop_recording(self) -> None:
         """Stops the current recording."""
@@ -304,7 +307,9 @@ class Telemetry:
             parsed_transmission: ParsedTransmission | None = parse_rn2483_transmission(data, self.config)
             if parsed_transmission and parsed_transmission.blocks:
                 # Updates the telemetry buffer with the latest block data and latest mission time
-                self.telemetry_data.update_telemetry(parsed_transmission.packet_header.version, parsed_transmission.blocks)
+                self.telemetry_data.update_telemetry(
+                    parsed_transmission.packet_header.version, parsed_transmission.blocks
+                )
 
             if self.status.mission.recording:
                 logger.info(f"Recording: {data}")
