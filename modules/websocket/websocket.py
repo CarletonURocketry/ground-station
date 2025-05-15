@@ -104,20 +104,27 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
 
         # When we allow many users to access the front end, only a single user should have access to commands
         # To facilitate this, very simple authentication is implemented.
-        # If no one has been authenticated as the sudo_user, the only messages that should be processed are those
-        # that try to authenticate. Once a sudo_user has been authenticated, only messages sent by them should be 
-        # processed
+
+        # Once a sudo_user has been authenticated, only messages sent by them should be processed
         if self == TornadoWSServer.sudo_user:
-            if message == "deauth": TornadoWSServer.sudo_user = None
-            else: ws_commands_queue.put(message)
+            if message == "deauth":
+                TornadoWSServer.sudo_user = None
+            else:
+                ws_commands_queue.put(message)
+        # If no one has been authenticated as the sudo_user, the only messages that should be processed are those
+        # that try to authenticate
         elif TornadoWSServer.sudo_user is None:
             message = message.split(" ")
-            if len(message) != 2: return
-            if message[0] == "auth":
+            if len(message) != 2 and message[0] == "auth":
                 h = hashlib.sha256()
                 h.update(message[1].encode())
                 if h.hexdigest() == TornadoWSServer.pw:
                     TornadoWSServer.sudo_user = self
+                    logger.info("Successfully authenticated")
+                else:
+                    logger.info("Incorrect password")
+            else:
+                logger.info("Insufficient permissions")
 
     def check_origin(self, origin: str) -> bool:
         """Authenticates clients from any host origin (_ parameter)."""
