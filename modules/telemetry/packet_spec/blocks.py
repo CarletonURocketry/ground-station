@@ -104,7 +104,7 @@ class AltitudeAboveSeaLevel(TimedBlock):
 
 @dataclass
 class LinearAcceleration(TimedBlock):
-    _struct_format: str = field(default="<hHHH", init=False, repr=False)
+    _struct_format: str = field(default="<hhhh", init=False, repr=False)
     measurement_time: int
     x_axis: int
     y_axis: int
@@ -128,7 +128,7 @@ class LinearAcceleration(TimedBlock):
 
 @dataclass
 class AngularVelocity(TimedBlock):
-    _struct_format: str = field(default="<hHHH", init=False, repr=False)
+    _struct_format: str = field(default="<hhhh", init=False, repr=False)
     measurement_time: int
     x_axis: int
     y_axis: int
@@ -198,7 +198,7 @@ class Temperature(TimedBlock):
 
 @dataclass
 class Voltage(TimedBlock):
-    _struct_format: str = field(default="<hiB", init=False, repr=False)
+    _struct_format: str = field(default="<hhB", init=False, repr=False)
     measurement_time: int
     voltage: int
     identifier: int
