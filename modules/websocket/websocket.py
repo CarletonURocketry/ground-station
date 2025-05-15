@@ -97,7 +97,7 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
         TornadoWSServer.clients.remove(self)
         logger.info("Client disconnected")
 
-    def on_message(self, message: str) -> None:
+    def on_message(self, message: str | bytes) -> None:
         logger.info(f"Received message: {message}")
 
         # When we allow many users to access the front end, only a single user should have access to commands
@@ -112,10 +112,10 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
         # If no one has been authenticated as the sudo_user, the only messages that should be processed are those
         # that try to authenticate
         elif TornadoWSServer.sudo_user is None:
-            message = message.split(" ")
-            if len(message) == 2 and message[0] == "auth":
+            parsed_message = message.split(" ")
+            if len(parsed_message) == 2 and parsed_message[0] == "auth":
                 h = hashlib.sha256()
-                h.update(message[1].encode())
+                h.update(parsed_message[1].encode())
                 if h.hexdigest() == TornadoWSServer.pw:
                     TornadoWSServer.sudo_user = self
                     logger.info("Successfully authenticated")

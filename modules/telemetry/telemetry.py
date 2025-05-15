@@ -76,7 +76,7 @@ class Telemetry:
         self.mission_path: Path | None = None
 
         # Mission Recording
-        self.mission_recording_file: BufferedWriter | None = None
+        self.mission_recording_file: TextIOWrapper[BufferedWriter] | None = None
 
         # Replay System
         self.replay: Process | None = None
