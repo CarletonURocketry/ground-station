@@ -23,6 +23,7 @@ from modules.misc.config import Config
 from modules.telemetry.replay import TelemetryReplay
 from modules.telemetry.parsing_utils import parse_rn2483_transmission, ParsedTransmission
 from modules.telemetry.errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
+from modules.telemetry.csv_writer import CSVWriter
 
 # Constants
 MISSION_EXTENSION: str = "mission"
@@ -77,6 +78,21 @@ class Telemetry:
 
         # Mission Recording
         self.mission_recording_file: TextIOWrapper[BufferedWriter] | None = None
+
+        # Mission parsed data recording in csv format
+        self.csv_writer = CSVWriter(
+            [
+                "Time",
+                "Altitude",
+                "Temperature",
+                "Pressure",
+                "Linear Acceleration (x,y,z)",
+                "Angular Velocity (x,y,z)",
+                "Magnetic Field Strengh (x,y,z)",
+                "Latitude",
+                "Longitude"
+            ]
+        )
 
         # Replay System
         self.replay: Process | None = None
@@ -290,6 +306,7 @@ class Telemetry:
         self.mission_recording_file = TextIOWrapper(
             BufferedWriter(open(self.mission_path, "wb+", 0)), line_buffering=False, write_through=True
         )
+        self.csv_writer.create_csv_log(mission_name)
         logger.info(f"Starting to record to {self.mission_path}")
 
     def stop_recording(self) -> None:
@@ -315,6 +332,10 @@ class Telemetry:
             if parsed and parsed.blocks:
                 # Updates the telemetry buffer with the latest block data and latest mission time
                 self.telemetry_data.add(parsed.blocks)
+                if self.status.mission.recording:
+                    self.csv_writer.add_block_data(parsed.packet_header, parsed.blocks)
+
+
         except Exception as e:
             print(e)
             logger.error(e)
