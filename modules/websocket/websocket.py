@@ -54,7 +54,6 @@ class WebSocketHandler(Process):
             ],
             websocket_ping_interval=5,
             websocket_ping_timeout=10,
-            ws_commands_queue=ws_commands_queue
         )
 
         try:
@@ -110,7 +109,6 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
             if message == "deauth":
                 TornadoWSServer.sudo_user = None
             else:
-                ws_commands_queue = self.application.settings["ws_commands_queue"]
                 ws_commands_queue.put(message)
         # If no one has been authenticated as the sudo_user, the only messages that should be processed are those
         # that try to authenticate
