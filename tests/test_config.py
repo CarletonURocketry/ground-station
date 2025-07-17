@@ -47,7 +47,7 @@ def test_radio_params_default(def_radio_params: dict[str, str | int | bool]):
     assert params.preamble_len == def_radio_params.get("preamble_len")
     assert params.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert params.iqi == def_radio_params.get("iqi")
-    assert params.sync_word == def_radio_params.get("sync_word")[2:]
+    assert params.sync_word == def_radio_params.get("sync_word")[2:]  # type: ignore
 
 
 def test_radio_params_partial_default():
@@ -75,7 +75,7 @@ def test_radio_params_default_json(def_radio_params: dict[str, str | int | bool]
     assert params.preamble_len == def_radio_params.get("preamble_len")
     assert params.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert params.iqi == def_radio_params.get("iqi")
-    assert params.sync_word == def_radio_params.get("sync_word")[2:]
+    assert params.sync_word == def_radio_params.get("sync_word")[2:]  # type: ignore
 
 
 def test_radio_params_partial_defaults_json():
@@ -215,7 +215,7 @@ def test_config_defaults(def_radio_params: dict[str, str | int | bool], callsign
     assert config.radio_parameters.preamble_len == def_radio_params.get("preamble_len")
     assert config.radio_parameters.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert config.radio_parameters.iqi == def_radio_params.get("iqi")
-    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")[2:]
+    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")[2:]  # type: ignore
     assert config.approved_callsigns == callsigns
 
 
@@ -232,7 +232,7 @@ def test_config_defaults_json(def_radio_params: dict[str, str | int | bool], cal
     assert config.radio_parameters.preamble_len == def_radio_params.get("preamble_len")
     assert config.radio_parameters.cyclic_redundancy == def_radio_params.get("cyclic_redundancy")
     assert config.radio_parameters.iqi == def_radio_params.get("iqi")
-    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")[2:]
+    assert config.radio_parameters.sync_word == def_radio_params.get("sync_word")[2:]  # type: ignore
     assert config.approved_callsigns == callsigns
 
 
@@ -264,7 +264,7 @@ def test_config_from_json(config: dict[str, dict[str, str | int | bool]]):
     assert cfg.radio_parameters.preamble_len == rparams.get("preamble_len")
     assert cfg.radio_parameters.cyclic_redundancy == rparams.get("cyclic_redundancy")
     assert cfg.radio_parameters.iqi == rparams.get("iqi")
-    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]
+    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]  # type: ignore
     assert cfg.approved_callsigns == config["approved_callsigns"]
 
 
@@ -285,7 +285,7 @@ def test_load_config(config: dict[str, dict[str, str | int | bool]]):
     assert cfg.radio_parameters.preamble_len == rparams.get("preamble_len")
     assert cfg.radio_parameters.cyclic_redundancy == rparams.get("cyclic_redundancy")
     assert cfg.radio_parameters.iqi == rparams.get("iqi")
-    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]
+    assert cfg.radio_parameters.sync_word == rparams.get("sync_word")[2:]  # type: ignore
     assert cfg.approved_callsigns == config["approved_callsigns"]
 
     # Teardown
