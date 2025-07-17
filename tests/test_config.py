@@ -56,7 +56,6 @@ def test_radio_params_partial_default():
     defaults, and specified values to the passed values.
     """
     params = RadioParameters(sync_word="0x13", power=12, coding_rate=CodingRates.FOUR_FIFTHS)
-    params = RadioParameters(power=12, coding_rate=CodingRates.FOUR_FIFTHS)
     assert params.sync_word == "13"
     assert params.power == 12
     assert params.coding_rate == CodingRates.FOUR_FIFTHS
