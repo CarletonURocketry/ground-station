@@ -1,7 +1,7 @@
 # # Contains test cases for verifying the parsing of block headers
 # __author__ = "Elias Hawa"
 
-# import pytest
+import pytest
 # from modules.telemetry.v1.data_block import (
 #     PressureDB,
 #     TemperatureDB,
@@ -13,42 +13,62 @@
 # )
 
 
-# @pytest.fixture
-# def pressure_data_content() -> bytes:
-#     """
-#     Returns a pressure sensor reading with the following attributes
-#     mission time: 0 ms
-#     pressure: 100810 mB
-#     """
-#     return b"\x00\x00\x00\x00\xca\x89\x01\x00"
+from modules.telemetry.packet_spec.headers import (
+    BlockType,
+    PacketHeader,
+    BlockHeader,
+    InvalidHeaderFieldValueError
+)
+from modules.telemetry.packet_spec.blocks import (
+    Block,
+    TimedBlock,
+    Pressure,
+    Temperature,
+    LinearAcceleration,
+    AngularVelocity,
+    Humidity,
+    Coordinates,
+    Voltage,
+    MagneticField
+)
 
 
-# @pytest.fixture
-# def temperature_data_content() -> bytes:
-#     """
-#     Returns a temperature sensor reading with the following attributes
-#     mission time: 0 ms
-#     temperature: 22000 mdC
-#     """
-#     return b"\x00\x00\x00\x00\xf0\x55\x00\x00"
+@pytest.fixture
+def pressure_data_content() -> bytes:
+    """
+    Returns a pressure sensor reading with the following attributes
+    mission time: 0 ms
+    pressure: 100810 mB
+    """
+    
+    return b"\x00\x00\x00\x00\xca\x89\x01\x00"
 
 
-# @pytest.fixture
-# def linear_acceleration_data_content() -> bytes:
-#     """
-#     Returns a linear acceleration sensor reading with the following attributes
-#     mission time: 0ms
-#     x axis acceleration: 3cm/s^2
-#     y axis acceleration: -4cm/s^2
-#     z axis acceleration: 1032cm/s^2
-#     Note that LinearAccelerationDB from_bytes method should convert the axis values
-#     from cm/s^2 to m/s^2
-#     """
-#     return b"\x00\x00\x00\x00\x03\x00\xfc\xff\x08\x04\x00\x00"
+@pytest.fixture
+def temperature_data_content() -> bytes:
+    """
+    Returns a temperature sensor reading with the following attributes
+    mission time: 0 ms
+    temperature: 22000 mdC
+    """
+    return b"\x00\x00\x00\x00\xf0\x55\x00\x00"
 
 
-# @pytest.fixture
-# def angular_velocity_data_content() -> bytes:
+@pytest.fixture
+def linear_acceleration_data_content() -> bytes:    
+    #     Returns a linear acceleration sensor reading with the following attributes
+    #     mission time: 0ms
+    #     x axis acceleration: 3cm/s^2
+    #     y axis acceleration: -4cm/s^2
+    #     z axis acceleration: 1032cm/s^2
+    #     Note that LinearAccelerationDB from_bytes method should convert the axis values
+    #     from cm/s^2 to m/s^2
+    
+    return b"\x00\x00\x00\x00\x03\x00\xfc\xff\x08\x04\x00\x00"
+
+
+@pytest.fixture
+def angular_velocity_data_content() -> bytes:
 #     """
 #     Returns an angular velocity sensor reading with the following attributes
 #     mission time: 0ms
@@ -58,48 +78,57 @@
 #     Note that the AngularVelocityDb from_bytes method should convert the axis values
 #     from tenths of a degree per second to degrees per second
 #     """
-#     return b"\x00\x00\x00\x00\x06\x00\x0b\x00\xfd\xff\x00\x00"
+    return b"\x00\x00\x00\x00\x06\x00\x0b\x00\xfd\xff\x00\x00"
 
 
-# @pytest.fixture
-# def humidity_data_content() -> bytes:
+@pytest.fixture
+def humidity_data_content() -> bytes:
 #     """
 #     Returns a humidity sensor reading with the following attributes
 #     mission time: 4121ms
 #     humidity: 44%
 #     """
-#     return b"\x19\x10\x00\x00\xfe\x10\x00\x00"
+    return b"\x19\x10\x00\x00\xfe\x10\x00\x00"
 
 
-# @pytest.fixture
-# def coordinates_data_content() -> bytes:
+@pytest.fixture
+def coordinates_data_content() -> bytes:
 #     """
 #     Returns a coordinates sensor reading with the following attributes
 #     mission time: 3340ms
 #     latitude: 0
 #     longitude: 0
 #     """
-#     return b"\x0c\x0d\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    return b"\x0c\x0d\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 
 
-# @pytest.fixture
-# def voltage_data_content() -> bytes:
+@pytest.fixture
+def voltage_data_content() -> bytes:
 #     """
 #     Returns a voltage sensor reading with the following attributes
 #     mission time: 3483 ms
 #     id: 2
 #     voltage: 3310 mV
 #     """
-#     return b"\x9b\x0d\x00\x00\x02\x00\xee\x0c"
+    return b"\x9b\x0d\x00\x00\x02\x00\xee\x0c"
 
 
-# def test_pressure_data_block(pressure_data_content: bytes) -> None:
-#     """Test that the pressure data block is parsed correctly."""
-#     pdb = PressureDB.from_bytes(pressure_data_content)
+def test_pressure_data_block(pressure_data_content: bytes) -> None:
+    """Test that the pressure data block is parsed correctly."""
+    packet_header = PacketHeader("TEST", 0, 1, 0)
+    block_header = BlockHeader(BlockType.PRESSURE)
+    
+    # Parse block
+    pressure_block = blocks.parse_block_contents(
+        packet_header,
+        block_header, 
+        pressure_data_content
+    )
+     
+    
 
-#     assert pdb.mission_time == 0
-#     assert pdb.pressure == 100810
-
+    print(pressure_block.measurement_time)  # 0 (milliseconds)
+    print(pressure_block.pressure)   
 
 # def test_temperature_data_block(temperature_data_content: bytes) -> None:
 #     """Test that the temperature is parsed correctly."""
@@ -155,3 +184,6 @@
 #     assert vdb.mission_time == 3483
 #     assert vdb.id == 2
 #     assert vdb.voltage == 3310
+
+# Running the pressure sensor parsing command. 
+
