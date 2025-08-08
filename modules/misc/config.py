@@ -127,6 +127,7 @@ class Config:
     telemetry_buffer_size: int = 20
     radio_parameters: RadioParameters = field(default_factory=RadioParameters)
     approved_callsigns: dict[str, str] = field(default_factory=dict[str, str])
+    parsing_parameters: dict[str, dict[str, Any]] = field(default_factory=dict[str, dict[str, Any]])
 
     def __post_init__(self):
         if len(self.approved_callsigns) == 0:
@@ -144,6 +145,7 @@ class Config:
             telemetry_buffer_size=data.get("telemetry_buffer_size", cls.telemetry_buffer_size),
             radio_parameters=RadioParameters.from_json(data.get("radio_params", dict())),
             approved_callsigns=data.get("approved_callsigns", dict()),
+            parsing_parameters=data.get("parsing_params", dict())
         )
 
 
