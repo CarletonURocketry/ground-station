@@ -26,6 +26,8 @@ class BlockType(IntEnum):
     COORDINATES = 0x07
     VOLTAGE = 0x08
     MAGNETIC_FIELD = 0x09
+    STATUS_MESSAGE = 0x0A
+    ERROR_MESSAGE = 0x0B
 
 
 class InvalidHeaderFieldValueError(Exception):
