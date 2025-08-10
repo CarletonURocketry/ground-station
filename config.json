@@ -13,25 +13,6 @@
     "cyclic_redundancy": true,
     "iqi": false
   },
-  "parsing_params": {
-    "error_codes": {
-      "0x00": "A general error has occurred",
-      "0x01": "The process in proc_id has died"
-    },
-    "status_codes": {
-      "0x00": "All systems nominal",
-      "0x01": "The telemetry system just changed to the idle state",
-      "0x02": "The telemetry system just changed to the airborne state",
-      "0x03": "The telemetry system just changed to the ascent state",
-      "0x04": "The telemetry system just detected apogee",
-      "0x05": "The telemetry system just changed to the landed state",
-      "0x06": "The telemetry system is still in the idle state",
-      "0x07": "The telemetry system is still in the airborne state",
-      "0x08": "The telemetry system is still in the ascent stage",
-      "0x09": "The telemetry system is still in the descent stage",
-      "0x0A": "The telemetry system is still in the landed state"
-    }
-  },
   "approved_callsigns": {
     "VA3INI": "Matteo Golin",
     "VA3ZTA": "Darwin Jull",
