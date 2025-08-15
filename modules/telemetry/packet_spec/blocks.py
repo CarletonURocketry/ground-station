@@ -5,13 +5,12 @@ import struct
 from modules.telemetry.packet_spec.headers import *
 from modules.misc.unit_conversions import *
 from typing import Any
-from modules.misc.config import Config
+
 
 @dataclass
 class Block:
     # A format for the struct class to unpack the block from bytes
     _struct_format: str = field(default="", init=False, repr=False)
-    config = Config.from_json({})
 
     @classmethod
     def size(cls) -> int:
@@ -229,9 +228,13 @@ class MagneticField(TimedBlock):
 @dataclass
 class FlightStatus(TimedBlock):
     _struct_format: str = field(default="<hB", init=False, repr=False)
-    flight_status: int 
+    measurement_time: int
+    flight_status: int
+
     def output_formatted(self, into: dict[str, Any]):
-        add_to_dict(into, ["flight_status", "flight_status"], self.config.parsing_parameters["status_codes"][self.flight_status])
+        add_to_dict(into, ["flight_status", "mission_time"], self.measurement_time)
+        add_to_dict(into, ["flight_status", "status_code"], self.flight_status)
+
 
 @dataclass
 class FlightError(TimedBlock):
@@ -240,12 +243,11 @@ class FlightError(TimedBlock):
     proc_id: int
     error_code: int
 
-    proc_id = proc_id & 0b00011111
-
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["flight_error", "mission_time"], self.measurement_time)
         add_to_dict(into, ["flight_error", "proc_id"], self.proc_id)
-        add_to_dict(into, ["flight_error", "error_code"], self.config.parsing_parameters["error_codes"][self.error_code])
+        add_to_dict(into, ["flight_error", "error_code"], self.error_code)
+
 
 class InvalidBlockContents(Exception):
     """Exception raised when invalid block contents are encountered"""
@@ -300,9 +302,9 @@ def get_block_class(type: BlockType) -> type[Block]:
         case BlockType.MAGNETIC_FIELD:
             return MagneticField
         case BlockType.STATUS_MESSAGE:
-            return FlightStatus 
+            return FlightStatus
         case BlockType.ERROR_MESSAGE:
-            return FlightError 
+            return FlightError
         case _:
             raise ValueError(f"Unsupported block type: {type}")
 
