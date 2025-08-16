@@ -225,6 +225,30 @@ class MagneticField(TimedBlock):
         add_to_dict(into, ["magnetic_field", "magnitude"], magnitude(self.x_axis, self.y_axis, self.z_axis))
 
 
+@dataclass
+class FlightStatus(TimedBlock):
+    _struct_format: str = field(default="<hB", init=False, repr=False)
+    measurement_time: int
+    flight_status: int
+
+    def output_formatted(self, into: dict[str, Any]):
+        add_to_dict(into, ["flight_status", "mission_time"], self.measurement_time)
+        add_to_dict(into, ["flight_status", "status_code"], self.flight_status)
+
+
+@dataclass
+class FlightError(TimedBlock):
+    _struct_format: str = field(default="<hBB", init=False, repr=False)
+    measurement_time: int
+    proc_id: int
+    error_code: int
+
+    def output_formatted(self, into: dict[str, Any]):
+        add_to_dict(into, ["flight_error", "mission_time"], self.measurement_time)
+        add_to_dict(into, ["flight_error", "proc_id"], self.proc_id)
+        add_to_dict(into, ["flight_error", "error_code"], self.error_code)
+
+
 class InvalidBlockContents(Exception):
     """Exception raised when invalid block contents are encountered"""
 
@@ -277,6 +301,10 @@ def get_block_class(type: BlockType) -> type[Block]:
             return Voltage
         case BlockType.MAGNETIC_FIELD:
             return MagneticField
+        case BlockType.STATUS_MESSAGE:
+            return FlightStatus
+        case BlockType.ERROR_MESSAGE:
+            return FlightError
         case _:
             raise ValueError(f"Unsupported block type: {type}")
 
