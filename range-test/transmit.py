@@ -27,7 +27,7 @@ def main() -> None:
     print(f"Using parameters: {params}")
     
     # Initialize radio with port and parameters
-    radio = RN2483Radio(sys.argv[1], params)
+    radio = RN2483Radio(sys.argv[1])
     
     # Setup the radio (reset, configure, etc.)
     radio.setup(params)
