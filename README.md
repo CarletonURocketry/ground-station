@@ -35,7 +35,7 @@ contributions are currently limited to *Carleton University students or CUInSpac
 [ground-station-ui]: https://github.com/CarletonURocketry/ground-station-ui
 [wiki]: https://github.com/CarletonURocketry/ground-station/wiki
 
-# Installation
+## Installation
 ```
 python3 -m venv .venv
 ```
@@ -52,7 +52,17 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-# Run the project
+## Running the ground station
 ```
 python main.py
+```
+
+## Running the radio tests
+### To receive
+```
+python range-test/receive.py
+```
+### To transmit
+```
+python range-test/transmit.py
 ```
