@@ -10,7 +10,6 @@ TRANSMIT_DATA: str = (
     "VA3INI - This is a test message to test the functionality of the RN2483 transceiver with a long packet containing plenty of data - VA3INI - Packet number follows"
 )
 
-
 def main() -> None:
 
     if len(sys.argv) != 2:
@@ -20,9 +19,12 @@ def main() -> None:
     print(f"Using packet length: {len(TRANSMIT_DATA.encode('ascii'))}")
 
     # Get config file path relative to this script
-    config_path = Path(__file__).parent.parent / "src" / "config.json"
+    script_dir = Path(__file__).parent
+    config_path = script_dir / "config_lora.json"
+    
     with open(config_path) as f:
-        params = RadioParameters.from_json(json.load(f))
+        config = json.load(f)
+        params = RadioParameters.from_json(config["radio_params"])
     
     print(f"Using parameters: {params}")
     

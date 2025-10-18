@@ -12,15 +12,18 @@ def main() -> None:
         print("Must provide the COM port/serial port where the radio is connected.")
         exit(1)
 
-    # Get config file path relative to this script
-    config_path = Path(__file__).parent.parent / "src" / "config.json"
+    script_dir = Path(__file__).parent
+    config_path = script_dir / "config_lora.json"
+    
     with open(config_path) as f:
-        params = Parameters.from_json(json.load(f))
+        config = json.load(f)
+        params = Parameters.from_json(config["radio_params"])
     
     print(f"Using parameters: {params}")
     
     # Initialize radio with port and parameters
     radio = Radio(sys.argv[1])
+    
     
     # Setup the radio (reset, configure, etc.)
     radio.setup(params)
