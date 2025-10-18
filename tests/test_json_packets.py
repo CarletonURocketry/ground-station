@@ -2,7 +2,7 @@
 __author__ = "Matteo Golin"
 
 # Imports
-import modules.telemetry.status as status
+import ground_station.telemetry.status as status
 
 
 # Default parameter tests

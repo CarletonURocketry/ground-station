@@ -16,13 +16,13 @@ from time import sleep
 from typing import Any, TypeAlias
 from types import FrameType
 
-from modules.telemetry.data import TelemetryBuffer
-from modules.telemetry.status import TelemetryStatus, MissionState, ReplayState
-import modules.telemetry.websocket_commands as wsc
-from modules.misc.config import Config
-from modules.telemetry.replay import TelemetryReplay
-from modules.telemetry.parsing_utils import parse_rn2483_transmission, ParsedTransmission
-from modules.telemetry.errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
+from ground_station.telemetry.data import TelemetryBuffer
+from ground_station.telemetry.status import TelemetryStatus, MissionState, ReplayState
+import ground_station.telemetry.websocket_commands as wsc
+from ground_station.misc.config import Config
+from ground_station.telemetry.replay import TelemetryReplay
+from ground_station.telemetry.parsing_utils import parse_rn2483_transmission, ParsedTransmission
+from ground_station.telemetry.errors import MissionNotFoundError, AlreadyRecordingError, ReplayPlaybackError
 
 # Constants
 MISSION_EXTENSION: str = "mission"

@@ -5,7 +5,7 @@ __author__ = "Matteo Golin"
 import pytest
 import json
 import os
-from modules.misc.config import CodingRates, Config, RadioParameters, load_config
+from ground_station.misc.config import CodingRates, Config, RadioParameters, load_config
 
 
 # Fixtures

@@ -1,16 +1,16 @@
 # import pytest
 # import logging
 # from pytest import LogCaptureFixture
-# from modules.telemetry.v1.block import (
+# from ground_station.telemetry.v1.block import (
 #     BlockType,
 #     PacketHeader,
 #     BlockHeader,
 #     InvalidHeaderFieldValueError,
 #     UnsupportedEncodingVersionError,
 # )
-# from modules.telemetry.parsing_utils import parse_radio_block, from_approved_callsign
-# from modules.misc.config import load_config
-# from modules.telemetry.v1.data_block import DataBlockSubtype
+# from ground_station.telemetry.parsing_utils import parse_radio_block, from_approved_callsign
+# from ground_station.misc.config import load_config
+# from ground_station.telemetry.v1.data_block import DataBlockSubtype
 
 # # Fixtures and tests to ensure that parse_radio_block works as expected
 

@@ -34,3 +34,25 @@ contributions are currently limited to *Carleton University students or CUInSpac
 [ground-station-board]: https://github.com/CarletonURocketry/avionics-hardware/pull/18
 [ground-station-ui]: https://github.com/CarletonURocketry/ground-station-ui
 [wiki]: https://github.com/CarletonURocketry/ground-station/wiki
+
+# Installation
+```
+python3 -m venv .venv
+```
+
+```
+source .venv/bin/activate
+```
+
+```
+pip install -r requirements.txt
+```
+
+```
+pip install -e .
+```
+
+# Run the project
+```
+python main.py
+```

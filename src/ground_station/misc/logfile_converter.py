@@ -42,9 +42,9 @@ def logfile_to_mission(logfile: Path, mission: Path) -> None:
             mission_file.write(packet + "\n")
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=DESC)
-    parser.add_argument("logfile_input", type=Path, help="The logfile to convert")
-    parser.add_argument("mission_output", type=Path, help="The mission file to create")
-    args = parser.parse_args()
-    logfile_to_mission(args.logfile_input, args.mission_output)
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser(description=DESC)
+#     parser.add_argument("logfile_input", type=Path, help="The logfile to convert")
+#     parser.add_argument("mission_output", type=Path, help="The mission file to create")
+#     args = parser.parse_args()
+#     logfile_to_mission(args.logfile_input, args.mission_output)

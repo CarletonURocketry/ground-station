@@ -4,7 +4,7 @@ __author__ = "Matteo Golin"
 # Imports
 import pytest
 from enum import Enum
-import modules.telemetry.websocket_commands as cmd
+import ground_station.telemetry.websocket_commands as cmd
 
 
 # Helper functions
