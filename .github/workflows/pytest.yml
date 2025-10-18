@@ -19,6 +19,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest
         pip install -r requirements.txt
+        pip install -e .
     - name: Running the full pytest suite
       run: |
         pytest
