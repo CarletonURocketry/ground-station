@@ -9,13 +9,13 @@ from queue import Queue
 from re import sub
 import logging
 from typing import TypeAlias, Any
-from modules.misc.config import load_config
+from ground_station.misc.config import load_config
 
-from modules.misc.messages import print_cu_rocket
-from modules.serial.serial_manager import SerialManager
-from modules.telemetry.telemetry import Telemetry
-from modules.websocket.websocket import WebSocketHandler
-from modules.misc.cli import parser
+from ground_station.misc.messages import print_cu_rocket
+from ground_station.serial.serial_manager import SerialManager
+from ground_station.telemetry.telemetry import Telemetry
+from ground_station.websocket.websocket import WebSocketHandler
+from ground_station.misc.cli import parser
 
 JSON: TypeAlias = dict[str, Any]
 STR_TO_LOGGING_MODE: dict[str, int] = {

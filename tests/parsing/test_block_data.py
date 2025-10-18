@@ -2,7 +2,7 @@
 # __author__ = "Elias Hawa"
 
 # import pytest
-# from modules.telemetry.v1.data_block import (
+# from ground_station.telemetry.v1.data_block import (
 #     PressureDB,
 #     TemperatureDB,
 #     LinearAccelerationDB,

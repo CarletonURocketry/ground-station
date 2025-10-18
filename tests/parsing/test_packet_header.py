@@ -2,7 +2,7 @@
 # __author__ = "Matteo Golin"
 
 # import pytest
-# from modules.telemetry.v1.block import PacketHeader, InvalidHeaderFieldValueError
+# from ground_station.telemetry.v1.block import PacketHeader, InvalidHeaderFieldValueError
 
 
 # @pytest.fixture

@@ -3,9 +3,9 @@ from typing import List, Optional
 import logging
 
 
-from modules.telemetry.packet_spec.headers import *
-from modules.telemetry.packet_spec.blocks import Block, parse_block_contents, get_block_class, InvalidBlockContents
-from modules.misc.config import Config
+from ground_station.telemetry.packet_spec.headers import *
+from ground_station.telemetry.packet_spec.blocks import Block, parse_block_contents, get_block_class, InvalidBlockContents
+from ground_station.misc.config import Config
 
 logger = logging.getLogger(__name__)
 

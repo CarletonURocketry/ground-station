@@ -2,7 +2,7 @@
 
 # # Imports
 # import pytest
-# from modules.telemetry.v1.block import BlockHeader, InvalidHeaderFieldValueError
+# from ground_station.telemetry.v1.block import BlockHeader, InvalidHeaderFieldValueError
 
 
 # # Fixtures

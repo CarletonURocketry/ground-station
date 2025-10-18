@@ -1,5 +1,6 @@
 [project]
-name = "Telemetry Server"
+name = "ground_station"
+version = "1.0.0"
 description = "The CUInSpace ground station telemetry server for parsing and distributing rocket telemetry."
 license = {text = "MIT"}
 authors = [
