@@ -5,7 +5,8 @@ __author__ = "Matteo Golin"
 import pytest
 import json
 import os
-from ground_station.misc.config import CodingRates, Config, RadioParameters, load_config
+from ground_station.misc.config import CodingRates, Config, RadioParameters
+from pathlib import Path
 
 
 # Fixtures
@@ -272,10 +273,13 @@ def test_load_config(config: dict[str, dict[str, str | int | bool]]):
     """Test that loading a Config object from a valid JSON config file results in the correct values being set."""
 
     # Setup
-    with open("./test_config.json", "w") as file:
+    script_dir = Path(__file__).parent
+    config_path = script_dir / "test_config.json"
+
+    with open(config_path, "w") as file:
         json.dump(config, file)
 
-    cfg = load_config("./test_config.json")
+    cfg = Config.from_json(config)
     rparams = config["radio_parameters"]
     assert cfg.radio_parameters.modulation.value == rparams.get("modulation")
     assert cfg.radio_parameters.frequency == rparams.get("frequency")
@@ -289,4 +293,4 @@ def test_load_config(config: dict[str, dict[str, str | int | bool]]):
     assert cfg.approved_callsigns == config["approved_callsigns"]
 
     # Teardown
-    os.remove("./test_config.json")
+    os.remove(config_path)
