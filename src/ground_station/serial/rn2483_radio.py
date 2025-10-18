@@ -200,3 +200,35 @@ class RN2483Radio:
         """
         radio_write(self.serial, "radio get snr")
         return int(self.serial.readline())
+
+    def transmit(self, data: str) -> bool:
+        """
+        Transmits data over the radio.
+
+        Arguments:
+            data: The string message to transmit. Will be encoded to hexadecimal.
+
+        Returns:
+            True if transmission was successful, False otherwise.
+        """
+        # Must pause MAC before transmitting
+        radio_write(self.serial, "mac pause")
+        line = str(self.serial.readline())
+        if "4294967245" not in line:
+            return False
+        
+        # Encode data to string of hex
+        data_str = ""
+        for b in data.encode("ascii"):
+            data_str += hex(b)[2:]
+        
+        # Transmit the data
+        radio_write(self.serial, f"radio tx {data_str}")
+        if not wait_for_ok(self.serial):
+            return False
+        
+        # Wait for response of successful TX
+        line = ""
+        while "radio_tx_ok" not in line:
+            line = str(self.serial.readline())
+        return True

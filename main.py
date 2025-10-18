@@ -9,8 +9,9 @@ from queue import Queue
 from re import sub
 import logging
 from typing import TypeAlias, Any
-from ground_station.misc.config import load_config
+import json
 
+from ground_station.misc.config import Config
 from ground_station.misc.messages import print_cu_rocket
 from ground_station.serial.serial_manager import SerialManager
 from ground_station.telemetry.telemetry import Telemetry
@@ -62,7 +63,7 @@ def main():
     telemetry_json_output: Queue[JSON] = mp.Queue()  # type: ignore
 
     # Load config file
-    config = load_config("config.json")
+    config = Config.from_json(json.load(open("config.json")))
 
     # Print display screen
     print_cu_rocket(config.rocket_name, VERSION)
