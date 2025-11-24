@@ -129,6 +129,14 @@ def main():
 def parse_ws_command(ws_cmd: str, serial_commands: Queue[list[str]], telemetry_commands: Queue[list[str]]) -> None:
     """Parses a websocket command and places it on the correct process queue (telemetry or serial)."""
 
+    # If the client id exists, then parse it out
+    # Example format with a client id: "__client_id__7ecc8f4e telemetry replay play july_12th"
+    client_id = ""
+    if ws_cmd.startswith("__client_id__"):
+        parts = ws_cmd.split(" ", 1)
+        client_id = parts[0].replace("__client_id__", "")
+        ws_cmd = parts[1] if len(parts) > 1 else ""
+
     # Remove special characters
     parsed_command = sub(r"[^\da-zA-Z_./\s-]+", "", ws_cmd).split(" ")
 
@@ -139,7 +147,9 @@ def parse_ws_command(ws_cmd: str, serial_commands: Queue[list[str]], telemetry_c
         case "serial":
             serial_commands.put(parsed_command[1:])
         case "telemetry":
-            telemetry_commands.put(parsed_command[1:])
+            # Include client id as the first element for telemetry commands
+            # This is so it can send specific data to specific clients (replay data, anything else we want to add in the future)
+            telemetry_commands.put([client_id] + parsed_command[1:])
         case "shutdown":
             raise ShutdownException
         case _:

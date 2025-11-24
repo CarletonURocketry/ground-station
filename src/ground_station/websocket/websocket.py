@@ -11,9 +11,9 @@ import json
 from multiprocessing import Queue, Process
 from abc import ABC
 from typing import Optional, Any
-import hashlib
 import logging
 import os.path
+import uuid
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
@@ -83,23 +83,37 @@ class WebSocketHandler(Process):
 class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
     """The server which handles websocket connections."""
 
-    clients: set[TornadoWSServer] = set()
+    # Clients now have a client ID
+    clients: dict[str, TornadoWSServer] = {}
     last_msg_send: str = ""
 
     def open(self, *args: Any, **kwargs: Any) -> None:
-        TornadoWSServer.clients.add(self)
+        # Generate unique client ID using UUID4
+        # This should make sure that there are no duplicate client IDs
+        # UUID4 has been proven to be so unbelievably unlikely to have duplicates that people don't even bother considering it, so this is very good for our use case
+        self.client_id = str(uuid.uuid4())
+        TornadoWSServer.clients[self.client_id] = self
         self.send_message(self.last_msg_send)
-        logger.info("Client connected")
+        logger.info(f"Client connected with ID: {self.client_id}")
 
     def on_close(self) -> None:
-        TornadoWSServer.clients.remove(self)
-        logger.info("Client disconnected")
+        # Safety check: client_id might not be set if connection failed during open()
+        if not hasattr(self, 'client_id'):
+            logger.warning("Client disconnected before client_id was assigned")
+            return
+            
+        if self.client_id in TornadoWSServer.clients:
+            del TornadoWSServer.clients[self.client_id]
+        # Notify telemetry to stop any active replay for this client
+        ws_commands_queue.put(f"__client_id__{self.client_id} telemetry replay stop")
+        logger.info(f"Client disconnected: {self.client_id}")
 
     def on_message(self, message: str | bytes) -> None:
         message = str(message)
         logger.info(f"Received message: {message}")
 
-        ws_commands_queue.put(message)
+        # Put client id at the start of the command for tracking which client sent it
+        ws_commands_queue.put(f"__client_id__{self.client_id} {message}")
 
     def check_origin(self, origin: str) -> bool:
         """Authenticates clients from any host origin (_ parameter)."""
@@ -111,5 +125,22 @@ class TornadoWSServer(tornado.websocket.WebSocketHandler, ABC):
             return
 
         cls.last_msg_send = message
-        for client in cls.clients:
-            _ = client.write_message(message)
+        
+        # Parse message to check for target field
+        try:
+            msg_data = json.loads(message)
+            target = msg_data.get("target")
+            
+            # Treat empty string same as None (broadcast to all clients)
+            if target and target in cls.clients:
+                # Send to specific client
+                _ = cls.clients[target].write_message(message)
+            elif target is None or target == "":
+                # Send to all clients
+                for client in cls.clients.values():
+                    _ = client.write_message(message)
+            # If target specified but not found, message is silently dropped
+        except (json.JSONDecodeError, AttributeError):
+            # If message isn't JSON, send to all clients
+            for client in cls.clients.values():
+                _ = client.write_message(message)
