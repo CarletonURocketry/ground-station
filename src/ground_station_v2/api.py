@@ -4,6 +4,7 @@ import uvicorn
 import asyncio
 from src.ground_station_v2.replay import Replay
 import logging
+from src.ground_station_v2.record import Record
 
 logger = logging.getLogger(__name__)
 
@@ -48,15 +49,17 @@ async def replay_goto(x_client_id: str = Header(alias="X-Client-ID")):
 
     return {"status": "ok"}
 
-@app.post("/radio_record")
-async def replay_record(x_client_id: str = Header(alias="X-Client-ID")):
-    if x_client_id not in connected_clients:
-        raise HTTPException(status_code=401, detail="Client not connected")
+@app.post("/record_start")
+async def record_start(x_client_id: str = Header(alias="X-Client-ID")):
 
-    logger.info(f"Radio record for client {x_client_id}")
-
+    logger.info(f"Record start for client {x_client_id}")
     return {"status": "ok"}
 
+@app.post("/record_stop")
+async def record_stop(x_client_id: str = Header(alias="X-Client-ID")):
+
+    logger.info(f"Record stop for client {x_client_id}")
+    return {"status": "ok"}
 
 # simple readonly websocket endpoint, doesn't process any commands 
 @app.websocket("/ws")
