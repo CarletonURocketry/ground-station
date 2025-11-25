@@ -26,3 +26,6 @@ pytest>=7.4.3
 PyYAML>=6.0.1
 setuptools>=68.2.2
 tornado>=6.2
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=12.0
