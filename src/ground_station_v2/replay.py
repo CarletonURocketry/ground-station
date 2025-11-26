@@ -11,14 +11,14 @@ class Replay:
     # why the hell are we storing raw packets and parsing them at runtime?
     # we should instead log raw packets in one directory and timestamped parsed data in another
     # for now this will stay
-    async def run(self, websocket_client):
+    async def run(self):
         self.playing = True
         with open(self.replay_path, "r") as file:
             for line in file:
                 if not self.playing:
                     break
                 if self.speed > 0:
-                    websocket_client.send_text(line.strip())
+                    yield line.strip()
                 # TODO: this is stupid, time delay should be based on the time between packets
                 # not a fixed 52ms bruh moment
                 await asyncio.sleep(0.052 / self.speed if self.speed > 0 else 0.052)

@@ -1,16 +1,67 @@
 from fastapi import FastAPI, Header, WebSocket, WebSocketException, WebSocketDisconnect, HTTPException
+from contextlib import asynccontextmanager
 import uuid
 import uvicorn
 import asyncio
+import json
 from src.ground_station_v2.replay import Replay
-import logging
 from src.ground_station_v2.record import Record
+from typing import Any
+import logging
+from src.ground_station_v2.radio.serial import get_radio_packet
+from src.ground_station_v2.radio.packets.spec import parse_rn2483_transmission
+from src.ground_station_v2.config import load_config
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
-
 connected_clients: dict[str, WebSocket] = {}
+
+async def broadcast_radio_packets():
+    logger.info("Starting broadcast_radio_packets")
+    config = load_config("config.json")
+
+    try:
+        async for packet in get_radio_packet():
+            packet_hex = packet.hex()
+            parsed = parse_rn2483_transmission(packet_hex, config)
+            
+            if not parsed:
+                logger.warning(f"Failed to parse packet: {packet_hex}")
+                continue
+            
+            telemetry_dict: dict[str, Any] = {}
+            for block in parsed.blocks:
+                block.output_formatted(telemetry_dict)
+            
+            json_packet: str = json.dumps(telemetry_dict)
+            
+            disconnected: list[str] = []
+            for client_id, websocket in connected_clients.items():
+                try:
+                    await websocket.send_text(json_packet)
+                except Exception as e:
+                    logger.warning(f"Failed to send to client {client_id}: {e}")
+                    disconnected.append(client_id)
+            
+            for client_id in disconnected:
+                connected_clients.pop(client_id, None)
+    except Exception as e:
+        logger.error(f"Error in broadcast_radio_packets: {e}", exc_info=True)
+
+
+# handles the lifespan of the app, creates and destroys async tasks
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(broadcast_radio_packets())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+app = FastAPI(lifespan=lifespan)
+
 
 # generates a uuid for the client to use 
 @app.get("/client_id")
