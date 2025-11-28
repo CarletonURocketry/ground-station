@@ -62,6 +62,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+record = Record()
+
 
 # generates a uuid for the client to use 
 @app.get("/client_id")
@@ -103,12 +105,14 @@ async def replay_goto(x_client_id: str = Header(alias="X-Client-ID")):
 @app.post("/record_start")
 async def record_start(x_client_id: str = Header(alias="X-Client-ID")):
 
+    record.start()
     logger.info(f"Record start for client {x_client_id}")
     return {"status": "ok"}
 
 @app.post("/record_stop")
 async def record_stop(x_client_id: str = Header(alias="X-Client-ID")):
 
+    record.stop()
     logger.info(f"Record stop for client {x_client_id}")
     return {"status": "ok"}
 
