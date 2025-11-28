@@ -1,4 +1,5 @@
 from pathlib import Path
+from src.ground_station_v2.radio.packets.spec import ParsedTransmission
 
 # saves data in the "recordings" dir
 # recording dir has child dirs for each mission, the default name is the timestamp but it should have the ability to be renamed
@@ -11,6 +12,13 @@ from pathlib import Path
 # Add a variable if currently recording or not, and implement start/stop. Then inside of main api when the record api request comes in, set to true and then it starts recording
 class Record:
     _instance = None
+
+    raw_file = None
+    parsed_file = None
+
+    # Make this the current timestamp by default
+    mission_name = None
+
     recording = False
 
     # singleton pattern
@@ -22,12 +30,31 @@ class Record:
             Path("recordings").mkdir(exist_ok=True)
         return cls._instance
     
-    # def write_recording(raw_packet, parsed_packet, self):
-    #     # Writes recording based off
+
+    def init_mission(self, recordings_path: str, mission_name: str | None):
+        self.mission_name = mission_name
+
+        self.raw_file = open(recordings_path + f"/{self.mission_name}/raw", "w")
+        self.parsed_file = open(recordings_path + f"/{self.mission_name}/parsed", "w")
+
+    def close_mission(self):
+        if not self.raw_file or not self.parsed_file:
+            raise FileExistsError("Mission not initialized")
+
+        self.raw_file.close()
+        self.parsed_file.close()
+    
+
+    def write(self, raw_packet: str, parsed_packet: ParsedTransmission | None):
+        if not self.raw_file or not self.parsed_file:
+            raise FileExistsError("Mission not initialized")
+        
+        self.raw_file.write(raw_packet)
+        self.parsed_file.write(str(parsed_packet))
+        
 
     def start(self):
         self.recording = True
-        pass
+
     def stop(self):
         self.recording = False
-        pass

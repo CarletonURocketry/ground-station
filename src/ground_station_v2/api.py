@@ -14,6 +14,8 @@ from src.ground_station_v2.config import load_config
 
 logger = logging.getLogger(__name__)
 
+recorder = Record()
+
 connected_clients: dict[str, WebSocket] = {}
 
 async def broadcast_radio_packets():
@@ -21,9 +23,14 @@ async def broadcast_radio_packets():
     config = load_config("config.json")
 
     try:
+        recorder.init_mission("recordings", "test_mission")
+
         async for packet in get_radio_packet():
             packet_hex = packet.hex()
             parsed = parse_rn2483_transmission(packet_hex, config)
+
+            if (recorder.recording):
+                recorder.write(packet_hex, parsed)
             
             if not parsed:
                 logger.warning(f"Failed to parse packet: {packet_hex}")
@@ -45,8 +52,12 @@ async def broadcast_radio_packets():
             
             for client_id in disconnected:
                 connected_clients.pop(client_id, None)
+
+            recorder.close_mission()
     except Exception as e:
+        recorder.close_mission()
         logger.error(f"Error in broadcast_radio_packets: {e}", exc_info=True)
+        
 
 
 # handles the lifespan of the app, creates and destroys async tasks
@@ -61,8 +72,6 @@ async def lifespan(app: FastAPI):
         pass
 
 app = FastAPI(lifespan=lifespan)
-
-record = Record()
 
 
 # generates a uuid for the client to use 
@@ -105,14 +114,14 @@ async def replay_goto(x_client_id: str = Header(alias="X-Client-ID")):
 @app.post("/record_start")
 async def record_start(x_client_id: str = Header(alias="X-Client-ID")):
 
-    record.start()
+    recorder.start()
     logger.info(f"Record start for client {x_client_id}")
     return {"status": "ok"}
 
 @app.post("/record_stop")
 async def record_stop(x_client_id: str = Header(alias="X-Client-ID")):
 
-    record.stop()
+    recorder.stop()
     logger.info(f"Record stop for client {x_client_id}")
     return {"status": "ok"}
 
