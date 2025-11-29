@@ -42,6 +42,7 @@ class Record:
         os.makedirs(f"{recordings_path}/{self.mission_name}", exist_ok=True)
 
         self.raw_file = open(recordings_path + f"/{self.mission_name}/raw", "w")
+        
         # TODO: Make 'parsed' a folder of csvs
         # self.parsed_file = open(recordings_path + f"/{self.mission_name}/parsed", "w")
 
@@ -64,6 +65,8 @@ class Record:
             raise FileExistsError("Mission not initialized")
         
         self.raw_file.write(raw_packet + "\n")
+        self.raw_file.flush()
+        
         # TODO: Write data of parsed packets
         # self.parsed_file.write(str(parsed_packet) + "\n")
         
