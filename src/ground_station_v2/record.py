@@ -1,5 +1,6 @@
 from pathlib import Path
 from src.ground_station_v2.radio.packets.spec import ParsedTransmission
+import os
 
 # saves data in the "recordings" dir
 # recording dir has child dirs for each mission, the default name is the timestamp but it should have the ability to be renamed
@@ -9,14 +10,15 @@ from src.ground_station_v2.radio.packets.spec import ParsedTransmission
 # the recoding class is a singleton, which means it can only be instantiated once
 # it's methods are async, which means we don't need threads or processes, just one asyncio task
 
-# Add a variable if currently recording or not, and implement start/stop. Then inside of main api when the record api request comes in, set to true and then it starts recording
+
+# TODO: Make all methods async?
 class Record:
     _instance = None
 
     raw_file = None
     parsed_file = None
 
-    # Make this the current timestamp by default
+    # TODO: Make this the current timestamp by default
     mission_name = None
 
     recording = False
@@ -34,7 +36,10 @@ class Record:
     def init_mission(self, recordings_path: str, mission_name: str | None):
         self.mission_name = mission_name
 
+        os.makedirs(f"{recordings_path}/{self.mission_name}", exist_ok=True)
+
         self.raw_file = open(recordings_path + f"/{self.mission_name}/raw", "w")
+        # TODO: Make the parsed file a collection of CSVs
         self.parsed_file = open(recordings_path + f"/{self.mission_name}/parsed", "w")
 
     def close_mission(self):
@@ -49,8 +54,9 @@ class Record:
         if not self.raw_file or not self.parsed_file:
             raise FileExistsError("Mission not initialized")
         
-        self.raw_file.write(raw_packet)
-        self.parsed_file.write(str(parsed_packet))
+        self.raw_file.write(raw_packet + "\n")
+        # TODO: SERIALIZE PACKET BEFORE WRITING
+        self.parsed_file.write(str(parsed_packet) + "\n")
         
 
     def start(self):

@@ -23,13 +23,16 @@ async def broadcast_radio_packets():
     config = load_config("config.json")
 
     try:
+        logger.info("STARTING TRY")
         recorder.init_mission("recordings", "test_mission")
+        recorder.start()
 
-        async for packet in get_radio_packet():
+        async for packet in get_radio_packet(True):
             packet_hex = packet.hex()
             parsed = parse_rn2483_transmission(packet_hex, config)
 
             if (recorder.recording):
+                logger.info("Writing")
                 recorder.write(packet_hex, parsed)
             
             if not parsed:
@@ -53,8 +56,10 @@ async def broadcast_radio_packets():
             for client_id in disconnected:
                 connected_clients.pop(client_id, None)
 
-            recorder.close_mission()
+        recorder.stop()
+        recorder.close_mission()
     except Exception as e:
+        recorder.stop()
         recorder.close_mission()
         logger.error(f"Error in broadcast_radio_packets: {e}", exc_info=True)
         

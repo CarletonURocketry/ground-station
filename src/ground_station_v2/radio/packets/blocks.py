@@ -2,8 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import struct
 
-from ground_station_v2.radio.packets.headers import PacketHeader, BlockHeader, BlockType
-from ground_station_v2.radio.packets.unit_conversions import *
+from src.ground_station_v2.radio.packets.headers import PacketHeader, BlockHeader, BlockType
+from src.ground_station_v2.radio.packets.unit_conversions import *
 from typing import Any
 
 
