@@ -4,7 +4,6 @@ import uuid
 import uvicorn
 import asyncio
 import json
-from src.ground_station_v2.replay import Replay
 from src.ground_station_v2.record import Record
 from typing import Any
 import logging
@@ -14,6 +13,8 @@ from src.ground_station_v2.config import load_config
 
 logger = logging.getLogger(__name__)
 
+recorder = Record()
+
 connected_clients: dict[str, WebSocket] = {}
 
 async def broadcast_radio_packets():
@@ -21,9 +22,16 @@ async def broadcast_radio_packets():
     config = load_config("config.json")
 
     try:
-        async for packet in get_radio_packet():
+        recorder.init_mission("recordings")
+        recorder.start()
+
+        async for packet in get_radio_packet(True):
             packet_hex = packet.hex()
             parsed = parse_rn2483_transmission(packet_hex, config)
+
+            if (recorder.recording):
+                logger.info("Writing")
+                recorder.write(packet_hex, parsed)
             
             if not parsed:
                 logger.warning(f"Failed to parse packet: {packet_hex}")
@@ -45,8 +53,14 @@ async def broadcast_radio_packets():
             
             for client_id in disconnected:
                 connected_clients.pop(client_id, None)
+
+        recorder.stop()
+        recorder.close_mission()
     except Exception as e:
+        recorder.stop()
+        recorder.close_mission()
         logger.error(f"Error in broadcast_radio_packets: {e}", exc_info=True)
+        
 
 
 # handles the lifespan of the app, creates and destroys async tasks
@@ -103,12 +117,14 @@ async def replay_goto(x_client_id: str = Header(alias="X-Client-ID")):
 @app.post("/record_start")
 async def record_start(x_client_id: str = Header(alias="X-Client-ID")):
 
+    recorder.start()
     logger.info(f"Record start for client {x_client_id}")
     return {"status": "ok"}
 
 @app.post("/record_stop")
 async def record_stop(x_client_id: str = Header(alias="X-Client-ID")):
 
+    recorder.stop()
     logger.info(f"Record stop for client {x_client_id}")
     return {"status": "ok"}
 

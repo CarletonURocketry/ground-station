@@ -1,17 +1,21 @@
 from dataclasses import dataclass
 from typing import List, Optional
 import logging
+import struct
 
-from ground_station_v2.radio.packets.headers import (
+from src.ground_station_v2.radio.packets.headers import (
     PacketHeader,
+    BlockType,
     parse_packet_header,
     parse_block_header,
     PACKET_HEADER_LENGTH,
     BLOCK_HEADER_LENGTH,
+    CALLSIGN_LENGTH,
     InvalidHeaderFieldValueError,
 )
-from ground_station_v2.radio.packets.blocks import Block, parse_block_contents, get_block_class, InvalidBlockContents
-from ground_station_v2.config import Config
+from src.ground_station_v2.radio.packets.blocks import Block, parse_block_contents, get_block_class, InvalidBlockContents
+from src.ground_station_v2.config import Config
+from time import time
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +68,6 @@ def from_approved_callsign(pkt_hdr: PacketHeader, approved_callsigns: dict[str, 
     logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
     return False
 
-
 def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Block]:
     """
     Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
@@ -104,3 +107,40 @@ def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Blo
         encoded_blocks = encoded_blocks[BLOCK_HEADER_LENGTH + block_len :]
 
     return parsed_blocks
+
+# For now, returns the same packet.
+def create_fake_packet() -> str:
+    """
+    Creates a fake packet with sample telemetry data for testing purposes.
+    Returns a hex string representation of the raw packet bytes that can be
+    parsed by parse_rn2483_transmission().
+    """
+    timestamp = int(time() * 1000) & 0xFFFF  # Mask to 16 bits
+    packet_num = 1
+    block_count = 3
+
+    # Create packet header bytes (callsign padded to 9 chars + timestamp + block count + packet num)
+    callsign = "VA3ZAJ".ljust(CALLSIGN_LENGTH, '\x00')
+    packet_header_bytes = callsign.encode('ascii') + struct.pack("<HBB", timestamp, block_count, packet_num)
+
+    # Create block bytes
+    block_bytes = b""
+
+    # Temperature block: block header (type=0x02, count=1) + contents (time, temp)
+    block_bytes += struct.pack("<BB", BlockType.TEMPERATURE, 1)  # Block header
+    block_bytes += struct.pack("<hi", 1000, 25000)  # 1 second, 25°C (milli-degrees)
+
+    # Pressure block: block header (type=0x03, count=1) + contents (time, pressure)
+    block_bytes += struct.pack("<BB", BlockType.PRESSURE, 1)  # Block header
+    block_bytes += struct.pack("<hI", 1500, 101325)  # 1.5 seconds, ~1 atm
+
+    # Linear acceleration block: block header (type=0x04, count=1) + contents (time, x, y, z)
+    block_bytes += struct.pack("<BB", BlockType.LINEAR_ACCELERATION, 1)  # Block header
+    block_bytes += struct.pack("<hhhh", 2000, 0, 0, 981)  # 2 seconds, ~9.81 m/s² in z
+
+    # Combine and return as hex string
+    full_packet = packet_header_bytes + block_bytes
+    return full_packet.hex()
+    
+    
+    
