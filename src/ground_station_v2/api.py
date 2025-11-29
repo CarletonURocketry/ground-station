@@ -4,7 +4,6 @@ import uuid
 import uvicorn
 import asyncio
 import json
-from src.ground_station_v2.replay import Replay
 from src.ground_station_v2.record import Record
 from typing import Any
 import logging
@@ -23,8 +22,7 @@ async def broadcast_radio_packets():
     config = load_config("config.json")
 
     try:
-        logger.info("STARTING TRY")
-        recorder.init_mission("recordings", "test_mission")
+        recorder.init_mission("recordings")
         recorder.start()
 
         async for packet in get_radio_packet(True):

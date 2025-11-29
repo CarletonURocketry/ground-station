@@ -6,7 +6,6 @@ import struct
 from src.ground_station_v2.radio.packets.headers import (
     PacketHeader,
     BlockType,
-    BlockHeader,
     parse_packet_header,
     parse_block_header,
     PACKET_HEADER_LENGTH,
@@ -109,6 +108,7 @@ def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Blo
 
     return parsed_blocks
 
+# For now, returns the same packet.
 def create_fake_packet() -> str:
     """
     Creates a fake packet with sample telemetry data for testing purposes.

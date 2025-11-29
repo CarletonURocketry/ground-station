@@ -1,6 +1,7 @@
 from pathlib import Path
 from src.ground_station_v2.radio.packets.spec import ParsedTransmission
 import os
+from time import time
 
 # saves data in the "recordings" dir
 # recording dir has child dirs for each mission, the default name is the timestamp but it should have the ability to be renamed
@@ -11,15 +12,16 @@ import os
 # it's methods are async, which means we don't need threads or processes, just one asyncio task
 
 
-# TODO: Make all methods async?
+# TODO: Make all methods async? I don't think its needed?
 class Record:
     _instance = None
 
     raw_file = None
-    parsed_file = None
 
-    # TODO: Make this the current timestamp by default
-    mission_name = None
+    # Commented as the parsed data will be in multiple csv files
+    # parsed_file = None
+
+    mission_name = time()
 
     recording = False
 
@@ -33,30 +35,37 @@ class Record:
         return cls._instance
     
 
-    def init_mission(self, recordings_path: str, mission_name: str | None):
-        self.mission_name = mission_name
+    def init_mission(self, recordings_path: str, mission_name: str | None = None):
+        if mission_name:
+            self.mission_name = mission_name
 
         os.makedirs(f"{recordings_path}/{self.mission_name}", exist_ok=True)
 
         self.raw_file = open(recordings_path + f"/{self.mission_name}/raw", "w")
-        # TODO: Make the parsed file a collection of CSVs
-        self.parsed_file = open(recordings_path + f"/{self.mission_name}/parsed", "w")
+        # TODO: Make 'parsed' a folder of csvs
+        # self.parsed_file = open(recordings_path + f"/{self.mission_name}/parsed", "w")
 
     def close_mission(self):
-        if not self.raw_file or not self.parsed_file:
+        # if not self.raw_file or not self.parsed_file:
+        #     raise FileExistsError("Mission not initialized")
+
+        if not self.raw_file:
             raise FileExistsError("Mission not initialized")
 
         self.raw_file.close()
-        self.parsed_file.close()
+        # self.parsed_file.close()
     
 
     def write(self, raw_packet: str, parsed_packet: ParsedTransmission | None):
-        if not self.raw_file or not self.parsed_file:
+        # if not self.raw_file or not self.parsed_file:
+        #     raise FileExistsError("Mission not initialized")
+
+        if not self.raw_file:
             raise FileExistsError("Mission not initialized")
         
         self.raw_file.write(raw_packet + "\n")
-        # TODO: SERIALIZE PACKET BEFORE WRITING
-        self.parsed_file.write(str(parsed_packet) + "\n")
+        # TODO: Write data of parsed packets
+        # self.parsed_file.write(str(parsed_packet) + "\n")
         
 
     def start(self):
