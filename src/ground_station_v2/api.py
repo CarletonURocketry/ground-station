@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Header, WebSocket, WebSocketException, WebSocketDisconnect, HTTPException
 from contextlib import asynccontextmanager
 import uuid
+from time import time
 import uvicorn
 import asyncio
 import json
@@ -22,7 +23,8 @@ async def broadcast_radio_packets():
     config = load_config("config.json")
 
     try:
-        recorder.init_mission("recordings")
+        recorder.init_mission("recordings", time())
+        recorder.start()
 
         async for packet in get_radio_packet(True):
             packet_hex = packet.hex()

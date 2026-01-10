@@ -1,6 +1,5 @@
 from pathlib import Path
 from src.ground_station_v2.radio.packets.spec import ParsedTransmission
-from time import time
 from src.ground_station_v2.radio.packets.blocks import (
     AltitudeAboveSeaLevel,
     AltitudeAboveLaunchLevel,
@@ -41,7 +40,7 @@ class Record:
     _instance = None
 
     raw_file = None
-    mission_name = time()
+    mission_name = None
     recording = False
 
     # Config for files
@@ -70,9 +69,12 @@ class Record:
         return cls._instance
     
 
-    def init_mission(self, recordings_path: str, mission_name: str | None = None):
-        if mission_name:
-            self.mission_name = mission_name
+    def init_mission(self, recordings_path: str, mission_name: str | float):
+        if not mission_name:
+            raise ValueError("Mission name must be provided")
+        
+        self.mission_name = mission_name
+            
 
         Path(f"{recordings_path}/{self.mission_name}").mkdir(exist_ok=True)
         Path(f"{recordings_path}/{self.mission_name}/parsed").mkdir(exist_ok=True)
