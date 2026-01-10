@@ -71,7 +71,7 @@ class Record:
 
     def init_mission(self, recordings_path: str, mission_name: str | float):
         if not mission_name:
-            raise ValueError("Mission name must be provided")
+            return
         
         self.mission_name = mission_name
             
@@ -98,7 +98,7 @@ class Record:
 
     def close_mission(self):
         if not self.raw_file:
-            raise FileExistsError("Mission not initialized")
+            return
 
         self.raw_file.close()
         for value in self.parsed_files.values():
@@ -108,7 +108,7 @@ class Record:
 
     def write(self, raw_packet: str, parsed_packet: ParsedTransmission | None):
         if not self.raw_file:
-            raise FileExistsError("Mission not initialized")
+            return
         
         self.raw_file.write(raw_packet + "\n")
         self.raw_file.flush()
