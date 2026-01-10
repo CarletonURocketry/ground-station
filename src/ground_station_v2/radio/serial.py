@@ -17,7 +17,6 @@ async def get_radio_packet(fake: bool):
     if fake:
         logger.info("Sending fake radio packet")
         while True:
-            logger.info("Sending packet")
             yield bytes.fromhex(create_fake_packet())
             await asyncio.sleep(1)
     else:

@@ -23,7 +23,6 @@ async def broadcast_radio_packets():
 
     try:
         recorder.init_mission("recordings")
-        recorder.start()
 
         async for packet in get_radio_packet(True):
             packet_hex = packet.hex()
