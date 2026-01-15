@@ -68,6 +68,7 @@ def from_approved_callsign(pkt_hdr: PacketHeader, approved_callsigns: dict[str, 
     logger.warning(f"Incoming packet from unauthorized call sign {pkt_hdr.callsign}")
     return False
 
+
 def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Block]:
     """
     Parses telemetry payload blocks from either parsed packets or stored replays. Block contents are a hex string.
@@ -108,6 +109,7 @@ def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Blo
 
     return parsed_blocks
 
+
 # For now, returns the same packet.
 def create_fake_packet() -> str:
     """
@@ -120,8 +122,8 @@ def create_fake_packet() -> str:
     block_count = 3
 
     # Create packet header bytes (callsign padded to 9 chars + timestamp + block count + packet num)
-    callsign = "VA3ZAJ".ljust(CALLSIGN_LENGTH, '\x00')
-    packet_header_bytes = callsign.encode('ascii') + struct.pack("<HBB", timestamp, block_count, packet_num)
+    callsign = "VA3ZAJ".ljust(CALLSIGN_LENGTH, "\x00")
+    packet_header_bytes = callsign.encode("ascii") + struct.pack("<HBB", timestamp, block_count, packet_num)
 
     # Create block bytes
     block_bytes = b""
@@ -141,6 +143,3 @@ def create_fake_packet() -> str:
     # Combine and return as hex string
     full_packet = packet_header_bytes + block_bytes
     return full_packet.hex()
-    
-    
-    

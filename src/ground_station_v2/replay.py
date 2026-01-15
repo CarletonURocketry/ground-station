@@ -1,6 +1,7 @@
 from pathlib import Path
 import asyncio
 
+
 class Replay:
     def __init__(self, replay_path: Path, speed: float = 1.0):
         self.replay_path = replay_path
@@ -34,4 +35,3 @@ class Replay:
 
     def stop(self):
         self.playing = False
-

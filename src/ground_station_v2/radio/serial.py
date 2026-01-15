@@ -6,9 +6,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def discover_port():
     logger.error("Not implemented")
     return ""
+
 
 async def get_radio_packet(fake: bool):
     # TODO: remove this, just for testing
@@ -23,7 +25,7 @@ async def get_radio_packet(fake: bool):
         port = discover_port()
         config = load_config("config.json")
         radio = RN2483Radio(port)
-        
+
         logger.info(f"Setting up radio on port {port}")
         await asyncio.to_thread(radio.setup, config.radio_parameters)
         logger.info("Radio setup complete")
