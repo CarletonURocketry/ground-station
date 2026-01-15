@@ -1,7 +1,7 @@
 import asyncio
-from src.ground_station_v2.config import load_config
-from src.ground_station_v2.radio.rn2483 import RN2483Radio
-from src.ground_station_v2.radio.packets.spec import create_fake_packet
+from ground_station_v2.config import load_config
+from ground_station_v2.radio.rn2483 import RN2483Radio
+from ground_station_v2.radio.packets.spec import create_fake_packet
 import logging
 
 logger = logging.getLogger(__name__)

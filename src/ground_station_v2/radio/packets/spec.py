@@ -3,7 +3,7 @@ from typing import List, Optional
 import logging
 import struct
 
-from src.ground_station_v2.radio.packets.headers import (
+from ground_station_v2.radio.packets.headers import (
     PacketHeader,
     BlockType,
     parse_packet_header,
@@ -13,8 +13,8 @@ from src.ground_station_v2.radio.packets.headers import (
     CALLSIGN_LENGTH,
     InvalidHeaderFieldValueError,
 )
-from src.ground_station_v2.radio.packets.blocks import Block, parse_block_contents, get_block_class, InvalidBlockContents
-from src.ground_station_v2.config import Config
+from ground_station_v2.radio.packets.blocks import Block, parse_block_contents, get_block_class, InvalidBlockContents
+from ground_station_v2.config import Config
 from time import time
 
 logger = logging.getLogger(__name__)

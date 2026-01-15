@@ -5,12 +5,12 @@ from time import time
 import uvicorn
 import asyncio
 import json
-from src.ground_station_v2.record import Record
+from ground_station_v2.record import Record
 from typing import Any
 import logging
-from src.ground_station_v2.radio.serial import get_radio_packet
-from src.ground_station_v2.radio.packets.spec import parse_rn2483_transmission
-from src.ground_station_v2.config import load_config
+from ground_station_v2.radio.serial import get_radio_packet
+from ground_station_v2.radio.packets.spec import parse_rn2483_transmission
+from ground_station_v2.config import load_config
 
 logger = logging.getLogger(__name__)
 

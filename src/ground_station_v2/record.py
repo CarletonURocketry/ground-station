@@ -1,6 +1,6 @@
 from pathlib import Path
-from src.ground_station_v2.radio.packets.spec import ParsedTransmission
-from src.ground_station_v2.radio.packets.blocks import (
+from ground_station_v2.radio.packets.spec import ParsedTransmission
+from ground_station_v2.radio.packets.blocks import (
     AltitudeAboveSeaLevel,
     AltitudeAboveLaunchLevel,
     Temperature,
