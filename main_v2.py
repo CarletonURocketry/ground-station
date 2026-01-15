@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from src.ground_station_v2.api import run_server
+from ground_station_v2.api import run_server
 
 Path("logs").mkdir(exist_ok=True)
 
@@ -18,4 +18,3 @@ logging.basicConfig(
 
 if __name__ == "__main__":
     run_server()
-

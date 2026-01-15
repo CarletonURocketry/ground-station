@@ -51,12 +51,14 @@ class PacketHeader:
     def __len__(self):
         return self.num_block_headers
 
+
 @dataclass
 class BlockHeader:
     """Represents a header for a telemetry block."""
 
     type: BlockType
     count: int
+
 
 def parse_packet_header(header_bytes: bytes) -> PacketHeader:
     """Parses a packet header
