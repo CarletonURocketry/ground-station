@@ -6,9 +6,7 @@ from pathlib import Path
 from ground_station.misc.config import RadioParameters
 from ground_station.serial.rn2483_radio import RN2483Radio
 
-TRANSMIT_DATA: str = (
-    "VA3INI - This is a test message to test the functionality of the RN2483 transceiver with a long packet containing plenty of data - VA3INI - Packet number follows"
-)
+TRANSMIT_DATA: str = "VA3INI - This is a test message to test the functionality of the RN2483 transceiver with a long packet containing plenty of data - VA3INI - Packet number follows"
 
 
 def main() -> None:
