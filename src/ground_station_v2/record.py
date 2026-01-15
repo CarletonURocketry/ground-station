@@ -94,8 +94,6 @@ class Record:
             value['file'] = file
             value['writer'] = writer
                 
-            
-
     def close_mission(self):
         if not self.raw_file:
             return
@@ -105,7 +103,6 @@ class Record:
             if value["file"]:
                 value['file'].close()
     
-
     def write(self, raw_packet: str, parsed_packet: ParsedTransmission | None):
         if not self.raw_file:
             return
