@@ -123,7 +123,6 @@ async def replay_goto(x_client_id: str = Header(alias="X-Client-ID")):
 
 @app.post("/record_start")
 async def record_start(x_client_id: str = Header(alias="X-Client-ID")):
-
     recorder.start()
     logger.info(f"Record start for client {x_client_id}")
     return {"status": "ok"}
@@ -131,7 +130,6 @@ async def record_start(x_client_id: str = Header(alias="X-Client-ID")):
 
 @app.post("/record_stop")
 async def record_stop(x_client_id: str = Header(alias="X-Client-ID")):
-
     recorder.stop()
     logger.info(f"Record stop for client {x_client_id}")
     return {"status": "ok"}

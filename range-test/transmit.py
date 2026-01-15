@@ -12,7 +12,6 @@ TRANSMIT_DATA: str = (
 
 
 def main() -> None:
-
     if len(sys.argv) != 2:
         print("Must provide the COM port/serial port where the radio is connected.")
         exit(1)
