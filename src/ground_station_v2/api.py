@@ -15,6 +15,8 @@ from ground_station_v2.config import load_config
 logger = logging.getLogger(__name__)
 
 recorder = Record()
+from ground_station_v2.replay import Replay
+replay = Replay()
 
 connected_clients: dict[str, WebSocket] = {}
 
@@ -64,6 +66,41 @@ async def broadcast_radio_packets():
         logger.error(f"Error in broadcast_radio_packets: {e}", exc_info=True)
 
 
+async def broadcast_replay_packets():
+    logger.info("Starting broadcast_replay_packets")
+    config = load_config("config.json")
+
+    try:
+        async for packet_hex in replay.run():
+            if not packet_hex:
+                continue
+            
+            parsed = parse_rn2483_transmission(packet_hex, config)
+            
+            if not parsed:
+                logger.warning(f"Failed to parse replay packet: {packet_hex}")
+                continue
+
+            telemetry_dict: dict[str, Any] = {}
+            for block in parsed.blocks:
+                block.output_formatted(telemetry_dict)
+
+            json_packet: str = json.dumps(telemetry_dict)
+
+            disconnected: list[str] = []
+            for client_id, websocket in connected_clients.items():
+                try:
+                    await websocket.send_text(json_packet)
+                except Exception as e:
+                    logger.warning(f"Failed to send replay packet to client {client_id}: {e}")
+                    disconnected.append(client_id)
+
+            for client_id in disconnected:
+                connected_clients.pop(client_id, None)
+    except Exception as e:
+        logger.error(f"Error in broadcast_replay_packets: {e}", exc_info=True)
+
+
 # handles the lifespan of the app, creates and destroys async tasks
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -93,31 +130,75 @@ async def get_client_id():
 
 
 @app.post("/replay_play")
-async def replay_play(x_client_id: str = Header(alias="X-Client-ID")):
+async def replay_play(
+    replay_path: str,
+    speed: float = 1.0,
+    x_client_id: str = Header(alias="X-Client-ID")
+):
     if x_client_id not in connected_clients:
         raise HTTPException(status_code=401, detail="Client not connected")
 
-    logger.info(f"Replay played for client {x_client_id}")
-
-    return {"status": "ok"}
+    try:
+        # Stop any existing replay
+        if replay.is_playing():
+            replay.stop()
+            if replay.task and not replay.task.done():
+                replay.task.cancel()
+                try:
+                    await replay.task
+                except asyncio.CancelledError:
+                    pass
+        
+        # Start new replay
+        replay.start(replay_path, speed)
+        replay.task = asyncio.create_task(broadcast_replay_packets())
+        
+        logger.info(f"Replay started for client {x_client_id}: {replay_path} at {speed}x")
+        return {"status": "ok", "replay_path": replay_path, "speed": speed}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error starting replay: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to start replay: {str(e)}")
 
 
 @app.post("/replay_pause")
-async def replay_pause(x_client_id: str = Header(alias="X-Client-ID")):
+async def replay_pause(
+    paused: bool = True,
+    speed: float = 1.0,
+    x_client_id: str = Header(alias="X-Client-ID")
+):
     if x_client_id not in connected_clients:
         raise HTTPException(status_code=401, detail="Client not connected")
 
-    logger.info(f"Replay paused for client {x_client_id}")
-    return {"status": "ok"}
+    if not replay.is_playing():
+        raise HTTPException(status_code=400, detail="No replay is currently active")
+    
+    if paused:
+        replay.pause()
+        logger.info(f"Replay paused for client {x_client_id}")
+    else:
+        replay.resume(speed)
+        logger.info(f"Replay resumed for client {x_client_id} at {speed}x")
+    
+    return {"status": "ok", "paused": paused}
 
 
-@app.post("/replay_goto")
-async def replay_goto(x_client_id: str = Header(alias="X-Client-ID")):
+@app.post("/replay_stop")
+async def replay_stop(x_client_id: str = Header(alias="X-Client-ID")):
     if x_client_id not in connected_clients:
         raise HTTPException(status_code=401, detail="Client not connected")
 
-    logger.info(f"Replay goto for client {x_client_id}")
-
+    if replay.is_playing():
+        replay.stop()
+        if replay.task and not replay.task.done():
+            replay.task.cancel()
+            try:
+                await replay.task
+            except asyncio.CancelledError:
+                pass
+        logger.info(f"Replay stopped for client {x_client_id}")
+    
     return {"status": "ok"}
 
 
