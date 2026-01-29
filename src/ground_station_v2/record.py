@@ -178,8 +178,6 @@ class Record:
 
             # Check if the block is a key inside of the parsed_files dict
             if block_type in self.parsed_files:
-                print(f"Block type: {block_type.__name__}")
-
                 writer_entry = self.parsed_files[block_type]
                 writer = writer_entry["writer"]
                 file = writer_entry["file"]

@@ -34,7 +34,6 @@ async def broadcast_radio_packets():
             parsed = parse_rn2483_transmission(packet_hex, config)
 
             if recorder.recording:
-                logger.info("Writing")
                 recorder.write(packet_hex, parsed)
 
             if not parsed:
