@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Header, WebSocket, WebSocketException, WebSocketDisconnect, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uuid
 from time import time
@@ -17,6 +18,8 @@ logger = logging.getLogger(__name__)
 recorder = Record()
 from ground_station_v2.replay import Replay
 replay = Replay()
+from ground_station_v2.missions import Mission
+missions = Mission()
 
 connected_clients: dict[str, WebSocket] = {}
 
@@ -115,6 +118,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+allowed_origins = [
+    "http://localhost:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+)
+
+# From Adam: Is this needed, or can we just generate on the frontend?
 # generates a uuid for the client to use
 @app.get("/client_id")
 async def get_client_id():
@@ -131,7 +144,6 @@ async def get_client_id():
 
 
 # TODO: Make replay and record api names similar play -> start
-
 @app.post("/replay_play")
 async def replay_play(
     replay_path: str,
@@ -217,6 +229,21 @@ async def record_stop(client_id: str = Query(alias="client_id")):
     recorder.stop()
     logger.info(f"Record stop for client {client_id}")
     return {"status": "ok"}
+
+
+@app.get("/missions")
+async def get_missions(client_id: str = Query(alias="client_id")):
+    if client_id not in connected_clients:
+        raise HTTPException(status_code=401, detail="Client not connected")
+    
+    try:
+        mission_list = missions.get_missions()
+        logger.info(f"Retrieved {len(mission_list)} missions for client {client_id}")
+        return {"status": "ok", "missions": mission_list}
+    
+    except Exception as e:
+        logger.error(f"Error retrieving missions: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve missions: {str(e)}")
 
 
 # simple readonly websocket endpoint, doesn't process any commands
