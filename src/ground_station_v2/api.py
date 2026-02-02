@@ -136,9 +136,9 @@ async def get_client_id():
 async def replay_play(
     replay_path: str,
     speed: float = 1.0,
-    x_client_id: str = Query(alias="X-Client-ID")
+    client_id: str = Query(alias="client_id")
 ):
-    if x_client_id not in connected_clients:
+    if client_id not in connected_clients:
         raise HTTPException(status_code=401, detail="Client not connected")
 
     try:
@@ -156,7 +156,7 @@ async def replay_play(
         replay.start(replay_path, speed)
         replay.task = asyncio.create_task(broadcast_replay_packets())
         
-        logger.info(f"Replay started for client {x_client_id}: {replay_path} at {speed}x")
+        logger.info(f"Replay started for client {client_id}: {replay_path} at {speed}x")
         return {"status": "ok", "replay_path": replay_path, "speed": speed}
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -169,9 +169,9 @@ async def replay_play(
 async def replay_pause(
     paused: bool = True,
     speed: float = 1.0,
-    x_client_id: str = Query(alias="X-Client-ID")
+    client_id: str = Query(alias="client_id")
 ):
-    if x_client_id not in connected_clients:
+    if client_id not in connected_clients:
         raise HTTPException(status_code=401, detail="Client not connected")
 
     if not replay.is_playing():
@@ -179,17 +179,17 @@ async def replay_pause(
     
     if paused:
         replay.pause()
-        logger.info(f"Replay paused for client {x_client_id}")
+        logger.info(f"Replay paused for client {client_id}")
     else:
         replay.resume(speed)
-        logger.info(f"Replay resumed for client {x_client_id} at {speed}x")
+        logger.info(f"Replay resumed for client {client_id} at {speed}x")
     
     return {"status": "ok", "paused": paused}
 
 
 @app.post("/replay_stop")
-async def replay_stop(x_client_id: str = Query(alias="X-Client-ID")):
-    if x_client_id not in connected_clients:
+async def replay_stop(client_id: str = Query(alias="client_id")):
+    if client_id not in connected_clients:
         raise HTTPException(status_code=401, detail="Client not connected")
 
     if replay.is_playing():
@@ -200,43 +200,43 @@ async def replay_stop(x_client_id: str = Query(alias="X-Client-ID")):
                 await replay.task
             except asyncio.CancelledError:
                 pass
-        logger.info(f"Replay stopped for client {x_client_id}")
+        logger.info(f"Replay stopped for client {client_id}")
     
     return {"status": "ok"}
 
 
 @app.post("/record_start")
-async def record_start(x_client_id: str = Query(alias="X-Client-ID")):
+async def record_start(client_id: str = Query(alias="client_id")):
     recorder.start()
-    logger.info(f"Record start for client {x_client_id}")
+    logger.info(f"Record start for client {client_id}")
     return {"status": "ok"}
 
 
 @app.post("/record_stop")
-async def record_stop(x_client_id: str = Query(alias="X-Client-ID")):
+async def record_stop(client_id: str = Query(alias="client_id")):
     recorder.stop()
-    logger.info(f"Record stop for client {x_client_id}")
+    logger.info(f"Record stop for client {client_id}")
     return {"status": "ok"}
 
 
 # simple readonly websocket endpoint, doesn't process any commands
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, x_client_id: str = Query(alias="X-Client-ID")):
-    if x_client_id in connected_clients:
-        logger.warning(f"Client already connected: {x_client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str = Query(alias="client_id")):
+    if client_id in connected_clients:
+        logger.warning(f"Client already connected: {client_id}")
         raise WebSocketException(code=1008, reason="Client already connected")
 
     await websocket.accept()
-    connected_clients[x_client_id] = websocket
-    logger.info(f"Client connected: {x_client_id}")
+    connected_clients[client_id] = websocket
+    logger.info(f"Client connected: {client_id}")
 
     try:
         # stal the socket, we can now reuse the websocket object from other func so send data to the client
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        connected_clients.pop(x_client_id, None)
-        logger.info(f"Client disconnected: {x_client_id}")
+        connected_clients.pop(client_id, None)
+        logger.info(f"Client disconnected: {client_id}")
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8000):
