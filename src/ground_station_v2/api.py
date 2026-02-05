@@ -125,6 +125,9 @@ allowed_origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # From Adam: Is this needed, or can we just generate on the frontend?
@@ -176,6 +179,8 @@ async def replay_play(
         logger.error(f"Error starting replay: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to start replay: {str(e)}")
 
+
+# TODO: ADD replay adjust speed endpoint
 
 @app.post("/replay_pause")
 async def replay_pause(
