@@ -6,12 +6,10 @@ from pathlib import Path
 from ground_station.misc.config import RadioParameters
 from ground_station.serial.rn2483_radio import RN2483Radio
 
-TRANSMIT_DATA: str = (
-    "VA3INI - This is a test message to test the functionality of the RN2483 transceiver with a long packet containing plenty of data - VA3INI - Packet number follows"
-)
+TRANSMIT_DATA: str = "VA3INI - This is a test message to test the functionality of the RN2483 transceiver with a long packet containing plenty of data - VA3INI - Packet number follows"
+
 
 def main() -> None:
-
     if len(sys.argv) != 2:
         print("Must provide the COM port/serial port where the radio is connected.")
         exit(1)
@@ -21,16 +19,16 @@ def main() -> None:
     # Get config file path relative to this script
     script_dir = Path(__file__).parent
     config_path = script_dir / "config_lora.json"
-    
+
     with open(config_path) as f:
         config = json.load(f)
         params = RadioParameters.from_json(config["radio_params"])
-    
+
     print(f"Using parameters: {params}")
-    
+
     # Initialize radio with port and parameters
     radio = RN2483Radio(sys.argv[1])
-    
+
     # Setup the radio (reset, configure, etc.)
     radio.setup(params)
     print("Radio configured successfully")
