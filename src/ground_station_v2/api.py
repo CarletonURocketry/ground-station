@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 recorder = Record()
 from ground_station_v2.replay import Replay
 replay = Replay()
-from ground_station_v2.missions import Mission
-missions = Mission()
+from ground_station_v2.recordings import Recordings
+recordings = Recordings()
 
 connected_clients: dict[str, WebSocket] = {}
 
@@ -261,19 +261,19 @@ async def record_stop(client_id: str = Query(alias="client_id")):
     return {"status": "ok"}
 
 
-@app.get("/missions")
-async def get_missions(client_id: str = Query(alias="client_id")):
+@app.get("/recordings")
+async def get_recordings(client_id: str = Query(alias="client_id")):
     if client_id not in connected_clients:
         raise HTTPException(status_code=401, detail="Client not connected")
     
     try:
-        mission_list = missions.get_missions()
-        logger.info(f"Retrieved {len(mission_list)} missions for client {client_id}")
-        return {"status": "ok", "missions": mission_list}
+        recording_list = recordings.get_recordings()
+        logger.info(f"Retrieved {len(recording_list)} recordings for client {client_id}")
+        return {"status": "ok", "recordings": recording_list}
     
     except Exception as e:
-        logger.error(f"Error retrieving missions: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve missions: {str(e)}")
+        logger.error(f"Error retrieving recordings: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve recordings: {str(e)}")
 
 
 # simple readonly websocket endpoint, doesn't process any commands
