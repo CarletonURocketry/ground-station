@@ -29,7 +29,7 @@ class Mission:
             
             missions: List[MissionInfo] = []
             for file_path in self.missions_path.iterdir():
-                if file_path.is_file() and file_path.suffix == ".mission":
+                if file_path.is_file():
                     missions.append({
                         "name": file_path.name,
                         "path": str(file_path)
@@ -44,22 +44,3 @@ class Mission:
             logger.error(f"Error retrieving missions: {e}", exc_info=True)
             raise
     
-    def get_mission_by_name(self, name: str) -> Optional[MissionInfo]:
-        """
-        Get a specific mission by name.
-        
-        Args:
-            name: The mission filename (including .mission extension)
-            
-        Returns:
-            Dictionary containing mission info or None if not found
-        """
-        mission_path = self.missions_path / name
-        
-        if mission_path.exists() and mission_path.is_file() and name.endswith('.mission'):
-            return {
-                "name": name,
-                "path": str(mission_path)
-            }
-        
-        return None
