@@ -2,8 +2,8 @@ import sys
 import json
 from pathlib import Path
 
-from ground_station.serial.rn2483_radio import RN2483Radio as Radio
-from ground_station.misc.config import RadioParameters as Parameters
+from ground_station_v2.radio.rn2483 import RN2483Radio as Radio
+from ground_station_v2.config import RadioParameters as Parameters
 
 
 def main() -> None:
@@ -12,7 +12,7 @@ def main() -> None:
         exit(1)
 
     script_dir = Path(__file__).parent
-    config_path = script_dir / "config_lora.json"
+    config_path = script_dir.parent / "config.json"
 
     with open(config_path) as f:
         config = json.load(f)
