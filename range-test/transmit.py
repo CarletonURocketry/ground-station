@@ -3,8 +3,8 @@ import json
 import time
 from pathlib import Path
 
-from ground_station.misc.config import RadioParameters
-from ground_station.serial.rn2483_radio import RN2483Radio
+from ground_station_v2.config import RadioParameters
+from ground_station_v2.radio.rn2483 import RN2483Radio
 
 TRANSMIT_DATA: str = "VA3INI - This is a test message to test the functionality of the RN2483 transceiver with a long packet containing plenty of data - VA3INI - Packet number follows"
 
@@ -18,7 +18,7 @@ def main() -> None:
 
     # Get config file path relative to this script
     script_dir = Path(__file__).parent
-    config_path = script_dir / "config_lora.json"
+    config_path = script_dir.parent / "config.json"
 
     with open(config_path) as f:
         config = json.load(f)
