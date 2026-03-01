@@ -93,19 +93,30 @@ def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Blo
         logger.debug(block_header)
 
         block_len = get_block_class(block_header.type).size()
-        block_contents = encoded_blocks[BLOCK_HEADER_LENGTH : BLOCK_HEADER_LENGTH + block_len]
+        
+        # Skip past the block header
+        encoded_blocks = encoded_blocks[BLOCK_HEADER_LENGTH:]
+        
+        # Parse 'count' number of blocks of this type
+        for i in range(block_header.count):
+            if len(encoded_blocks) < block_len:
+                logger.error(f"Not enough data for block {i+1}/{block_header.count} of type {block_header.type}")
+                return parsed_blocks
+                
+            block_contents = encoded_blocks[:block_len]
 
-        data_block = None
-        try:
-            data_block = parse_block_contents(packet_header, block_header, block_contents)
-        except InvalidBlockContents as e:
-            logger.error(f"{e}")
+            data_block = None
+            try:
+                data_block = parse_block_contents(packet_header, block_header, block_contents)
+            except InvalidBlockContents as e:
+                logger.error(f"{e}")
 
-        if data_block is not None:
-            logger.debug(data_block)
-            parsed_blocks.append(data_block)
-        # Remove the data we processed from the whole set, and move onto the next data block
-        encoded_blocks = encoded_blocks[BLOCK_HEADER_LENGTH + block_len :]
+            if data_block is not None:
+                logger.debug(data_block)
+                parsed_blocks.append(data_block)
+            
+            # Move to next block
+            encoded_blocks = encoded_blocks[block_len:]
 
     return parsed_blocks
 
