@@ -222,6 +222,31 @@ async def replay_stop(client_id: str = Query(alias="client_id")):
     return {"status": "ok"}
 
 
+@app.get("/replay_status")
+async def replay_status(client_id: str = Query(alias="client_id")):
+    if client_id not in connected_clients:
+        raise HTTPException(status_code=401, detail="Client not connected")
+    
+    status = replay.get_status()
+    return {"status": "ok", **status}
+
+
+@app.post("/replay_seek")
+async def replay_seek(
+    position: int,
+    client_id: str = Query(alias="client_id")
+):
+    if client_id not in connected_clients:
+        raise HTTPException(status_code=401, detail="Client not connected")
+    
+    if not replay.is_playing():
+        raise HTTPException(status_code=400, detail="No replay is currently active")
+    
+    replay.seek(position)
+    logger.info(f"Replay seeked to position {position} for client {client_id}")
+    return {"status": "ok", "position": replay.current_line, "total": replay.total_lines}
+
+
 @app.post("/record_start")
 async def record_start(client_id: str = Query(alias="client_id")):
     recorder.start()
