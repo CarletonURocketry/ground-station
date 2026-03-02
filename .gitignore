@@ -134,3 +134,6 @@ dmypy.json
 
 # Misc
 .idea/
+
+/recordings/*
+!/recordings/josh-recording-1
