@@ -1,6 +1,8 @@
 import logging
+import json
 from pathlib import Path
 from time import time
+from fastapi import WebSocket
 from ground_station_v2.record import Record
 from ground_station_v2.replay import Replay
 from ground_station_v2.radio.serial import get_radio_packet
@@ -42,13 +44,13 @@ async def ingest_global_radio_packets(live_queue: TelemetryTimelineQueue) -> Non
         recorder.close_mission()
         logger.error(f"Error in ingest_global_radio_packets: {e}", exc_info=True)
 
-# ingest parsed replay packets from a replay instance into the client's replay queue
-async def ingest_client_replay_packets(replay: Replay, queue: TelemetryTimelineQueue) -> None:
+# ingest parsed replay packets from a replay instance and send directly to client WebSocket
+async def ingest_client_replay_packets(replay: Replay, websocket: WebSocket) -> None:
     try:
         async for timestamp, row, block_type in replay.run():
             block = block_from_csv_row(timestamp, row, block_type)
             if block:
-                await queue.add_block(block)
+                await websocket.send_text(json.dumps(block.to_json()))  # type: ignore
     except Exception as e:
         logger.error(f"Error in ingest_client_replay_packets: {e}", exc_info=True)
 

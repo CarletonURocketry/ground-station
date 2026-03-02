@@ -15,18 +15,15 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ClientReplayState:
     instance: Replay
-    queue: TelemetryTimelineQueue
-    worker_task: asyncio.Task[None]
     ingest_task: asyncio.Task[None]
     
     async def cleanup(self):
-        """Cancel and await all tasks"""
-        for task in [self.ingest_task, self.worker_task]:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
+        """Cancel and await ingest task"""
+        self.ingest_task.cancel()
+        try:
+            await self.ingest_task
+        except asyncio.CancelledError:
+            pass
 
 @dataclass
 class ClientState:
@@ -49,18 +46,12 @@ async def get_client_state(x_client_id: str = Header(alias="X-Client-ID")) -> Cl
 
 async def start_client_replay(client_id: str, state: ClientState, replay_path: str, speed: float) -> ClientReplayState:
     """Setup and start a client replay session"""
-    replay_queue = TelemetryTimelineQueue()
-    replay_worker = TelemetryTimelineWorker(replay_queue, lambda: {client_id: state.websocket})
-    worker_task = asyncio.create_task(replay_worker.run())
-    
     replay_instance = Replay()
     replay_instance.start(replay_path, speed)
-    ingest_task = asyncio.create_task(ingest_client_replay_packets(replay_instance, replay_queue))
+    ingest_task = asyncio.create_task(ingest_client_replay_packets(replay_instance, state.websocket))
     
     return ClientReplayState(
         instance=replay_instance,
-        queue=replay_queue,
-        worker_task=worker_task,
         ingest_task=ingest_task
     )
 
@@ -71,6 +62,9 @@ async def lifespan(app: FastAPI):
     
     if _from_recording is None:
         asyncio.create_task(ingest_global_radio_packets(live_queue))
+    else:
+        asyncio.create_task(ingest_global_replay_packets(live_queue, _from_recording))
+        logger.info(f"Started global replay ingestion from: {_from_recording}")
     
     yield
 
@@ -186,18 +180,13 @@ async def websocket_endpoint(websocket: WebSocket, x_client_id: str = Header(ali
     )
     connected_clients[x_client_id] = state
     logger.info(f"Client connected: {x_client_id}")
-    
-    if _from_recording is not None and len(connected_clients) == 1:
-        asyncio.create_task(ingest_global_replay_packets(live_queue, _from_recording))
-        logger.info(f"Started replay ingest for first client: {_from_recording}")
 
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
         if state.replay:
-            state.replay.ingest_task.cancel()
-            state.replay.worker_task.cancel()
+            await state.replay.cleanup()
         connected_clients.pop(x_client_id, None)
         logger.info(f"Client disconnected: {x_client_id}")
 
