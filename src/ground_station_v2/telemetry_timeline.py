@@ -6,6 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# This is an auto sorting queue of telemetry samples, the ingestion workers push stuff onto it and the latency workers pop
 class TelemetryTimelineQueue:
     def __init__(self, max_size: int = 256):
         self.heap: list[Any] = []
@@ -55,6 +56,9 @@ class TelemetryTimelineQueue:
             timestamps = [getattr(b, 'measurement_time', None) for b in self.heap[:10]]
             logger.info(f"Queue size: {len(self.heap)}, first 10 timestamps: {timestamps}")
 
+
+# This is the worker that simulates the latency of the telemetry to create smoother data
+# it pops data from the timeline queue and sends it to the necessary clients based on an internal timer
 class TelemetryTimelineWorker:
     def __init__(self, timeline_queue: TelemetryTimelineQueue, get_clients_func: Callable[[], dict[str, Any]]):
         self.timeline_queue = timeline_queue
