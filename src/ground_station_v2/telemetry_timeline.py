@@ -17,8 +17,8 @@ class TelemetryTimelineQueue:
     async def add_block(self, block: Any) -> None:
         async with self.heap_lock:
             if len(self.heap) >= self.max_size:
-                logger.warning(f"Timeline queue full, clearing all blocks")
-                self.heap.clear()
+                dropped = heapq.heappop(self.heap)
+                logger.warning(f"Timeline queue full, dropping oldest block at time {getattr(dropped, 'measurement_time', 'unknown')}")
             
             heapq.heappush(self.heap, block)
             self.not_empty.set()

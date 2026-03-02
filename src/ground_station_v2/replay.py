@@ -13,7 +13,6 @@ class Replay:
         self.replay_path: Path | None = None
         self.speed: float = 1.0
         self.playing: bool = False
-        self.task: asyncio.Task | None = None
 
     def start(self, replay_path: Path | str, speed: float = 1.0):
         if isinstance(replay_path, str):

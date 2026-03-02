@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 from pathlib import Path
 from time import time
 from ground_station_v2.record import Record
@@ -44,16 +43,12 @@ async def ingest_global_radio_packets(live_queue: TelemetryTimelineQueue) -> Non
         logger.error(f"Error in ingest_global_radio_packets: {e}", exc_info=True)
 
 # ingest parsed replay packets from a replay instance into the client's replay queue
-async def ingest_client_replay_packets(client_id: str, replay: Replay, connected_clients: dict[str, Any]) -> None:
+async def ingest_client_replay_packets(replay: Replay, queue: TelemetryTimelineQueue) -> None:
     try:
         async for timestamp, row, block_type in replay.run():
-            state = connected_clients.get(client_id)
-            if not state or not state.replay_queue:
-                break
-            
             block = block_from_csv_row(timestamp, row, block_type)
             if block:
-                await state.replay_queue.add_block(block)
+                await queue.add_block(block)
     except Exception as e:
         logger.error(f"Error in ingest_client_replay_packets: {e}", exc_info=True)
 

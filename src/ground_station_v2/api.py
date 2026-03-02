@@ -13,21 +13,56 @@ from ground_station_v2.ingestion import ingest_global_radio_packets, ingest_glob
 logger = logging.getLogger(__name__)
 
 @dataclass
+class ClientReplayState:
+    instance: Replay
+    queue: TelemetryTimelineQueue
+    worker_task: asyncio.Task[None]
+    ingest_task: asyncio.Task[None]
+    
+    async def cleanup(self):
+        """Cancel and await all tasks"""
+        for task in [self.ingest_task, self.worker_task]:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+@dataclass
 class ClientState:
     websocket: WebSocket
     mode: str
-    replay_queue: TelemetryTimelineQueue | None = None
-    replay_worker_task: asyncio.Task[None] | None = None
-    replay_ingest_task: asyncio.Task[None] | None = None
-    replay_instance: Replay | None = None
+    replay: ClientReplayState | None = None
 
 connected_clients: dict[str, ClientState] = {}
 live_queue: TelemetryTimelineQueue = TelemetryTimelineQueue()
 _from_recording: Path | None = None
 
-# need this function for circular imports goddammit
 def get_live_clients():
     return {client_id: state.websocket for client_id, state in connected_clients.items() if state.mode == "live"}
+
+async def get_client_state(x_client_id: str = Header(alias="X-Client-ID")) -> ClientState:
+    """FastAPI dependency to validate and retrieve client state"""
+    if x_client_id not in connected_clients:
+        raise HTTPException(status_code=401, detail="Client not connected")
+    return connected_clients[x_client_id]
+
+async def start_client_replay(client_id: str, state: ClientState, replay_path: str, speed: float) -> ClientReplayState:
+    """Setup and start a client replay session"""
+    replay_queue = TelemetryTimelineQueue()
+    replay_worker = TelemetryTimelineWorker(replay_queue, lambda: {client_id: state.websocket})
+    worker_task = asyncio.create_task(replay_worker.run())
+    
+    replay_instance = Replay()
+    replay_instance.start(replay_path, speed)
+    ingest_task = asyncio.create_task(ingest_client_replay_packets(replay_instance, replay_queue))
+    
+    return ClientReplayState(
+        instance=replay_instance,
+        queue=replay_queue,
+        worker_task=worker_task,
+        ingest_task=ingest_task
+    )
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -59,32 +94,14 @@ async def replay_play(
     speed: float = 1.0,
     x_client_id: str = Header(alias="X-Client-ID")
 ):
-    if x_client_id not in connected_clients:
-        raise HTTPException(status_code=401, detail="Client not connected")
+    state = await get_client_state(x_client_id)
 
     try:
-        state = connected_clients[x_client_id]
-        
-        # cancel any existing replay tasks
-        if state.replay_ingest_task and not state.replay_ingest_task.done():
-            state.replay_ingest_task.cancel()
-            try:
-                await state.replay_ingest_task
-            except asyncio.CancelledError:
-                pass
-        
-        if state.replay_worker_task and not state.replay_worker_task.done():
-            state.replay_worker_task.cancel()
+        if state.replay:
+            await state.replay.cleanup()
         
         state.mode = "replay"
-        state.replay_queue = TelemetryTimelineQueue()
-        
-        replay_worker = TelemetryTimelineWorker(state.replay_queue, lambda: {x_client_id: state.websocket})
-        state.replay_worker_task = asyncio.create_task(replay_worker.run())
-        
-        state.replay_instance = Replay()
-        state.replay_instance.start(replay_path, speed)
-        state.replay_ingest_task = asyncio.create_task(ingest_client_replay_packets(x_client_id, state.replay_instance, connected_clients))
+        state.replay = await start_client_replay(x_client_id, state, replay_path, speed)
         
         logger.info(f"Replay started for client {x_client_id}: {replay_path} at {speed}x")
         return {"status": "ok", "replay_path": replay_path, "speed": speed}
@@ -97,23 +114,13 @@ async def replay_play(
 
 @app.post("/resume_live")
 async def resume_live(x_client_id: str = Header(alias="X-Client-ID")):
-    if x_client_id not in connected_clients:
-        raise HTTPException(status_code=401, detail="Client not connected")
-
-    state = connected_clients[x_client_id]
+    state = await get_client_state(x_client_id)
     
-    if state.replay_ingest_task and not state.replay_ingest_task.done():
-        state.replay_ingest_task.cancel()
-        await state.replay_ingest_task
-    
-    if state.replay_worker_task and not state.replay_worker_task.done():
-        state.replay_worker_task.cancel()
+    if state.replay:
+        await state.replay.cleanup()
     
     state.mode = "live"
-    state.replay_queue = None
-    state.replay_worker_task = None
-    state.replay_ingest_task = None
-    state.replay_instance = None
+    state.replay = None
     
     logger.info(f"Client {x_client_id} resumed live mode")
     return {"status": "ok"}
@@ -125,18 +132,15 @@ async def replay_pause(
     speed: float = 1.0,
     x_client_id: str = Header(alias="X-Client-ID")
 ):
-    if x_client_id not in connected_clients:
-        raise HTTPException(status_code=401, detail="Client not connected")
-
-    state = connected_clients[x_client_id]
-    if not state.replay_instance or not state.replay_instance.is_playing():
+    state = await get_client_state(x_client_id)
+    if not state.replay or not state.replay.instance.is_playing():
         raise HTTPException(status_code=400, detail="No replay is currently active")
 
     if paused:
-        state.replay_instance.pause()
+        state.replay.instance.pause()
         logger.info(f"Replay paused for client {x_client_id}")
     else:
-        state.replay_instance.resume(speed)
+        state.replay.instance.resume(speed)
         logger.info(f"Replay resumed for client {x_client_id} at {speed}x")
 
     return {"status": "ok", "paused": paused}
@@ -144,18 +148,11 @@ async def replay_pause(
 
 @app.post("/replay_stop")
 async def replay_stop(x_client_id: str = Header(alias="X-Client-ID")):
-    if x_client_id not in connected_clients:
-        raise HTTPException(status_code=401, detail="Client not connected")
-
-    state = connected_clients[x_client_id]
-    if state.replay_instance and state.replay_instance.is_playing():
-        state.replay_instance.stop()
-        if state.replay_ingest_task and not state.replay_ingest_task.done():
-            state.replay_ingest_task.cancel()
-            try:
-                await state.replay_ingest_task
-            except asyncio.CancelledError:
-                pass
+    state = await get_client_state(x_client_id)
+    
+    if state.replay and state.replay.instance.is_playing():
+        state.replay.instance.stop()
+        await state.replay.cleanup()
         logger.info(f"Replay stopped for client {x_client_id}")
     
     return {"status": "ok"}
@@ -198,10 +195,9 @@ async def websocket_endpoint(websocket: WebSocket, x_client_id: str = Header(ali
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        if state.replay_ingest_task:
-            state.replay_ingest_task.cancel()
-        if state.replay_worker_task:
-            state.replay_worker_task.cancel()
+        if state.replay:
+            state.replay.ingest_task.cancel()
+            state.replay.worker_task.cancel()
         connected_clients.pop(x_client_id, None)
         logger.info(f"Client disconnected: {x_client_id}")
 
