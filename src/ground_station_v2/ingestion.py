@@ -24,6 +24,7 @@ async def ingest_global_radio_packets(live_queue: TelemetryTimelineQueue) -> Non
         recorder.init_mission("recordings", time())
         recorder.start()
 
+        # TODO: Put the parameter as False when radio is connected to receive live data. For testing, True for reading from fake data.
         async for packet in get_radio_packet(True):
             packet_hex = packet.hex()
             parsed = parse_rn2483_transmission(packet_hex, config)
