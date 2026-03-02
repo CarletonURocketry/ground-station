@@ -1,183 +1,56 @@
 from fastapi import FastAPI, Header, WebSocket, WebSocketException, WebSocketDisconnect, HTTPException
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from dataclasses import dataclass
 import uuid
-from time import time
 import uvicorn
 import asyncio
-import json
-from ground_station_v2.record import Record
 import logging
-from ground_station_v2.radio.serial import get_radio_packet
-from ground_station_v2.radio.packets.spec import parse_rn2483_transmission
-from ground_station_v2.config import load_config
+from ground_station_v2.telemetry_timeline import TelemetryTimelineQueue, TelemetryTimelineWorker
+from ground_station_v2.replay import Replay
+from ground_station_v2.ingestion import ingest_global_radio_packets, ingest_global_replay_packets, ingest_client_replay_packets, recorder
 
 logger = logging.getLogger(__name__)
 
-recorder = Record()
-from ground_station_v2.replay import Replay
-replay = Replay()
+@dataclass
+class ClientState:
+    websocket: WebSocket
+    mode: str
+    replay_queue: TelemetryTimelineQueue | None = None
+    replay_worker_task: asyncio.Task[None] | None = None
+    replay_ingest_task: asyncio.Task[None] | None = None
 
-connected_clients: dict[str, WebSocket] = {}
-
+connected_clients: dict[str, ClientState] = {}
+live_queue: TelemetryTimelineQueue = TelemetryTimelineQueue()
 _from_recording: Path | None = None
 
-async def broadcast_radio_packets():
-    logger.info("Starting broadcast_radio_packets")
-    config = load_config("config.json")
+# need this function for circular imports goddammit
+def get_live_clients():
+    return {client_id: state.websocket for client_id, state in connected_clients.items() if state.mode == "live"}
 
-    try:
-        recorder.init_mission("recordings", time())
-        recorder.start()
-
-        async for packet in get_radio_packet(True):
-            packet_hex = packet.hex()
-            parsed = parse_rn2483_transmission(packet_hex, config)
-
-            if recorder.recording:
-                recorder.write(packet_hex, parsed)
-
-            if not parsed:
-                logger.warning(f"Failed to parse packet: {packet_hex}")
-                continue
-
-            telemetry_dict: dict[str, Any] = {}
-            for block in parsed.blocks:
-                block.output_formatted(telemetry_dict)
-
-            json_packet: str = json.dumps(telemetry_dict)
-
-            disconnected: list[str] = []
-            for client_id, websocket in connected_clients.items():
-                try:
-                    await websocket.send_text(json_packet)
-                except Exception as e:
-                    logger.warning(f"Failed to send to client {client_id}: {e}")
-                    disconnected.append(client_id)
-
-            for client_id in disconnected:
-                connected_clients.pop(client_id, None)
-
-        recorder.stop()
-        recorder.close_mission()
-    except Exception as e:
-        recorder.stop()
-        recorder.close_mission()
-        logger.error(f"Error in broadcast_radio_packets: {e}", exc_info=True)
-
-
-
-async def broadcast_replay_packets():
-    logger.info("Starting broadcast_replay_packets")
-    config = load_config("config.json")
-
-    try:
-        async for packet_hex in replay.run():
-            if not packet_hex:
-                continue
-
-            parsed = parse_rn2483_transmission(packet_hex, config)
-
-            if not parsed:
-                logger.warning(f"Failed to parse replay packet: {packet_hex}")
-                continue
-
-            telemetry_dict: dict[str, Any] = {}
-            for block in parsed.blocks:
-                block.output_formatted(telemetry_dict)
-
-            json_packet: str = json.dumps(telemetry_dict)
-
-            disconnected: list[str] = []
-            for client_id, websocket in connected_clients.items():
-                try:
-                    await websocket.send_text(json_packet)
-                except Exception as e:
-                    logger.warning(f"Failed to send replay packet to client {client_id}: {e}")
-                    disconnected.append(client_id)
-
-            for client_id in disconnected:
-                connected_clients.pop(client_id, None)
-    except Exception as e:
-        logger.error(f"Error in broadcast_replay_packets: {e}", exc_info=True)
-
-
-async def broadcast_from_recording(recording_path: Path):
-    logger.info(f"Starting broadcast_from_recording: {recording_path}")
-    config = load_config("config.json")
-    interval = 0.8
-
-    try:
-        while True:
-            with open(recording_path, "r") as file:
-                for line in file:
-                    packet_hex = line.strip()
-                    if not packet_hex:
-                        continue
-
-                    logger.info(f"Incoming packet length: {len(packet_hex) // 2} bytes")
-                    parsed = parse_rn2483_transmission(packet_hex, config)
-
-                    if not parsed:
-                        logger.warning(f"Failed to parse packet from recording: {packet_hex}")
-                        await asyncio.sleep(interval)
-                        continue
-
-                    telemetry_dict: dict[str, Any] = {}
-                    for block in parsed.blocks:
-                        block.output_formatted(telemetry_dict)
-
-                    json_packet: str = json.dumps(telemetry_dict)
-
-                    disconnected: list[str] = []
-                    for client_id, websocket in connected_clients.items():
-                        try:
-                            await websocket.send_text(json_packet)
-                        except Exception as e:
-                            logger.warning(f"Failed to send recording packet to client {client_id}: {e}")
-                            disconnected.append(client_id)
-
-                    for client_id in disconnected:
-                        connected_clients.pop(client_id, None)
-
-                    await asyncio.sleep(interval)
-
-            logger.info("Recording ended, looping back to start")
-    except Exception as e:
-        logger.error(f"Error in broadcast_from_recording: {e}", exc_info=True)
-
-
-# handles the lifespan of the app, creates and destroys async tasks
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if _from_recording is not None:
-        task = asyncio.create_task(broadcast_from_recording(_from_recording))
-    else:
-        task = asyncio.create_task(broadcast_radio_packets())
+    live_worker = TelemetryTimelineWorker(live_queue, get_live_clients)
+    asyncio.create_task(live_worker.run())
+    
+    if _from_recording is None:
+        asyncio.create_task(ingest_global_radio_packets(live_queue))
+    
     yield
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
 
 
 app = FastAPI(lifespan=lifespan)
 
-
-# generates a uuid for the client to use
+# generates a uuid for the client to use, in theory is not needed as the frontend can gen its own
 @app.get("/client_id")
 async def get_client_id():
     client_id = str(uuid.uuid4())
     return {"client_id": client_id}
 
-
 # all the requests below expect the X-Client-ID header to be set with the client_id from the request above
 # for now it's not checked whether it was generated by the get_client_id endpoint or not, this will be changed
 
 # TODO: include the header id check in middleware
-
 
 @app.post("/replay_play")
 async def replay_play(
@@ -189,19 +62,28 @@ async def replay_play(
         raise HTTPException(status_code=401, detail="Client not connected")
 
     try:
-        # Stop any existing replay
-        if replay.is_playing():
-            replay.stop()
-            if replay.task and not replay.task.done():
-                replay.task.cancel()
-                try:
-                    await replay.task
-                except asyncio.CancelledError:
-                    pass
+        state = connected_clients[x_client_id]
         
-        # Start new replay
-        replay.start(replay_path, speed)
-        replay.task = asyncio.create_task(broadcast_replay_packets())
+        # cancel any existing replay tasks
+        if state.replay_ingest_task and not state.replay_ingest_task.done():
+            state.replay_ingest_task.cancel()
+            try:
+                await state.replay_ingest_task
+            except asyncio.CancelledError:
+                pass
+        
+        if state.replay_worker_task and not state.replay_worker_task.done():
+            state.replay_worker_task.cancel()
+        
+        state.mode = "replay"
+        state.replay_queue = TelemetryTimelineQueue()
+        
+        replay_worker = TelemetryTimelineWorker(state.replay_queue, lambda: {x_client_id: state.websocket})
+        state.replay_worker_task = asyncio.create_task(replay_worker.run())
+        
+        client_replay = Replay()
+        client_replay.start(replay_path, speed)
+        state.replay_ingest_task = asyncio.create_task(ingest_client_replay_packets(x_client_id, client_replay, connected_clients))
         
         logger.info(f"Replay started for client {x_client_id}: {replay_path} at {speed}x")
         return {"status": "ok", "replay_path": replay_path, "speed": speed}
@@ -212,43 +94,26 @@ async def replay_play(
         raise HTTPException(status_code=500, detail=f"Failed to start replay: {str(e)}")
 
 
-@app.post("/replay_pause")
-async def replay_pause(
-    paused: bool = True,
-    speed: float = 1.0,
-    x_client_id: str = Header(alias="X-Client-ID")
-):
+@app.post("/resume_live")
+async def resume_live(x_client_id: str = Header(alias="X-Client-ID")):
     if x_client_id not in connected_clients:
         raise HTTPException(status_code=401, detail="Client not connected")
 
-    if not replay.is_playing():
-        raise HTTPException(status_code=400, detail="No replay is currently active")
+    state = connected_clients[x_client_id]
     
-    if paused:
-        replay.pause()
-        logger.info(f"Replay paused for client {x_client_id}")
-    else:
-        replay.resume(speed)
-        logger.info(f"Replay resumed for client {x_client_id} at {speed}x")
+    if state.replay_ingest_task and not state.replay_ingest_task.done():
+        state.replay_ingest_task.cancel()
+        await state.replay_ingest_task
     
-    return {"status": "ok", "paused": paused}
-
-
-@app.post("/replay_stop")
-async def replay_stop(x_client_id: str = Header(alias="X-Client-ID")):
-    if x_client_id not in connected_clients:
-        raise HTTPException(status_code=401, detail="Client not connected")
-
-    if replay.is_playing():
-        replay.stop()
-        if replay.task and not replay.task.done():
-            replay.task.cancel()
-            try:
-                await replay.task
-            except asyncio.CancelledError:
-                pass
-        logger.info(f"Replay stopped for client {x_client_id}")
+    if state.replay_worker_task and not state.replay_worker_task.done():
+        state.replay_worker_task.cancel()
     
+    state.mode = "live"
+    state.replay_queue = None
+    state.replay_worker_task = None
+    state.replay_ingest_task = None
+    
+    logger.info(f"Client {x_client_id} resumed live mode")
     return {"status": "ok"}
 
 
@@ -266,7 +131,6 @@ async def record_stop(x_client_id: str = Header(alias="X-Client-ID")):
     return {"status": "ok"}
 
 
-# simple readonly websocket endpoint, doesn't process any commands
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, x_client_id: str = Header(alias="X-Client-ID")):
     if x_client_id in connected_clients:
@@ -274,14 +138,26 @@ async def websocket_endpoint(websocket: WebSocket, x_client_id: str = Header(ali
         raise WebSocketException(code=1008, reason="Client already connected")
 
     await websocket.accept()
-    connected_clients[x_client_id] = websocket
+    
+    state = ClientState(
+        websocket=websocket,
+        mode="live"
+    )
+    connected_clients[x_client_id] = state
     logger.info(f"Client connected: {x_client_id}")
+    
+    if _from_recording is not None and len(connected_clients) == 1:
+        asyncio.create_task(ingest_global_replay_packets(live_queue, _from_recording))
+        logger.info(f"Started replay ingest for first client: {_from_recording}")
 
     try:
-        # stal the socket, we can now reuse the websocket object from other func so send data to the client
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
+        if state.replay_ingest_task:
+            state.replay_ingest_task.cancel()
+        if state.replay_worker_task:
+            state.replay_worker_task.cancel()
         connected_clients.pop(x_client_id, None)
         logger.info(f"Client disconnected: {x_client_id}")
 
