@@ -1,12 +1,13 @@
 from fastapi import FastAPI, Header, WebSocket, WebSocketException, WebSocketDisconnect, HTTPException
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any
 import uuid
 from time import time
 import uvicorn
 import asyncio
 import json
 from ground_station_v2.record import Record
-from typing import Any
 import logging
 from ground_station_v2.radio.serial import get_radio_packet
 from ground_station_v2.radio.packets.spec import parse_rn2483_transmission
@@ -20,6 +21,7 @@ replay = Replay()
 
 connected_clients: dict[str, WebSocket] = {}
 
+_from_recording: Path | None = None
 
 async def broadcast_radio_packets():
     logger.info("Starting broadcast_radio_packets")
@@ -65,6 +67,7 @@ async def broadcast_radio_packets():
         logger.error(f"Error in broadcast_radio_packets: {e}", exc_info=True)
 
 
+
 async def broadcast_replay_packets():
     logger.info("Starting broadcast_replay_packets")
     config = load_config("config.json")
@@ -73,9 +76,9 @@ async def broadcast_replay_packets():
         async for packet_hex in replay.run():
             if not packet_hex:
                 continue
-            
+
             parsed = parse_rn2483_transmission(packet_hex, config)
-            
+
             if not parsed:
                 logger.warning(f"Failed to parse replay packet: {packet_hex}")
                 continue
@@ -100,10 +103,58 @@ async def broadcast_replay_packets():
         logger.error(f"Error in broadcast_replay_packets: {e}", exc_info=True)
 
 
+async def broadcast_from_recording(recording_path: Path):
+    logger.info(f"Starting broadcast_from_recording: {recording_path}")
+    config = load_config("config.json")
+    interval = 0.8
+
+    try:
+        while True:
+            with open(recording_path, "r") as file:
+                for line in file:
+                    packet_hex = line.strip()
+                    if not packet_hex:
+                        continue
+
+                    logger.info(f"Incoming packet length: {len(packet_hex) // 2} bytes")
+                    parsed = parse_rn2483_transmission(packet_hex, config)
+
+                    if not parsed:
+                        logger.warning(f"Failed to parse packet from recording: {packet_hex}")
+                        await asyncio.sleep(interval)
+                        continue
+
+                    telemetry_dict: dict[str, Any] = {}
+                    for block in parsed.blocks:
+                        block.output_formatted(telemetry_dict)
+
+                    json_packet: str = json.dumps(telemetry_dict)
+
+                    disconnected: list[str] = []
+                    for client_id, websocket in connected_clients.items():
+                        try:
+                            await websocket.send_text(json_packet)
+                        except Exception as e:
+                            logger.warning(f"Failed to send recording packet to client {client_id}: {e}")
+                            disconnected.append(client_id)
+
+                    for client_id in disconnected:
+                        connected_clients.pop(client_id, None)
+
+                    await asyncio.sleep(interval)
+
+            logger.info("Recording ended, looping back to start")
+    except Exception as e:
+        logger.error(f"Error in broadcast_from_recording: {e}", exc_info=True)
+
+
 # handles the lifespan of the app, creates and destroys async tasks
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(broadcast_radio_packets())
+    if _from_recording is not None:
+        task = asyncio.create_task(broadcast_from_recording(_from_recording))
+    else:
+        task = asyncio.create_task(broadcast_radio_packets())
     yield
     task.cancel()
     try:
@@ -235,5 +286,7 @@ async def websocket_endpoint(websocket: WebSocket, x_client_id: str = Header(ali
         logger.info(f"Client disconnected: {x_client_id}")
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8000):
+def run_server(host: str = "0.0.0.0", port: int = 8000, from_recording: Path | None = None):
+    global _from_recording
+    _from_recording = from_recording
     uvicorn.run(app, host=host, port=port)
