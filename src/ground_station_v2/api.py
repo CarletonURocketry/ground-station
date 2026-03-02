@@ -29,6 +29,7 @@ async def broadcast_radio_packets():
     config = load_config("config.json")
 
     try:
+        # Whenever the mission/server is initalized, files are created but NOT written to unless recorder recording as seen in the write function.
         recorder.init_mission("recordings", time())
 
         async for packet in get_radio_packet(False):
