@@ -37,6 +37,13 @@ def scan_serial_ports() -> list[str]:
     system = platform.system()
     prefixes = _PORT_PREFIXES.get(system, ["tty.usbserial", "ttyUSB"])
 
+    if not os.path.isdir("/dev"):
+        logger.error(
+            "/dev directory not found. This likely means you are running on Windows, which is not supported. Please use macOS, Linux, or a UNIX based system."
+        )
+
+        return []
+
     try:
         files = os.listdir("/dev")
     except OSError:
