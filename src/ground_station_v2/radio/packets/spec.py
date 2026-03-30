@@ -121,36 +121,30 @@ def parse_blocks(packet_header: PacketHeader, encoded_blocks: bytes) -> List[Blo
     return parsed_blocks
 
 
-# For now, returns the same packet.
-def create_fake_packet() -> str:
-    """
-    Creates a fake packet with sample telemetry data for testing purposes.
-    Returns a hex string representation of the raw packet bytes that can be
-    parsed by parse_rn2483_transmission().
-    """
-    timestamp = int(time() * 1000) & 0xFFFF  # Mask to 16 bits
-    packet_num = 1
-    block_count = 3
-
-    # Create packet header bytes (callsign padded to 9 chars + timestamp + block count + packet num)
+def create_fake_packet(packet_num: int = 1) -> str:
     callsign = "VA3ZAJ".ljust(CALLSIGN_LENGTH, "\x00")
-    packet_header_bytes = callsign.encode("ascii") + struct.pack("<HBB", timestamp, block_count, packet_num)
+    packet_header_bytes = callsign.encode("ascii") + struct.pack("<HBB", 0, 4, packet_num & 0xFF)
 
-    # Create block bytes
     block_bytes = b""
 
-    # Temperature block: block header (type=0x02, count=1) + contents (time, temp)
-    block_bytes += struct.pack("<BB", BlockType.TEMPERATURE, 1)  # Block header
-    block_bytes += struct.pack("<hi", 1000, 25000)  # 1 second, 25°C (milli-degrees)
+    block_bytes += struct.pack("<BB", BlockType.COORDINATES, 3)
+    block_bytes += struct.pack("<hii", 100, 45_424_690, -75_699_537)
+    block_bytes += struct.pack("<hii", 200, 45_424_690, -75_699_537)
+    block_bytes += struct.pack("<hii", 300, 45_424_690, -75_699_537)
 
-    # Pressure block: block header (type=0x03, count=1) + contents (time, pressure)
-    block_bytes += struct.pack("<BB", BlockType.PRESSURE, 1)  # Block header
-    block_bytes += struct.pack("<hI", 1500, 101325)  # 1.5 seconds, ~1 atm
+    block_bytes += struct.pack("<BB", BlockType.ALTITUDE_ABOVE_SEA_LEVEL, 3)
+    block_bytes += struct.pack("<hi", 100, 75_000)
+    block_bytes += struct.pack("<hi", 200, 75_100)
+    block_bytes += struct.pack("<hi", 300, 75_200)
 
-    # Linear acceleration block: block header (type=0x04, count=1) + contents (time, x, y, z)
-    block_bytes += struct.pack("<BB", BlockType.LINEAR_ACCELERATION, 1)  # Block header
-    block_bytes += struct.pack("<hhhh", 2000, 0, 0, 981)  # 2 seconds, ~9.81 m/s² in z
+    block_bytes += struct.pack("<BB", BlockType.MAGNETIC_FIELD, 3)
+    block_bytes += struct.pack("<hhhh", 100, 200, -50, 480)
+    block_bytes += struct.pack("<hhhh", 200, 202, -49, 479)
+    block_bytes += struct.pack("<hhhh", 300, 198, -51, 481)
 
-    # Combine and return as hex string
-    full_packet = packet_header_bytes + block_bytes
-    return full_packet.hex()
+    block_bytes += struct.pack("<BB", BlockType.LINEAR_ACCELERATION, 3)
+    block_bytes += struct.pack("<hhhh", 100, 10, -5, 981)
+    block_bytes += struct.pack("<hhhh", 200, 12, -4, 979)
+    block_bytes += struct.pack("<hhhh", 300, 8, -6, 983)
+
+    return (packet_header_bytes + block_bytes).hex()

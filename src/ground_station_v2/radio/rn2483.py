@@ -232,3 +232,19 @@ class RN2483Radio:
         while "radio_tx_ok" not in line:
             line = str(self.serial.readline())
         return True
+
+    def transmit_hex(self, data_hex: str) -> bool:
+        # same as transmit but data is already in hex
+        radio_write(self.serial, "mac pause")
+        line = str(self.serial.readline())
+        if "4294967245" not in line:
+            return False
+
+        radio_write(self.serial, f"radio tx {data_hex}")
+        if not wait_for_ok(self.serial):
+            return False
+
+        line = ""
+        while "radio_tx_ok" not in line:
+            line = str(self.serial.readline())
+        return True
