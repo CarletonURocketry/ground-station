@@ -70,6 +70,9 @@ def main() -> None:
 
                 if parsed:
                     logger.info("snr_db=%d blocks=%d", snr, len(parsed.blocks))
+                    for blk in parsed.blocks:
+                        cls = type(blk)
+                        logger.info("  block class=%s payload_bytes=%d", cls.__name__, cls.size())
                 else:
                     logger.info("snr_db=%d blocks=0 parsing failed", snr)
             else:

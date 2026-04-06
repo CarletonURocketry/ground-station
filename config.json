@@ -14,10 +14,11 @@
     "iqi": false
   },
   "approved_callsigns": {
-    "VA3INI": "Matteo Golin",
-    "VA3ZTA": "Darwin Jull",
-    "VE3LWN": "Thomas Selwyn",
-    "VA3EHJ": "Elias Hawa",
-    "VA3ZAJ": "Angus Jull"
+    "VA3XXX": "Placeholder callsign",
+    "VA3NPM": "Tony Lin",
+    "VA3LIG": "Sean Dauphinee",
+    "VE3XUM": "Amaan Khan",
+    "VE3FSZ": "Roland Neill",
+    "VA3JHX": "Jack Hartman"
   }
 }

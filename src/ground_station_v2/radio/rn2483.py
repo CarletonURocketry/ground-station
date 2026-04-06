@@ -78,6 +78,22 @@ def radio_write_ok(conn: Serial, data: str) -> bool:
     return wait_for_ok(conn)
 
 
+def transmit_hex(conn: Serial, hex_payload: str) -> bool:
+    radio_write(conn, "mac pause")
+    line = str(conn.readline())
+    if "4294967245" not in line:
+        return False
+
+    radio_write(conn, f"radio tx {hex_payload}")
+    if not wait_for_ok(conn):
+        return False
+
+    line = ""
+    while "radio_tx_ok" not in line:
+        line = str(conn.readline())
+    return True
+
+
 class RN2483Radio:
     def __init__(self, serial_port: str):
         self.serial = Serial(
@@ -232,3 +248,7 @@ class RN2483Radio:
         while "radio_tx_ok" not in line:
             line = str(self.serial.readline())
         return True
+
+    def transmit_hex(self, hex_payload: str) -> bool:
+        """Same as module-level :func:`transmit_hex` using this radio's serial connection."""
+        return transmit_hex(self.serial, hex_payload)
