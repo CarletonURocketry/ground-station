@@ -104,7 +104,7 @@ def microdegrees_to_degrees(microdegrees: int) -> float:
         float: The angle in degrees
     """
 
-    return round(microdegrees / pow(10, 7), 2)
+    return microdegrees / pow(10, 7)
 
 
 def magnitude(x: float, y: float, z: float) -> float:

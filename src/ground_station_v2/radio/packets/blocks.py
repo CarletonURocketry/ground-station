@@ -227,8 +227,8 @@ class Coordinates(TimedBlock):
             "measurement_time": float(self.measurement_time),
             "sensor_type": "gnss",
             "data": {
-                "latitude": microdegrees_to_degrees(self.latitude),
-                "longitude": microdegrees_to_degrees(self.longitude)
+                "latitude": self.latitude,
+                "longitude": self.longitude
             }
         }
 
