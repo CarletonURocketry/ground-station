@@ -1,6 +1,9 @@
 from pathlib import Path
 import asyncio
 import logging
+import csv
+import time
+from typing import Any, AsyncGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -13,54 +16,80 @@ class Replay:
         self.task: asyncio.Task | None = None
         self.current_line: int = 0
         self.total_lines: int = 0
-        self.lines: list[str] = []  # Pre-loaded lines for random access
+        self.blocks: list[Any] = []
 
     def start(self, replay_path: Path | str, speed: float = 1.0):
         if isinstance(replay_path, str):
             replay_path = Path(replay_path)
         
         if not replay_path.exists():
-            raise FileNotFoundError(f"Replay file not found: {replay_path}")
+            raise FileNotFoundError(f"Replay path not found: {replay_path}")
         
         self.replay_path = replay_path
         self.speed = speed
         self.playing = True
         self.current_line = 0
         
-        # Pre-load all lines for position tracking and future seeking
-        with open(replay_path, "r") as file:
-            self.lines = [line.strip() for line in file if line.strip()]
-        self.total_lines = len(self.lines)
+        blocks: list[Any] = []
+        for csv_file in (replay_path / "parsed").glob("*.csv"):
+            with open(csv_file, "r") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    blocks.append((float(row["measurement_time"]), row, csv_file.stem))
+
+        blocks.sort(key=lambda x: x[0])
+        self.blocks = blocks
+        self.total_lines = len(blocks)
         
         logger.info(f"Replay started: {replay_path} at speed {speed}x ({self.total_lines} packets)")
 
-    # simple async generator that yields packets
-    # Now uses pre-loaded lines for position tracking
-    async def run(self):
-        if not self.replay_path or not self.playing or not self.lines:
+    async def run(self) -> AsyncGenerator[tuple[float, dict[str, str], str], None]:
+        if not self.replay_path or not self.playing or not self.blocks:
             return
-        
+            
         try:
-            while self.current_line < self.total_lines and self.playing:
-                # Wait while paused (speed == 0)
-                while self.speed == 0 and self.playing:
-                    await asyncio.sleep(0.1)
+            while self.playing:
+                start_time = self.blocks[self.current_line][0]
+                real_start = time.time()
+
+                while self.current_line < self.total_lines and self.playing:
+                    line = self.current_line
+
+                    while self.speed == 0 and self.playing:
+                        await asyncio.sleep(0.1)
+
+                    if not self.playing:
+                        break
+
+                    if self.current_line != line:
+                        start_time = self.blocks[self.current_line][0]
+                        real_start = time.time()
+                        continue
+
+                    timestamp, row, block_type = self.blocks[line]
+                    mission_elapsed = timestamp - start_time
+                    real_elapsed = time.time() - real_start
+                    wait_time = (mission_elapsed / self.speed) - real_elapsed
+                    if wait_time > 0:
+                        await asyncio.sleep(wait_time)
+
+                    if self.current_line != line:
+                        start_time = self.blocks[self.current_line][0]
+                        real_start = time.time()
+                        continue
+
+                    yield (timestamp, row, block_type)
+                    self.current_line += 1
+
+                if self.playing:
+                    logger.info("Replay loop complete, restarting...")
+                    self.current_line = 0
                 
-                if not self.playing:
-                    break
-                
-                line = self.lines[self.current_line]
-                self.current_line += 1
-                
-                yield line
-                # TODO: this is stupid, time delay should be based on the time between packets
-                # not a fixed 52ms bruh moment
-                await asyncio.sleep(0.052 / self.speed if self.speed > 0 else 0.052)
         except Exception as e:
-            logger.error(f"Error during replay: {e}", exc_info=True)
+            logger.error(f"Error during parsed replay: {e}", exc_info=True)
         finally:
             self.playing = False
-            logger.info("Replay finished")
+            logger.info("Parsed replay finished")
 
     def set_speed(self, speed: float):
         self.speed = speed
@@ -77,14 +106,14 @@ class Replay:
     def stop(self):
         self.playing = False
         self.current_line = 0
-        self.lines = []
+        self.blocks = []
         self.total_lines = 0
         logger.info("Replay stopped")
     
     def is_playing(self) -> bool:
         return self.playing
     
-    def get_status(self) -> dict:
+    def get_status(self) -> dict[str, object]:
         """Return current replay status for API endpoint."""
         return {
             "is_playing": self.playing,
@@ -104,4 +133,3 @@ class Replay:
             line_number = self.total_lines - 1 if self.total_lines > 0 else 0
         
         self.current_line = line_number
-        logger.info(f"Seeked to line {line_number}/{self.total_lines}")

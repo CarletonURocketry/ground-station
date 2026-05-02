@@ -1,3 +1,4 @@
+import argparse
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -16,5 +17,16 @@ logging.basicConfig(
     ],
 )
 
+parser = argparse.ArgumentParser(description="CUInSpace Ground Station telemetry server.")
+_ = parser.add_argument("--host", default="0.0.0.0", help="Host address to bind to (default: 0.0.0.0)")
+_ = parser.add_argument("--port", type=int, default=8000, help="Port to listen on (default: 8000)")
+_ = parser.add_argument(
+    "--from-recording",
+    type=Path,
+    metavar="RAW_FILE",
+    help="Path to a raw recording file to feed into the stream at 0.6s intervals instead of reading from radio",
+)
+
 if __name__ == "__main__":
-    run_server()
+    args = parser.parse_args()
+    run_server(host=args.host, port=args.port, from_recording=args.from_recording)

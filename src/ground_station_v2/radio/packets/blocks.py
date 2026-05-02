@@ -45,6 +45,13 @@ class Block:
             into (dict[str, Any]): A dictionary to add the block to
         """
         pass
+    
+    def get_measurement_time(self) -> float:
+        return float(getattr(self, 'measurement_time', 0))
+    
+    # this overrides the less than operator, cool workaround
+    def __lt__(self, other: "Block") -> bool:
+        return self.get_measurement_time() < other.get_measurement_time()
 
     def __init__(self, *args):  # type: ignore
         """Stand-in for dataclass constructors with any number of arguments"""
@@ -78,6 +85,13 @@ class TimedBlock(Block):
 
     def output_formatted(self, into: dict[str, Any]):
         pass
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "timed_block",
+            "data": {}
+        }
 
 
 @dataclass
@@ -89,6 +103,13 @@ class AltitudeAboveLaunchLevel(TimedBlock):
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["altitude_launch_level", "mission_time"], self.measurement_time)
         add_to_dict(into, ["altitude_launch_level", "metres"], millimeters_to_meters(self.altitude))
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "altitude_launch_level",
+            "data": {"metres": millimeters_to_meters(self.altitude)}
+        }
 
 
 @dataclass
@@ -100,6 +121,13 @@ class AltitudeAboveSeaLevel(TimedBlock):
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["altitude_sea_level", "mission_time"], self.measurement_time)
         add_to_dict(into, ["altitude_sea_level", "metres"], millimeters_to_meters(self.altitude))
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "altitude_sea_level",
+            "data": {"metres": millimeters_to_meters(self.altitude)}
+        }
 
 
 @dataclass
@@ -124,6 +152,22 @@ class LinearAcceleration(TimedBlock):
                 centimeters_to_meters(self.z_axis),
             ),
         )
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "linear_acceleration",
+            "data": {
+                "x": centimeters_to_meters(self.x_axis),
+                "y": centimeters_to_meters(self.y_axis),
+                "z": centimeters_to_meters(self.z_axis),
+                "magnitude": magnitude(
+                    centimeters_to_meters(self.x_axis),
+                    centimeters_to_meters(self.y_axis),
+                    centimeters_to_meters(self.z_axis)
+                )
+            }
+        }
 
 
 @dataclass
@@ -148,6 +192,22 @@ class AngularVelocity(TimedBlock):
                 tenthdegrees_to_degrees(self.z_axis),
             ),
         )
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "angular_velocity",
+            "data": {
+                "x": tenthdegrees_to_degrees(self.x_axis),
+                "y": tenthdegrees_to_degrees(self.y_axis),
+                "z": tenthdegrees_to_degrees(self.z_axis),
+                "magnitude": magnitude(
+                    tenthdegrees_to_degrees(self.x_axis),
+                    tenthdegrees_to_degrees(self.y_axis),
+                    tenthdegrees_to_degrees(self.z_axis)
+                )
+            }
+        }
 
 
 @dataclass
@@ -161,6 +221,16 @@ class Coordinates(TimedBlock):
         add_to_dict(into, ["gnss", "mission_time"], self.measurement_time)
         add_to_dict(into, ["gnss", "latitude"], microdegrees_to_degrees(self.latitude))
         add_to_dict(into, ["gnss", "longitude"], microdegrees_to_degrees(self.longitude))
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "gnss",
+            "data": {
+                "latitude": microdegrees_to_degrees(self.latitude),
+                "longitude": microdegrees_to_degrees(self.longitude)
+            }
+        }
 
 
 @dataclass
@@ -172,6 +242,13 @@ class Humidity(TimedBlock):
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["humidity", "mission_time"], self.measurement_time)
         add_to_dict(into, ["humidity", "percentage"], self.humidity)
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "humidity",
+            "data": {"percentage": self.humidity}
+        }
 
 
 @dataclass
@@ -183,6 +260,13 @@ class Pressure(TimedBlock):
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["pressure", "mission_time"], self.measurement_time)
         add_to_dict(into, ["pressure", "pascals"], self.pressure)
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "pressure",
+            "data": {"pascals": self.pressure}
+        }
 
 
 @dataclass
@@ -194,6 +278,13 @@ class Temperature(TimedBlock):
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["temperature", "mission_time"], self.measurement_time)
         add_to_dict(into, ["temperature", "celsius"], milli_degrees_to_celsius(self.temperature))
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "temperature",
+            "data": {"celsius": milli_degrees_to_celsius(self.temperature)}
+        }
 
 
 @dataclass
@@ -207,6 +298,13 @@ class Voltage(TimedBlock):
         # super().output_formatted(into)
         add_to_dict(into, ["voltage", "mission_time"], self.measurement_time)
         add_to_dict(into, ["voltage", str(self.identifier)], self.voltage)
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "voltage",
+            "data": {str(self.identifier): self.voltage}
+        }
 
 
 @dataclass
@@ -223,6 +321,18 @@ class MagneticField(TimedBlock):
         add_to_dict(into, ["magnetic_field", "y"], self.y_axis)
         add_to_dict(into, ["magnetic_field", "z"], self.z_axis)
         add_to_dict(into, ["magnetic_field", "magnitude"], magnitude(self.x_axis, self.y_axis, self.z_axis))
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "magnetic_field",
+            "data": {
+                "x": self.x_axis,
+                "y": self.y_axis,
+                "z": self.z_axis,
+                "magnitude": magnitude(self.x_axis, self.y_axis, self.z_axis)
+            }
+        }
 
 
 @dataclass
@@ -234,6 +344,13 @@ class FlightStatus(TimedBlock):
     def output_formatted(self, into: dict[str, Any]):
         add_to_dict(into, ["flight_status", "mission_time"], self.measurement_time)
         add_to_dict(into, ["flight_status", "status_code"], self.flight_status)
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "flight_status",
+            "data": {"status_code": self.flight_status}
+        }
 
 
 @dataclass
@@ -247,6 +364,16 @@ class FlightError(TimedBlock):
         add_to_dict(into, ["flight_error", "mission_time"], self.measurement_time)
         add_to_dict(into, ["flight_error", "proc_id"], self.proc_id)
         add_to_dict(into, ["flight_error", "error_code"], self.error_code)
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "flight_error",
+            "data": {
+                "proc_id": self.proc_id,
+                "error_code": self.error_code
+            }
+        }
 
 
 class InvalidBlockContents(Exception):
@@ -329,3 +456,51 @@ def parse_block_contents(packet_header: PacketHeader, block_header: BlockHeader,
         return block_class(*block_class.decode(packet_header.timestamp, encoded))
     except struct.error as e:
         raise InvalidBlockContents(block_header.type.name, f"bad block contents: {e}")
+
+
+CSV_BLOCK_TYPE_MAP: dict[str, type[Block]] = {
+    "altitude_above_launch_level": AltitudeAboveLaunchLevel,
+    "altitude_above_sea_level": AltitudeAboveSeaLevel,
+    "angular_velocity": AngularVelocity,
+    "coordinates": Coordinates,
+    "error_message": FlightError,
+    "humidity": Humidity,
+    "linear_acceleration": LinearAcceleration,
+    "magnetic_field": MagneticField,
+    "pressure": Pressure,
+    "status_message": FlightStatus,
+    "temperature": Temperature,
+    "voltage": Voltage,
+}
+
+
+def block_from_csv_row(timestamp: float, row: dict[str, str], block_type: str) -> Block | None:
+    """Construct a telemetry block from a CSV row
+
+    Args:
+        timestamp: The measurement_time timestamp
+        row: Dictionary of CSV column values
+        block_type: The CSV filename stem (e.g., "altitude_above_launch_level")
+
+    Returns:
+        Block instance or None if block_type is not recognized
+    """
+    if block_type not in CSV_BLOCK_TYPE_MAP:
+        return None
+    
+    block_class = CSV_BLOCK_TYPE_MAP[block_type]
+    kwargs: dict[str, Any] = {"measurement_time": timestamp}
+    
+    for key, value in row.items():
+        if key != "measurement_time" and value:
+            try:
+                if key in ["x_axis", "y_axis", "z_axis", "altitude", "voltage", "pressure", "humidity", "temperature"]:
+                    kwargs[key] = int(value)
+                elif key in ["latitude", "longitude"]:
+                    kwargs[key] = float(value)
+                else:
+                    kwargs[key] = value
+            except (ValueError, TypeError):
+                kwargs[key] = value
+    
+    return block_class(**kwargs)
