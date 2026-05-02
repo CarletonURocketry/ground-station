@@ -45,6 +45,7 @@ class Replay:
 
     async def run(self) -> AsyncGenerator[tuple[float, dict[str, str], str], None]:
         if not self.replay_path or not self.playing or not self.blocks:
+            self.playing = False
             return
             
         try:
@@ -81,9 +82,7 @@ class Replay:
                     yield (timestamp, row, block_type)
                     self.current_line += 1
 
-                if self.playing:
-                    logger.info("Replay loop complete, restarting...")
-                    self.current_line = 0
+                self.playing = False
                 
         except Exception as e:
             logger.error(f"Error during parsed replay: {e}", exc_info=True)
