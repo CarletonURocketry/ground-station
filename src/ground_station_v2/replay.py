@@ -43,7 +43,7 @@ class Replay:
         
         logger.info(f"Replay started: {replay_path} at speed {speed}x ({self.total_lines} packets)")
 
-    async def run(self) -> AsyncGenerator[tuple[float, dict[str, str], str], None]:
+    async def run(self) -> AsyncGenerator[tuple[float, dict[str, str], str, int], None]:
         if not self.replay_path or not self.playing or not self.blocks:
             self.playing = False
             return
@@ -79,7 +79,7 @@ class Replay:
                         real_start = time.time()
                         continue
 
-                    yield (timestamp, row, block_type)
+                    yield (timestamp, row, block_type, line)
                     self.current_line += 1
 
                 self.playing = False
