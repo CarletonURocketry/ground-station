@@ -227,8 +227,8 @@ class Coordinates(TimedBlock):
             "measurement_time": float(self.measurement_time),
             "sensor_type": "gnss",
             "data": {
-                "latitude": microdegrees_to_degrees(self.latitude),
-                "longitude": microdegrees_to_degrees(self.longitude)
+                "latitude": self.latitude,
+                "longitude": self.longitude
             }
         }
 
@@ -494,7 +494,7 @@ def block_from_csv_row(timestamp: float, row: dict[str, str], block_type: str) -
     for key, value in row.items():
         if key != "measurement_time" and value:
             try:
-                if key in ["x_axis", "y_axis", "z_axis", "altitude", "voltage", "pressure", "humidity", "temperature"]:
+                if key in ["x_axis", "y_axis", "z_axis", "altitude", "voltage", "pressure", "humidity", "temperature", "flight_status"]:
                     kwargs[key] = int(value)
                 elif key in ["latitude", "longitude"]:
                     kwargs[key] = float(value)

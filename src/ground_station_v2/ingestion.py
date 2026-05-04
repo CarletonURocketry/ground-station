@@ -47,7 +47,7 @@ async def ingest_global_radio_packets(live_queue: TelemetryTimelineQueue) -> Non
 # ingest parsed replay packets from a replay instance and send directly to client WebSocket
 async def ingest_client_replay_packets(replay: Replay, websocket: WebSocket) -> None:
     try:
-        async for timestamp, row, block_type in replay.run():
+        async for timestamp, row, block_type, _ in replay.run():
             block = block_from_csv_row(timestamp, row, block_type)
             if block:
                 await websocket.send_text(json.dumps(block.to_json()))  # type: ignore
@@ -60,7 +60,7 @@ async def ingest_global_replay_packets(live_queue: TelemetryTimelineQueue, from_
         replay_instance = Replay()
         replay_instance.start(from_recording, speed=1.0)
         
-        async for timestamp, row, block_type in replay_instance.run():
+        async for timestamp, row, block_type, _ in replay_instance.run():
             block = block_from_csv_row(timestamp, row, block_type)
             if block:
                 await live_queue.add_block(block)
