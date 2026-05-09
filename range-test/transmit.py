@@ -10,6 +10,7 @@ from pathlib import Path
 from ground_station_v2.config import RadioParameters
 from ground_station_v2.radio.packets.headers import BlockType, CALLSIGN_LENGTH
 from ground_station_v2.radio.rn2483 import RN2483Radio
+from ground_station_v2.radio.pool import scan_serial_ports
 
 PAYLOAD_BYTES: int = 255
 # a transmission delay is needed to avoid every other packet being dropped
@@ -18,6 +19,19 @@ PAYLOAD_BYTES: int = 255
 # larger packet size means larger delay
 TRANSMISSION_DELAY_SECONDS: float = 0.10
 logger = logging.getLogger(__name__)
+
+
+def discover_radio(params: RadioParameters) -> RN2483Radio:
+    for port in scan_serial_ports():
+        try:
+            radio = RN2483Radio(port)
+            radio.setup(params)
+            logger.info("Found and configured RN2483 on %s", port)
+            return radio
+        except Exception:
+            continue
+    logger.error("No RN2483 radio found")
+    sys.exit(1)
 
 # dynamically build a fixed lenght payload
 def build_fixed_payload(counter: int) -> str:
@@ -98,7 +112,6 @@ def main() -> None:
     configure_logging(script_dir / "logs" / "transmit.log")
 
     parser = argparse.ArgumentParser(description="Transmit data over RN2483 radio")
-    parser.add_argument("port", help="COM port/serial port where the radio is connected")
     parser.add_argument(
         "--csv",
         type=Path,
@@ -123,11 +136,7 @@ def main() -> None:
 
     logger.info("Using parameters: %s", params)
 
-    # Initialize radio with port and parameters
-    radio = RN2483Radio(args.port)
-
-    # Setup the radio (reset, configure, etc.)
-    radio.setup(params)
+    radio = discover_radio(params)
     logger.info("Radio configured successfully")
 
     if args.csv is not None:

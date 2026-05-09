@@ -1,10 +1,12 @@
 import json
+import sys
 import argparse
 import logging
 from pathlib import Path
 from time import time
 
 from ground_station_v2.radio.rn2483 import RN2483Radio as Radio
+from ground_station_v2.radio.pool import scan_serial_ports
 from ground_station_v2.config import RadioParameters as Parameters, Config
 from ground_station_v2.radio.packets.spec import parse_rn2483_transmission
 from ground_station_v2.record import Record
@@ -28,13 +30,25 @@ def configure_logging(log_path: Path) -> None:
     root.addHandler(file_handler)
 
 
+def discover_radio(params: Parameters) -> Radio:
+    for port in scan_serial_ports():
+        try:
+            radio = Radio(port)
+            radio.setup(params)
+            logger.info("Found and configured RN2483 on %s", port)
+            return radio
+        except Exception:
+            continue
+    logger.error("No RN2483 radio found")
+    sys.exit(1)
+
+
 def main() -> None:
     script_dir = Path(__file__).parent
     configure_logging(script_dir / "logs" / "receive.log")
 
     parser = argparse.ArgumentParser(description="Receive data from RN2483 radio")
-    parser.add_argument("port", help="COM port/serial port where the radio is connected")
-    parser.add_argument("--save", action="store_true", help="Save received data to recordings directory and attempt parsing")
+    parser.add_argument("--parse", action="store_true", help="Save received data to recordings directory and attempt parsing")
     args = parser.parse_args()
 
     config_path = script_dir.parent / "config.json"
@@ -46,13 +60,12 @@ def main() -> None:
 
     logger.info("Using parameters: %s", params)
 
-    radio = Radio(args.port)
-    radio.setup(params)
+    radio = discover_radio(params)
     logger.info("Radio configured successfully")
 
-    recorder = None
-    
-    if args.save:
+    recorder: Record | None = None
+
+    if args.parse:
         recorder = Record()
         mission_name = str(time())
         recordings_path = str(script_dir.parent / "recordings")
@@ -64,7 +77,7 @@ def main() -> None:
         if received:
             snr = radio.signal_report()
 
-            if args.save and recorder:
+            if recorder is not None:
                 parsed = parse_rn2483_transmission(received, config)
                 recorder.write(received, parsed)
 
