@@ -1,6 +1,7 @@
 from pathlib import Path
 from ground_station_v2.radio.packets.spec import ParsedTransmission
 from ground_station_v2.radio.packets.blocks import (
+    AltitudeAboveLaunchLevel,
     AltitudeAboveSeaLevel,
     LinearAcceleration,
     AngularVelocity,
@@ -42,6 +43,12 @@ class Record:
 
     # Config for files
     parsed_files: dict[Any, FileConfig] = {
+        AltitudeAboveLaunchLevel: {
+            "filename": "altitude_above_launch_level",
+            "file": None,
+            "writer": None,
+            "field_names": ["measurement_time", "altitude"],
+        },
         AltitudeAboveSeaLevel: {
             "filename": "altitude_above_sea_level",
             "file": None,
