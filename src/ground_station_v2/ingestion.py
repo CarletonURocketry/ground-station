@@ -35,6 +35,8 @@ async def ingest_global_radio_packets(live_queue: TelemetryTimelineQueue) -> Non
                 logger.warning(f"Failed to parse packet: {packet_hex}")
                 continue
 
+            h = parsed.packet_header
+            logger.info("Received packet: callsign=%s seq=%d blocks=%d t=%.3f", h.callsign.strip(), h.packet_num, len(parsed.blocks), time())
             await live_queue.add_blocks(parsed.blocks)
 
         recorder.stop()

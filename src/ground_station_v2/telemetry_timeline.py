@@ -82,7 +82,6 @@ class TelemetryTimelineWorker:
 
     async def send_block(self, block: Any) -> None:
         json_data = json.dumps(block.to_json())
-        logger.info("Sending block: %s", json_data)
 
         clients = self.get_clients_func()
 
