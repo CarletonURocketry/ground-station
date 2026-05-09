@@ -7,7 +7,6 @@ SENSOR_GYRO = 1
 SENSOR_MAG = 2
 SENSOR_GNSS = 3
 SENSOR_ALT = 4
-SENSOR_BARO = 5
 STATUS_MESSAGE = 6
 ERROR_MESSAGE = 7
 
@@ -72,14 +71,6 @@ class FusionAltitude:
     altitude: float
 
 @dataclass
-class SensorBaro:
-    FORMAT: ClassVar[str] = "<Qff"
-    SIZE: ClassVar[int] = 16
-    timestamp: int
-    pressure: float
-    temperature: float
-
-@dataclass
 class StatusMessage:
     FORMAT: ClassVar[str] = "<QI4x"
     SIZE: ClassVar[int] = 16
@@ -100,7 +91,6 @@ SCHEMAS = {
     SENSOR_MAG: ("mag", SensorMag),
     SENSOR_GNSS: ("gnss", SensorGnss),
     SENSOR_ALT: ("alt", FusionAltitude),
-    SENSOR_BARO: ("baro", SensorBaro),
     STATUS_MESSAGE: ("status", StatusMessage),
     ERROR_MESSAGE: ("error", ErrorMessage),
 }
