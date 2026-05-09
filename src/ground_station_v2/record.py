@@ -2,14 +2,9 @@ from pathlib import Path
 from ground_station_v2.radio.packets.spec import ParsedTransmission
 from ground_station_v2.radio.packets.blocks import (
     AltitudeAboveSeaLevel,
-    AltitudeAboveLaunchLevel,
-    Temperature,
-    Pressure,
     LinearAcceleration,
     AngularVelocity,
-    Humidity,
     Coordinates,
-    Voltage,
     MagneticField,
     FlightStatus,
     FlightError,
@@ -53,24 +48,6 @@ class Record:
             "writer": None,
             "field_names": ["measurement_time", "altitude"],
         },
-        AltitudeAboveLaunchLevel: {
-            "filename": "altitude_above_launch_level",
-            "file": None,
-            "writer": None,
-            "field_names": ["measurement_time", "altitude"],
-        },
-        Temperature: {
-            "filename": "temperature",
-            "file": None,
-            "writer": None,
-            "field_names": ["measurement_time", "temperature"],
-        },
-        Pressure: {
-            "filename": "pressure",
-            "file": None,
-            "writer": None,
-            "field_names": ["measurement_time", "pressure"],
-        },
         LinearAcceleration: {
             "filename": "linear_acceleration",
             "file": None,
@@ -83,23 +60,11 @@ class Record:
             "writer": None,
             "field_names": ["measurement_time", "x_axis", "y_axis", "z_axis"],
         },
-        Humidity: {
-            "filename": "humidity",
-            "file": None,
-            "writer": None,
-            "field_names": ["measurement_time", "humidity"],
-        },
         Coordinates: {
             "filename": "coordinates",
             "file": None,
             "writer": None,
             "field_names": ["measurement_time", "latitude", "longitude"],
-        },
-        Voltage: {
-            "filename": "voltage",
-            "file": None,
-            "writer": None,
-            "field_names": ["measurement_time", "voltage", "identifier"],
         },
         MagneticField: {
             "filename": "magnetic_field",
