@@ -376,6 +376,35 @@ class FlightError(TimedBlock):
         }
 
 
+@dataclass
+class DerivedFlightMetrics(TimedBlock):
+    """Computed flight metrics derived from sensor data (not parsed from binary)."""
+    measurement_time: int
+    apogee: float = 0.0
+    altitude_rate: float = 0.0
+    max_altitude_rate: float = 0.0
+    gps_lock: bool = False
+
+    def output_formatted(self, into: dict[str, Any]):
+        add_to_dict(into, ["derived_flight_metrics", "mission_time"], self.measurement_time)
+        add_to_dict(into, ["derived_flight_metrics", "apogee"], self.apogee)
+        add_to_dict(into, ["derived_flight_metrics", "altitude_rate"], self.altitude_rate)
+        add_to_dict(into, ["derived_flight_metrics", "max_altitude_rate"], self.max_altitude_rate)
+        add_to_dict(into, ["derived_flight_metrics", "gps_lock"], self.gps_lock)
+    
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "measurement_time": float(self.measurement_time),
+            "sensor_type": "derived_flight_metrics",
+            "data": {
+                "apogee": self.apogee,
+                "altitude_rate": self.altitude_rate,
+                "max_altitude_rate": self.max_altitude_rate,
+                "gps_lock": self.gps_lock
+            }
+        }
+
+
 class InvalidBlockContents(Exception):
     """Exception raised when invalid block contents are encountered"""
 
