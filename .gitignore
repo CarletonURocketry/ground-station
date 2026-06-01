@@ -137,3 +137,5 @@ dmypy.json
 
 /recordings/*
 !/recordings/josh-recording-1
+!/recordings/el-blasto
+!/recordings/quarter-pounder
