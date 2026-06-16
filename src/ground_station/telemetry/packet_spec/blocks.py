@@ -2,8 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import struct
 
-from ground_station.telemetry.packet_spec.headers import *
-from ground_station.misc.unit_conversions import *
+from src.ground_station.telemetry.packet_spec.headers import *
+from src.ground_station.misc.unit_conversions import *
 from typing import Any
 
 

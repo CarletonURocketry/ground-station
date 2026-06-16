@@ -6,9 +6,9 @@ import logging
 from queue import Queue
 from multiprocessing import Process, active_children
 from serial import Serial, SerialException
-from ground_station.misc.config import Config
-from ground_station.serial.serial_rn2483_radio import rn2483_radio_process
-from ground_station.serial.serial_rn2483_emulator import SerialRN2483Emulator
+from src.ground_station.misc.config import Config
+from src.ground_station.serial.serial_rn2483_radio import rn2483_radio_process
+from src.ground_station.serial.serial_rn2483_emulator import SerialRN2483Emulator
 from signal import signal, SIGTERM
 from types import FrameType
 

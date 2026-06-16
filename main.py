@@ -11,12 +11,12 @@ import logging
 from typing import TypeAlias, Any
 import json
 
-from ground_station.misc.config import Config
-from ground_station.misc.messages import print_cu_rocket
-from ground_station.serial.serial_manager import SerialManager
-from ground_station.telemetry.telemetry import Telemetry
-from ground_station.websocket.websocket import WebSocketHandler
-from ground_station.misc.cli import parser
+from src.ground_station.misc.config import Config
+from src.ground_station.misc.messages import print_cu_rocket
+from src.ground_station.serial.serial_manager import SerialManager
+from src.ground_station.telemetry.telemetry import Telemetry
+from src.ground_station.websocket.websocket import WebSocketHandler
+from src.ground_station.misc.cli import parser
 
 JSON: TypeAlias = dict[str, Any]
 STR_TO_LOGGING_MODE: dict[str, int] = {

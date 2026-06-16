@@ -99,14 +99,15 @@ class TelemetryTimelineWorker:
             if blocks_to_send:
                 await self.send_blocks(blocks_to_send)
     
-    async def send_blocks(self, blocks: list[Any]) -> None:
-        blocks_json = [block.to_json() for block in blocks]
-        json_data = json.dumps(blocks_json)
-        
+    async def send_blocks(self, blocks: list[Any]) -> None: 
         clients = self.get_clients_func()
         
+        # print(clients.items())
+
         for client_id, websocket in clients.items():
             try:
-                await websocket.send_text(json_data)
+                for block in blocks:
+                    blocks_json = block.to_json()
+                    await websocket.send_text(json.dumps(blocks_json))
             except Exception as e:
                 logger.warning(f"Failed to send blocks to client {client_id}: {e}")

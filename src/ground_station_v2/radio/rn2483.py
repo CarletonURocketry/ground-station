@@ -7,7 +7,7 @@ https://ww1.microchip.com/downloads/en/DeviceDoc/RN2483-LoRa-Technology-Module-C
 
 from typing import Optional
 from serial import Serial, EIGHTBITS, PARITY_NONE, SerialException
-from ground_station_v2.config import RadioParameters
+from src.ground_station_v2.config import RadioParameters
 
 RN2483_BAUD: int = 57600  # The baud rate of the RN2483 radio
 NUM_GPIO: int = 14  # Number of GPIO pins on the RN2483 module

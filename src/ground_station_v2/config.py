@@ -18,7 +18,7 @@ VALID_SPREADING_FACTORS: list[int] = [7, 8, 9, 10, 11, 12]
 VALID_BANDWIDTHS: list[int] = [125, 250, 500]
 SYNC_RANGE: tuple[int, int] = (0, 256 + 1)
 PREAMBLE_RANGE: tuple[int, int] = (0, 65_535 + 1)
-LF_RANGE: tuple[int, int] = (433_050_000, 434_790_000 + 1)
+LF_RANGE: tuple[int, int] = (430_050_000, 434_790_000 + 1)
 HF_RANGE: tuple[int, int] = (863_000_000, 870_000_000 + 1)
 
 # Types

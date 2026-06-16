@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from ground_station_v2.api import run_server
+from src.ground_station_v2.api import run_server
 
 Path("logs").mkdir(exist_ok=True)
 

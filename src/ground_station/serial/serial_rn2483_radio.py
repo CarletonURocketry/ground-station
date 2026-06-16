@@ -4,8 +4,8 @@ import time
 import logging
 from queue import Queue
 from serial import SerialException
-from ground_station.misc.config import RadioParameters
-from ground_station.serial.rn2483_radio import RN2483Radio
+from src.ground_station.misc.config import RadioParameters
+from src.ground_station.serial.rn2483_radio import RN2483Radio
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ import logging
 from typing import Any
 from collections import defaultdict
 
-from ground_station.telemetry.packet_spec.blocks import Block, TimedBlock
+from src.ground_station.telemetry.packet_spec.blocks import Block, TimedBlock
 
 logger = logging.getLogger(__name__)
 

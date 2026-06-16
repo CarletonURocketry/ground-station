@@ -3,13 +3,13 @@ import json
 from pathlib import Path
 from time import time
 from fastapi import WebSocket
-from ground_station_v2.record import Record
-from ground_station_v2.replay import Replay
-from ground_station_v2.radio.serial import get_radio_packet
-from ground_station_v2.radio.packets.spec import parse_rn2483_transmission
-from ground_station_v2.radio.packets.blocks import Block, block_from_csv_row, DerivedFlightMetrics
-from ground_station_v2.config import load_config
-from ground_station_v2.telemetry_timeline import TelemetryTimelineQueue
+from src.ground_station_v2.record import Record
+from src.ground_station_v2.replay import Replay
+from src.ground_station_v2.radio.serial import get_radio_packet
+from src.ground_station_v2.radio.packets.spec import parse_rn2483_transmission
+from src.ground_station_v2.radio.packets.blocks import Block, block_from_csv_row, DerivedFlightMetrics
+from src.ground_station_v2.config import load_config
+from src.ground_station_v2.telemetry_timeline import TelemetryTimelineQueue
 
 logger = logging.getLogger(__name__)
 

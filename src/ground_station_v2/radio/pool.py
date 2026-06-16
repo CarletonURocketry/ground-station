@@ -16,8 +16,8 @@ from typing import AsyncGenerator
 
 from serial import Serial, EIGHTBITS, PARITY_NONE, SerialException
 
-from ground_station_v2.config import RadioParameters
-from ground_station_v2.radio.rn2483 import RN2483Radio, RN2483_BAUD
+from src.ground_station_v2.config import RadioParameters
+from src.ground_station_v2.radio.rn2483 import RN2483Radio, RN2483_BAUD
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ def is_rn2483(port: str) -> bool:
 
         response = conn.readline().decode("utf-8", errors="ignore").strip()
         conn.close()
-
+        
         # The response from the radio module after the sent command "sys get ver" should start with "RN2483" for it to be a valid module.
         if response.startswith("RN2483"):
             logger.info(f"Identified RN2483 on {port}: {response}")

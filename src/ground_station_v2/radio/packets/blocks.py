@@ -2,8 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import struct
 
-from ground_station_v2.radio.packets.headers import PacketHeader, BlockHeader, BlockType
-from ground_station_v2.radio.packets.unit_conversions import *
+from src.ground_station_v2.radio.packets.headers import PacketHeader, BlockHeader, BlockType
+from src.ground_station_v2.radio.packets.unit_conversions import *
 from typing import Any
 
 
@@ -227,8 +227,8 @@ class Coordinates(TimedBlock):
             "measurement_time": float(self.measurement_time),
             "sensor_type": "gnss",
             "data": {
-                "latitude": self.latitude,
-                "longitude": self.longitude
+                "latitude": microdegrees_to_degrees(self.latitude),
+                "longitude": microdegrees_to_degrees(self.longitude)
             }
         }
 

@@ -1,6 +1,6 @@
 import asyncio
-from ground_station_v2.config import load_config
-from ground_station_v2.radio.pool import RadioPool
+from src.ground_station_v2.config import load_config
+from src.ground_station_v2.radio.pool import RadioPool
 import logging
 
 logger = logging.getLogger(__name__)

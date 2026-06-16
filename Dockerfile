@@ -23,4 +23,4 @@ COPY . .
 EXPOSE 33845/udp
 
 # Run the app when the container launches
-CMD ["python", "main.py"]
+CMD ["python", "main_v2.py"]

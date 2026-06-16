@@ -4,7 +4,7 @@
   "telemetry_buffer_size": 20,
   "radio_params": {
     "modulation": "lora",
-    "frequency": 433050000,
+    "frequency": 430600000,
     "power": 15,
     "spread_factor": 7,
     "coding_rate": "4/5",
