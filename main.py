@@ -50,6 +50,24 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def run_serial_manager(
+    serial_status: Queue[str],
+    serial_ws_commands: Queue[list[str]],
+    radio_signal_report: Queue[int],
+    rn2483_radio_input: Queue[str],
+    rn2483_radio_payloads: Queue[str],
+    config: Config,
+) -> None:
+    SerialManager(
+        serial_status,
+        serial_ws_commands,
+        radio_signal_report,
+        rn2483_radio_input,
+        rn2483_radio_payloads,
+        config,
+    ).run()
+
+
 def main():
     # Set up queues
     serial_status: Queue[str] = mp.Queue()  # type: ignore
@@ -72,14 +90,15 @@ def main():
     # Incoming information comes directly from RN2483 LoRa radio module over serial UART
     # Outputs information in hexadecimal payload format to rn2483_radio_payloads
     serial = Process(
-        target=SerialManager(
+        target=run_serial_manager,
+        args=(
             serial_status,
             serial_ws_commands,
             radio_signal_report,
             rn2483_radio_input,
             rn2483_radio_payloads,
             config,
-        ).run,
+        ),
     )
     serial.start()
     logger.info(f"{'Serial':.<13} started.")
